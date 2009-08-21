@@ -4,7 +4,7 @@
 \description{
   'summary' method for class 'betareg'.}
 \usage{
-summary.betareg(object,...)
+\method{summary}{betareg}(object,...)
 }
 \arguments{
   \item{object}{ Fitted model using betareg }
@@ -21,8 +21,8 @@ summary.betareg(object,...)
   \item{Pseudo R2}{the value of the pseudo R2 which is described by Ferrari and Cribari-Neto(2004).}
   \item{AIC}{the corresponding AIC} 
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br). 
-This version was modified to fit the standards of the 'lm' and 'glm' models. Andréa Vanessa Rocha (andrea@cox.de.ufpe.br) helped in the development of this new function.}
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br). 
+This version was modified to fit the standards of the 'lm' and 'glm' models. Andrea Vanessa Rocha (andrea@cox.de.ufpe.br) helped in the development of this new function.}
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.}
 \seealso{\code{\link{betareg}}, \code{\link{br.fit}}, \code{\link{predict.betareg}}, \code{\link{residuals.betareg}} }
@@ -31,6 +31,5 @@ data(pratergrouped)
 fit <- betareg(oil ~ batch1 + batch2 + batch3 + batch4 + batch5 + 
 batch6 + batch7 + batch8 + batch9 + temp, data=pratergrouped)
 summary(fit)
-  }
 }
 \keyword{regression}

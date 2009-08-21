@@ -18,7 +18,7 @@ cex.main=1.5, type = c("standardized","deviance"))
   \item{cex.main}{The size of the font in the main title}
   \item{type}{Determines if the type of the residual is "standardized" or "deviance"}
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br)
 
 This function was made by Elias Krainski.}
 \references{

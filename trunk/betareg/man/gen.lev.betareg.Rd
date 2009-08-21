@@ -15,7 +15,7 @@ gen.lev.betareg(x, ...)
 This function returns a vector containing the generalized leverage values.
 The generalized leverage was proposed by Wei, Hu and Fung and was adapted to the beta regression model by Ferrari and Cribari-Neto (2004).
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br)
 }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.

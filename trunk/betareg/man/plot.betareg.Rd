@@ -5,7 +5,7 @@
 \description{
   This function returns four plots: a plot of residuals against fitted values, a plot of standardized residuals against fitted values, a generalized leverage plot against fitted values and a plot of Cook's distances versus row labels.}
 \usage{
-plot.betareg(x, which = 1:4, caption = c("Deviance residuals vs indices of obs.", 
+\method{plot}{betareg}(x, which = 1:4, caption = c("Deviance residuals vs indices of obs.", 
     "Standardized residuals vs indices of obs.", "Generalized leverage vs. Predicted values", "Cook's distance plot"), 
     panel = points, sub.caption = deparse(x$call), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
@@ -24,7 +24,7 @@ plot.betareg(x, which = 1:4, caption = c("Deviance residuals vs indices of obs."
   \item{labels.id}{vector of labels, from which the labels for extreme points will be chosen.  'NULL' uses observation numbers.}
   \item{cex.id}{magnification of point labels.}
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br). }
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br) }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.
 }

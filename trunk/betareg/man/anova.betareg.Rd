@@ -5,7 +5,7 @@
   Compute an analysis of variance table for one or two model fits.
   }
 \usage{
-anova.betareg(object, object2, ...)
+\method{anova}{betareg}(object, object2, ...)
 }
 \arguments{
   \item{object}{ a fitted model using betareg, if there are two models, then this model should be the restricted one }
@@ -16,8 +16,8 @@ anova.betareg(object, object2, ...)
 If object2 is missing, an anova table is produced considering the null that the model contain only the intercept. If object2 isn't missing (i.e., a restricted model was placed), 
 an anova table is produced considering the null that the second model is true. This "anova table" is constructed using the log-likelihood ratio test suggest by Ferrari and Cribari-Neto (2004).
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
-Andréa Vanessa Rocha (andrea@cox.de.ufpe.br) contributed in the development of this function.
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br).
+Andrea Vanessa Rocha (andrea@cox.de.ufpe.br) contributed in the development of this function.
 }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.

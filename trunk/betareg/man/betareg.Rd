@@ -18,7 +18,7 @@ The model is useful for situations where the variable of interest is continuous,
 \value{
 The function returns an object of class 'betareg' or 'lm'. The function 'summary' is used to obtain an estimate of the precision parameter (phi), and the pseudo R2 value.
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br)
 }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.

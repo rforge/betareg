@@ -5,7 +5,7 @@
 \description{
   This function returns predictions from a fitted betareg object..}
 \usage{
-predict.betareg(object, newdata = NULL, type = c("link", "response"), ... )
+\method{predict}{betareg}(object, newdata = NULL, type = c("link", "response"), ... )
 }
 \arguments{
   \item{object}{ fitted model using betareg }
@@ -13,8 +13,8 @@ predict.betareg(object, newdata = NULL, type = c("link", "response"), ... )
   \item{type}{the type of prediction required.  The default is on the scale of the linear predictors; the alternative '"response"' is on the scale of the response variable.}
   \item{...}{Optional arguments}
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br). 
-This version was modified to fit the standards of the 'lm' and 'glm' models. Andréa Vanessa Rocha (andrea@cox.de.ufpe.br) helped in the development of this new function. }
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br). 
+This version was modified to fit the standards of the 'lm' and 'glm' models. Andrea Vanessa Rocha (andrea@cox.de.ufpe.br) helped in the development of this new function. }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.}
 \seealso{\code{\link{betareg}}, \code{\link{br.fit}}, \code{\link{summary.betareg}}, \code{\link{residuals.betareg}} }
@@ -28,5 +28,5 @@ predict(fit)
 predict(fit,new)
 predict(fit,new,type="response")
 }
-}
+
 \keyword{regression}

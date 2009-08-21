@@ -5,7 +5,7 @@
    Compute the diagonal elements of the "Hat" matrix of a beta regression model.
   }
 \usage{
-hatvalues.betareg(model, ...)
+\method{hatvalues}{betareg}(model, ...)
 }
 \arguments{
   \item{model}{ a fitted model using betareg. }
@@ -14,7 +14,7 @@ hatvalues.betareg(model, ...)
 \value{
 This function returns a vector containing the diagonal elements of the "hat" matrix.
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br)
 }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.

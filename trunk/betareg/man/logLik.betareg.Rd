@@ -5,7 +5,7 @@
   Obtain the log-likelihood value of a fitted betareg model.
   }
 \usage{
-logLik.betareg(object, ...)
+\method{logLik}{betareg}(object, ...)
 }
 \arguments{
   \item{object}{ a fitted model using betareg. }
@@ -14,7 +14,7 @@ logLik.betareg(object, ...)
 \value{
 Returns the log-likehood value of the model together with the number of parameters.
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br)
 }
 \references{
 FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.

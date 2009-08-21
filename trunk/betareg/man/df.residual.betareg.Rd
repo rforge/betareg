@@ -5,7 +5,7 @@
   Returns the residual degrees-of-freedom extracted from a fitted betareg model object.
   }
 \usage{
-df.residual.betareg(object, ...)
+\method{df.residual}{betareg}(object, ...)
 }
 \arguments{
   \item{object}{ an object for which the degrees-of-freedom are desired. }
@@ -15,7 +15,7 @@ df.residual.betareg(object, ...)
 The value of the residual degrees-of-freedom extracted from the
      object 'x'.
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br)
 }
 \seealso{\code{\link{br.fit}}, \code{\link{summary.betareg}}, \code{\link{predict.betareg}}, \code{\link{residuals.betareg}} }
 \examples{

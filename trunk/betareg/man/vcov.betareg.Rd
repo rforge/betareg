@@ -5,7 +5,7 @@
   Returns the variance-covariance matrix of the main parameters of a betareg fitted model object.
   }
 \usage{
-vcov.betareg(object, ...)
+\method{vcov}{betareg}(object, ...)
 }
 \arguments{
   \item{object}{ a fitted model using betareg. }
@@ -14,7 +14,7 @@ vcov.betareg(object, ...)
 \value{
 A matrix of the estimated covariances between the parameter estimates in the linear or non-linear predictor of the model.
 }
-\author{ Alexandre de Bustamante Simas, Instituto de Matemática Pura e Aplicada (alesimas@impa.br).
+\author{ Alexandre de Bustamante Simas (alesimas@impa.br).
 This function was inspired on the function made by Achim Zeileis.
 }
 \examples{
