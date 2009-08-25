@@ -1,27 +1,42 @@
 \name{residuals.betareg}
 \alias{residuals.betareg}
-\alias{residuals}
-\title{ Residuals function for beta regression models. }
+
+\title{Residuals Method for betareg Objects}
+
 \description{
-  This function returns the standardized residuals from beta regression models, deviance residuals or the raw residuals. 
+  Extract various types of residuals from beta regression models:
+  raw response residuals (observed - fitted), Pearson residuals (raw residuals scaled by
+  square root of variance function), deviance residuals (scaled log-likelihood contributions).
 }
+
 \usage{
-\method{residuals}{betareg}(object, type=c("standardized", "raw", "deviance"),...)
+\method{residuals}{betareg}(object, type = c("pearson", "deviance", "response"), \dots)
 }
+
 \arguments{
-  \item{object}{ Fitted model using betareg. }
-  \item{type}{ The desired type of residuals. This function returns by default the standardized residuals, also returns the deviance residuals and may return the raw residuals (which is the value minus estimated mean). }
-  \item{...}{Optional arguments}
+  \item{object}{fitted model object of class \code{"betareg"}.}
+  \item{type}{character indicating type of residuals.}
+  \item{\dots}{currently not used.}
 }
-\author{ Alexandre de Bustamante Simas (alesimas@impa.br) }
+
 \references{
-FERRARI, S.L.P., CRIBARI-NETO, F. (2004). Beta regression for modeling rates and proportions. Journal of Applied Statistics, v. 31, n. 7, p. 799-815.}
-\seealso{\code{\link{betareg}}, \code{\link{br.fit}}, \code{\link{summary.betareg}}, \code{\link{predict.betareg}} }
-\examples{
-data(pratergrouped)
-fit <- betareg(oil ~ batch1 + batch2 + batch3 + batch4 + batch5 + 
-batch6 + batch7 + batch8 + batch9 + temp, data=pratergrouped)
-residuals(fit)
-residuals(fit,type="dev")
+Ferrari, S.L.P., and Cribari-Neto, F. (2004).
+  Beta Regression for Modeling Rates and Proportions.
+  \emph{Journal of Applied Statistics}, \bold{31}(7), 799--815.
 }
+
+\seealso{\code{\link{betareg}}}
+
+\examples{
+data("GasolineYield", package = "betareg")
+
+gy <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
+
+cbind(
+  residuals(gy, type = "pearson"),
+  residuals(gy, type = "deviance"),
+  residuals(gy, type = "response")
+)
+}
+
 \keyword{regression}

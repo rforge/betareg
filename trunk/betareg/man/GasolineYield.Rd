@@ -58,13 +58,12 @@ Ferrari, S.L.P., and Cribari-Neto, F. (2004).
 Prater, N.H. (1956).
   \emph{Estimate Gasoline Yields from Crudes}.
   New York: Springer-Verlag.
-
 }
 
 \seealso{\code{\link{betareg}}}
 
 \examples{
-data("GasolineYield")
+data("GasolineYield", package = "betareg")
 
 gy1 <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
 summary(gy1)

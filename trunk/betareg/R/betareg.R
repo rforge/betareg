@@ -78,8 +78,6 @@ betareg.fit <- function(x, y, weights = NULL, offset = NULL,
   linkfun <- linkobj$linkfun
   linkinv <- linkobj$linkinv
   mu.eta <- linkobj$mu.eta
-  diflink <- function(y) 1/(linkobj$mu.eta(linkobj$linkfun(y)))
-  Tfun <- function(eta) diag(linkobj$mu.eta(eta))
 
   ## response and regressor matrix
   n <- NROW(x)
@@ -101,7 +99,7 @@ betareg.fit <- function(x, y, weights = NULL, offset = NULL,
     auxreg <- lm.wfit(x, ystar, weights, offset = offset)
     beta <- auxreg$coefficients
     yhat <- linkinv(auxreg$fitted.values)
-    dlink <- diflink(yhat)
+    dlink <- 1/mu.eta(linkfun(yhat))
     res <- auxreg$residuals
     sigma2 <- sum((weights * res)^2)/((n - k) * (dlink)^2)
     phi <- mean(yhat * (1 - yhat)/sigma2 - 1)
@@ -142,7 +140,6 @@ betareg.fit <- function(x, y, weights = NULL, offset = NULL,
   psi1 <- trigamma(mu * phi)
   psi2 <- trigamma((1 - mu) * phi)
   pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, ystar)^2
-  sigma2 <- sum((y - mu)^2)/((n - k) * (diflink(mu)^2))
 
   ## compute analytical covariance matrix
   ## compute diagonal of T
@@ -188,7 +185,6 @@ betareg.fit <- function(x, y, weights = NULL, offset = NULL,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
-    sigma2 = sigma2,
     pseudo.R.squared = pseudor2,
     link = linkobj,
     converged = opt$convergence < 1    
@@ -350,6 +346,9 @@ estfun.betareg <- function(x, phi = NULL, ...)
   return(rval)
 }
 
+coeftest.betareg <- function(x, vcov. = NULL, df = Inf, ...)
+  coeftest.default(x, vcov. = vcov., df = df, ...)  
+
 logLik.betareg <- function(object, ...) {
   structure(object$loglik, df = object$n - object$df.residual + 1, class = "logLik")
 }
@@ -369,19 +368,19 @@ model.matrix.betareg <- function(object, ...) {
   return(rval)
 }
 
-residuals.betareg <- function(x, type = c("pearson", "deviance", "response"), ...)
+residuals.betareg <- function(object, type = c("pearson", "deviance", "response"), ...)
 {
   ## raw response residuals and desired type
-  res <- x$residuals
+  res <- object$residuals
   type <- match.arg(type)
   if(type == "response") return(res)
 
   ## extract fitted information
-  y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
-  mu <- fitted(x)
-  wts <- weights(x)
+  y <- if(is.null(object$y)) model.response(model.frame(object)) else object$y
+  mu <- fitted(object)
+  wts <- weights(object)
   if(is.null(wts)) wts <- 1
-  phi <- tail(x$coefficients, 1)
+  phi <- tail(object$coefficients, 1)
   
   ## loglik function
   ll <- function(mu, phi)
