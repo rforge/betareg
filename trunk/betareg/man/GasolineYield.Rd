@@ -67,10 +67,15 @@ Prater, N.H. (1956).
 data("GasolineYield")
 
 gy1 <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
-gy2 <- betareg(yield ~ batch + temp, data = GasolineYield)
-
 summary(gy1)
+
+## Ferrari and Cribari-Neto (2004)
+gy2 <- betareg(yield ~ batch + temp, data = GasolineYield)
+## Table 1
 summary(gy2)
+## Figure 2
+par(mfrow = c(3, 2))
+plot(gy2, which = c(1:4, 6:7))
 }
 
 \keyword{datasets}
