@@ -1,10 +1,11 @@
 Package: betareg
+Version: 2.0-0
+Date: 2009-08-23
 Title: Beta Regression
-Version: 1.2-2
-Author: Alexandre de Bustamante Simas, Andrea Vanessa Rocha, Achim Zeileis
-Description: Beta regression for modeling rates and proportions.
+Author: Achim Zeileis, Alexandre de Bustamante Simas, Andrea Vanessa Rocha
 Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
+Description: Beta regression for modeling rates and proportions.
 Depends: R (>= 2.6.0), stats
 Imports: graphics, sandwich
-Suggests: sandwich
+Suggests: car, lmtest, sandwich
 License: GPL-2
