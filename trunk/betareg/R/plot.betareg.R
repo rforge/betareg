@@ -16,7 +16,7 @@ plot.betareg <- function(x, which = 1:4,
   Type <- Types[type == types]
 
   res <- residuals(x, type = type)
-  n <- length(rd)
+  n <- length(res)
   k <- length(x$coefficients) - 1
   show <- rep(FALSE, 5)
   show[which] <- TRUE
@@ -44,7 +44,7 @@ plot.betareg <- function(x, which = 1:4,
     mtext(caption[3], 3, 0.25)
   }
   if(show[4]) {
-    plot(predict(x, type = "link"), rp,
+    plot(predict(x, type = "link"), res,
       xlab = "Linear predictor", ylab = Type, main = main, ...)
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[4], 3, 0.25)

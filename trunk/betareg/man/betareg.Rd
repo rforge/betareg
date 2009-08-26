@@ -112,24 +112,25 @@ Ferrari, S.L.P., and Cribari-Neto, F. (2004).
 \seealso{\code{\link{summary.betareg}}, \code{\link{predict.betareg}}, \code{\link{residuals.betareg}}}
 
 \examples{
+## Section 4 from Ferrari and Cribari-Neto (2004)
 data("GasolineYield", package = "betareg")
+data("FoodExpenditure", package = "betareg")
 
-gy1 <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
-summary(gy1)
-
-## Ferrari and Cribari-Neto (2004)
-gy2 <- betareg(yield ~ batch + temp, data = GasolineYield)
 ## Table 1
-summary(gy2)
-## Figure 2
-par(mfrow = c(3, 2))
-plot(gy2, which = c(1:4, 6:7))
+gy <- betareg(yield ~ batch + temp, data = GasolineYield)
+summary(gy)
+
+## Table 2
+fe_lin <- lm(I(food/income) ~ income + persons, data = FoodExpenditure)
+library("lmtest")
+bptest(fe_lin)
+fe_beta <- betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
+summary(fe_beta)
 
 ## nested model comparisons via Wald and LR tests
-library("lmtest")
-gy3 <- betareg(yield ~ batch, data = GasolineYield)
-lrtest(gy2, gy3)
-waldtest(gy2, gy3)
+fe_beta2 <- betareg(I(food/income) ~ income, data = FoodExpenditure)
+lrtest(fe_beta, fe_beta2)
+waldtest(fe_beta, fe_beta2)
 }
 
 \keyword{regression}
