@@ -124,6 +124,12 @@ summary(gy2)
 ## Figure 2
 par(mfrow = c(3, 2))
 plot(gy2, which = c(1:4, 6:7))
+
+## nested model comparisons via Wald and LR tests
+library("lmtest")
+gy3 <- betareg(yield ~ batch, data = GasolineYield)
+lrtest(gy2, gy3)
+waldtest(gy2, gy3)
 }
 
 \keyword{regression}

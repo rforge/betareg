@@ -74,7 +74,14 @@ gy2 <- betareg(yield ~ batch + temp, data = GasolineYield)
 summary(gy2)
 ## Figure 2
 par(mfrow = c(3, 2))
-plot(gy2, which = c(1:4, 6:7))
+plot(gy2, which = 1:4)
+plot(gy2, which = 5, type = "deviance", sub.caption = "")
+plot(gy2, which = 1, type = "deviance", sub.caption = "")
+
+## exclude 4th observation
+gy2a <- update(gy2, subset = -4)
+gy2a
+summary(gy2a)
 }
 
 \keyword{datasets}

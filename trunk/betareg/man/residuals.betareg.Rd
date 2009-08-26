@@ -6,11 +6,14 @@
 \description{
   Extract various types of residuals from beta regression models:
   raw response residuals (observed - fitted), Pearson residuals (raw residuals scaled by
-  square root of variance function), deviance residuals (scaled log-likelihood contributions).
+  square root of variance function), deviance residuals (scaled log-likelihood contributions),
+  and different kinds of weighted residuals suggested by Espinheira et al. (2008).
 }
 
 \usage{
-\method{residuals}{betareg}(object, type = c("pearson", "deviance", "response"), \dots)
+\method{residuals}{betareg}(object,
+  type = c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2"),
+  \dots)
 }
 
 \arguments{
@@ -19,7 +22,20 @@
   \item{\dots}{currently not used.}
 }
 
+\details{
+  The definitions of all residuals are provided in Espinheira et al. (2008):
+  Equation 2 for \code{"pearson"}, last equation on page 409 for \code{"deviance"},
+  Equation 6 for \code{"weighted"}, Equation 7 for \code{"sweighted"}, and
+  Equation 8 for \code{"sweighted2"}.
+  
+  Espinheira et al. (2008) recommend to use \code{"sweighted2"}.
+}
+
 \references{
+Espinheira, P.L., Ferrari, S.L.P., and Cribari-Neto, F. (2008).
+  On Beta Regression Residuals.
+  \emph{Journal of Applied Statistics}, \bold{35}(4), 407--419.
+
 Ferrari, S.L.P., and Cribari-Neto, F. (2004).
   Beta Regression for Modeling Rates and Proportions.
   \emph{Journal of Applied Statistics}, \bold{31}(7), 799--815.
@@ -35,7 +51,10 @@ gy <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
 cbind(
   residuals(gy, type = "pearson"),
   residuals(gy, type = "deviance"),
-  residuals(gy, type = "response")
+  residuals(gy, type = "response"),
+  residuals(gy, type = "weighted"),
+  residuals(gy, type = "sweighted"),
+  residuals(gy, type = "sweighted2"),  
 )
 }
 

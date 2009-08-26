@@ -368,7 +368,8 @@ model.matrix.betareg <- function(object, ...) {
   return(rval)
 }
 
-residuals.betareg <- function(object, type = c("pearson", "deviance", "response"), ...)
+residuals.betareg <- function(object,
+  type = c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2"), ...)
 {
   ## raw response residuals and desired type
   res <- object$residuals
@@ -382,16 +383,40 @@ residuals.betareg <- function(object, type = c("pearson", "deviance", "response"
   if(is.null(wts)) wts <- 1
   phi <- tail(object$coefficients, 1)
   
-  ## loglik function
-  ll <- function(mu, phi)
-    wts * (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) + 
-      (mu * phi - 1) * log(y) + ((1 - mu) * phi - 1) * log(1 - y))
-
-  if(type == "deviance") {
-    res <- sign(res) * sqrt(2 * pmax(ll(y, phi) - ll(mu, phi), 0))
-  } else {
-    res <- res / sqrt(wts * mu * (1 - mu) / (1 + phi))
-  }
+  res <- switch(type,
+  
+    "pearson" = {
+      res / sqrt(wts * mu * (1 - mu) / (1 + phi))
+    },
+    
+    "deviance" = {
+      ## loglik function
+      ll <- function(mu, phi)
+        wts * (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) + 
+        (mu * phi - 1) * log(y) + ((1 - mu) * phi - 1) * log(1 - y))
+      sign(res) * sqrt(2 * pmax(ll(y, phi) - ll(mu, phi), 0))
+    },
+    
+    "weighted" = {
+      ystar <- object$link$linkfun(y)
+      mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
+      v <- wts * (trigamma(mu * phi) + trigamma((1 - mu) * phi))
+      (ystar - mustar) / sqrt(phi * v)
+    },
+    
+    "sweighted" = {
+      ystar <- object$link$linkfun(y)
+      mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
+      v <- wts * (trigamma(mu * phi) + trigamma((1 - mu) * phi))
+      (ystar - mustar) / sqrt(v)    
+    },
+    
+    "sweighted2" = {
+      ystar <- object$link$linkfun(y)
+      mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
+      v <- wts * (trigamma(mu * phi) + trigamma((1 - mu) * phi))
+      (ystar - mustar) / sqrt(v * hatvalues(object))
+    })
 
   return(res)
 }

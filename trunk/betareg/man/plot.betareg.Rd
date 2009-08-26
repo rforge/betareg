@@ -10,13 +10,12 @@
 
 \usage{
 \method{plot}{betareg}(x, which = 1:4,
-  caption = c("Pearson residuals vs indices of obs.", "Deviance residuals vs indices of obs.",
-    "Cook's distance plot", "Generalized leverage vs predicted values",
-    "Half-normal plot of standardized residuals", "Half-normal plot of deviance residuals",
-    "Pearson residuals vs linear predictor", "Deviance residuals vs linear predictor"),
+  caption = c("Residuals vs indices of obs.", "Cook's distance plot",
+    "Generalized leverage vs predicted values", "Residuals vs linear predictor", 
+    "Half-normal plot of residuals"),
     sub.caption = paste(deparse(x$call), collapse = "\n"), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
-    \dots, nsim = 100, level = 0.9)
+    \dots, type = "pearson", nsim = 100, level = 0.9)
 }
 
 \arguments{
@@ -27,6 +26,7 @@
   \item{main}{title to each plot-in addition to the above \code{caption}.}
   \item{ask}{logical. If \code{TRUE}, the user is asked before each plot.}
   \item{\dots}{other parameters to be passed through to plotting functions.}
+  \item{type}{character indicating type of residual to be used, see \code{\link{residuals.betareg}}.}
   \item{nsim}{number of simulations in half-normal plots.}
   \item{level}{confidence level in half-normal plots.}
 }
@@ -44,8 +44,8 @@ data("GasolineYield", package = "betareg")
 
 gy <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
 
-par(mfrow = c(4, 2))
-plot(gy, which = 1:8)
+par(mfrow = c(3, 2))
+plot(gy, which = 1:5)
 }
 
 \keyword{regression}
