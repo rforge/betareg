@@ -55,11 +55,11 @@ betareg.fit(x, y, weights = NULL, offset = NULL,
 
   A set of standard extractor functions for fitted model objects is available for
   objects of class \code{"betareg"}, including methods to the generic functions
-  \code{\link[base]{print}}, \code{\link[base]{summary}}, \code{\link[base]{plot}}, \code{\link[stats]{coef}}, 
+  \code{\link[base]{print}}, \code{\link[base]{summary}}, \code{\link[graphics]{plot}}, \code{\link[stats]{coef}}, 
   \code{\link[stats]{vcov}}, \code{\link[stats]{logLik}}, \code{\link[stats]{residuals}}, 
   \code{\link[stats]{predict}}, \code{\link[stats]{terms}},
   \code{\link[stats]{model.frame}}, \code{\link[stats]{model.matrix}},
-  \code{\link[stats]{cooks.distance}}, \code{\link[stats]{hatvalues}},
+  \code{cooks.distance} and \code{hatvalues} (see \code{\link[stats]{influence.measures}}),
   \code{\link[betareg]{gleverage}} (new generic), \code{\link[sandwich]{estfun}} and
   \code{\link[sandwich]{bread}} (from the \pkg{sandwich} package), and
   \code{\link[lmtest]{coeftest}} (from the \pkg{lmtest} package).
