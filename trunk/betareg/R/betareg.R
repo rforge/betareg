@@ -219,8 +219,8 @@ summary.betareg <- function(object, phi = NULL, ...)
   ## treat phi as full model parameter?
   if(!is.null(phi)) object$phi <- phi
   
-  ## store Pearson residuals
-  object$residuals <- residuals(object, type = "pearson")
+  ## store deviance residuals
+  object$residuals <- residuals(object, type = "deviance")
   
   ## extend coefficient table
   cf <- object$coefficients
@@ -248,7 +248,7 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
   if(!x$converged) {
     cat("model did not converge\n")
   } else {
-    cat("Pearson residuals:\n")
+    cat("Deviance residuals:\n")
     print(structure(round(as.vector(quantile(x$residuals)), digits = digits),
       .Names = c("Min", "1Q", "Median", "3Q", "Max")))
   
@@ -369,7 +369,7 @@ model.matrix.betareg <- function(object, ...) {
 }
 
 residuals.betareg <- function(object,
-  type = c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2"), ...)
+  type = c("deviance", "pearson", "response", "weighted", "sweighted", "sweighted2"), ...)
 {
   ## raw response residuals and desired type
   res <- object$residuals
@@ -386,36 +386,35 @@ residuals.betareg <- function(object,
   res <- switch(type,
   
     "pearson" = {
-      res / sqrt(wts * mu * (1 - mu) / (1 + phi))
+      sqrt(wts) * res / sqrt(mu * (1 - mu) / (1 + phi))
     },
     
     "deviance" = {
-      ## loglik function
       ll <- function(mu, phi)
-        wts * (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) + 
+        (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) + 
         (mu * phi - 1) * log(y) + ((1 - mu) * phi - 1) * log(1 - y))
-      sign(res) * sqrt(2 * pmax(ll(y, phi) - ll(mu, phi), 0))
+      sqrt(wts) * sign(res) * sqrt(2 * abs(ll(y, phi) - ll(mu, phi)))
     },
     
     "weighted" = {
       ystar <- object$link$linkfun(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
-      v <- wts * (trigamma(mu * phi) + trigamma((1 - mu) * phi))
-      (ystar - mustar) / sqrt(phi * v)
+      v <- trigamma(mu * phi) + trigamma((1 - mu) * phi)
+      sqrt(wts) * (ystar - mustar) / sqrt(phi * v)
     },
     
     "sweighted" = {
       ystar <- object$link$linkfun(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
-      v <- wts * (trigamma(mu * phi) + trigamma((1 - mu) * phi))
-      (ystar - mustar) / sqrt(v)    
+      v <- trigamma(mu * phi) + trigamma((1 - mu) * phi)
+      sqrt(wts) * (ystar - mustar) / sqrt(v)
     },
     
     "sweighted2" = {
       ystar <- object$link$linkfun(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
-      v <- wts * (trigamma(mu * phi) + trigamma((1 - mu) * phi))
-      (ystar - mustar) / sqrt(v * hatvalues(object))
+      v <- trigamma(mu * phi) + trigamma((1 - mu) * phi)
+      sqrt(wts) * (ystar - mustar) / sqrt(v * hatvalues(object))
     })
 
   return(res)

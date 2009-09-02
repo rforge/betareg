@@ -4,7 +4,7 @@ plot.betareg <- function(x, which = 1:4,
     "Half-normal plot of residuals"),
     sub.caption = paste(deparse(x$call), collapse = "\n"), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
-    ..., type = "pearson", nsim = 100, level = 0.9)
+    ..., type = "deviance", nsim = 100, level = 0.9)
 {
   if(!is.numeric(which) || any(which < 1) || any(which > 5)) 
     stop("`which' must be in 1:5")
@@ -65,7 +65,7 @@ plot.betareg <- function(x, which = 1:4,
   invisible()
 }
 
-halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "pearson")
+halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "deviance")
 {
   ## extract response y and regressors X
   y <- if(is.null(model$y)) model.response(model.frame(model)) else model$y

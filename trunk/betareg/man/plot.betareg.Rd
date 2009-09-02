@@ -15,7 +15,7 @@
     "Half-normal plot of residuals"),
     sub.caption = paste(deparse(x$call), collapse = "\n"), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
-    \dots, type = "pearson", nsim = 100, level = 0.9)
+    \dots, type = "deviance", nsim = 100, level = 0.9)
 }
 
 \arguments{

@@ -36,7 +36,7 @@ betareg.control(phi = TRUE, method = "BFGS", maxit = 5000,
   how \code{optim} is called.
 
   Starting values can be supplied via \code{start} or estimated by
-  \code{lm.wfit} (default, see \code{\link[stats]{lm.fit}}), using the link-transformed response.
+  \code{\link[stats:lmfit]{lm.wfit}}, using the link-transformed response.
   Covariances are derived analytically (if \code{hessian = FALSE}, the default) or
   numerically using the Hessian matrix returned by \code{\link[stats]{optim}}.
   
