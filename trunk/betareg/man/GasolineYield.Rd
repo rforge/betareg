@@ -5,7 +5,7 @@
 
 \description{
 Operational data of the proportion of crude oil converted to gasoline after
-distilation and fractionation.
+distillation and fractionation.
 }
 
 \usage{data("GasolineYield")}
@@ -13,7 +13,7 @@ distilation and fractionation.
 \format{
 A data frame containing 32 observations on 6 variables.
 \describe{
-  \item{yield}{proportion of crude oil converted to gasoline after distilation and fractionation.}
+  \item{yield}{proportion of crude oil converted to gasoline after distillation and fractionation.}
   \item{gravity}{crude oil gravity (degrees API).}
   \item{pressure}{vapor pressure of crude oil (lbf/in2).}
   \item{temp10}{temperature (degrees F) at which 10 percent of crude oil has vaporized.}
@@ -25,7 +25,7 @@ A data frame containing 32 observations on 6 variables.
 
 \details{
 This dataset was collected by Prater (1956), its dependent variable is the
-proportion of crude oil after distilation and fractionation. This dataset was
+proportion of crude oil after distillation and fractionation. This dataset was
 analyzed by Atkinson (1985), who used the linear regression model and noted that
 there is ``indication that the error distribution is not quite symmetrical,
 giving rise to some unduly large and small residuals'' (p. 60).
@@ -33,7 +33,7 @@ giving rise to some unduly large and small residuals'' (p. 60).
 The dataset contains 32 observations on the response and on the independent
 variables. It has been noted (Daniel and Wood, 1971, Chapter 8) that there are only
 ten sets of values of the first three explanatory variables which correspond to
-ten different crudes and were subjected to experimentally controlled distilation
+ten different crudes and were subjected to experimentally controlled distillation
 conditions. These conditions are captured in variable \code{batch} and
 the data were ordered according to the ascending order of \code{temp10}.
 }
