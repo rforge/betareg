@@ -66,6 +66,9 @@ betareg.fit(x, y, weights = NULL, offset = NULL,
   
   See \code{\link{predict.betareg}}, \code{\link{residuals.betareg}}, \code{\link{plot.betareg}},
   and \code{\link{summary.betareg}} for more details on all methods.
+
+  The original version of the package was written by Alexandre B. Simas and Andrea V. Rocha
+  (up to version 1.2). Starting from version 2.0-0 the code was rewritten by Achim Zeileis.
 }
 
 \value{

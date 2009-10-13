@@ -2,7 +2,7 @@ Package: betareg
 Version: 2.0-0
 Date: 2009-09-02
 Title: Beta Regression
-Author: Achim Zeileis
+Author: Achim Zeileis [aut, cre], Alexandre B. Simas [ctb] (earlier version by), Andrea V. Rocha [ctb] (earlier version by)
 Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
 Description: Beta regression for modeling rates and proportions.
 Depends: R (>= 2.6.0), stats
