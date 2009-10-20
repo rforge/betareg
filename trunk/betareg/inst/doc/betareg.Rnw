@@ -1,0 +1,82 @@
+\documentclass[nojss]{jss}
+\usepackage{thumbpdf}
+
+%% need no \usepackage{Sweave}
+\SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
+%\VignetteIndexEntry{Beta Regression in R}
+%\VignetteDepends{stats,betareg,car,lmtest,sandwich}
+%\VignetteKeywords{beta regression, rates, proportions, R}
+%\VignettePackage{betareg}
+
+
+%% additional commands
+\newcommand{\squote}[1]{`{#1}'}
+\newcommand{\dquote}[1]{``{#1}''}
+\newcommand{\fct}[1]{{\texttt{#1()}\index{#1@\texttt{#1()}}}}
+\newcommand{\class}[1]{\dquote{\texttt{#1}}}
+
+\author{Francisco Cribari-Neto\\Universidade Federal de Pernambuco \And
+        Achim Zeileis\\WU Wirtschaftsuniversit\"at Wien}
+\Plainauthor{Francisco Cribari-Neto, Achim Zeileis}
+
+\title{Beta Regression in \proglang{R}}
+\Plaintitle{Beta Regression in R}
+
+\Keywords{beta regression, rates, proportions, \proglang{R}}
+\Plainkeywords{beta regression, rates, proportions, R}
+
+\Abstract{ 
+  To do. Beta regression for modeling rates and proportions.
+}
+
+\Address{
+  Francisco Cribari-Neto\\
+  Departamento de Estat{\'i}stica, CCEN\\
+  Universidade Federal de Pernambuco\\
+  Cidade Universit{\'a}ria\\
+  Recife/PE 50740-540, Brazil\\
+  E-mail: \email{cribari@ufpe.br}\\
+  URL: \url{http://www.de.ufpe.br/~cribari/}\\
+  
+  Achim Zeileis\\
+  Department of Statistics and Mathematics\\
+  WU Wirtschaftsuniversit\"at Wien\\
+  Augasse 2--6\\
+  1090 Wien, Austria\\
+  E-mail: \email{Achim.Zeileis@R-project.org}\\
+  URL: \url{http://statmath.wu-wien.ac.at/~zeileis/}
+}
+
+\begin{document}
+
+<<preliminaries, echo=FALSE, results=hide>>=
+options(width = 70, prompt = "R> ", continue = "+  ")
+library("betareg")
+@
+
+\section{Introduction} \label{sec:intro}
+
+beta regression for modeling rates and proportions
+\citep{betareg:Kieschnick+McCullough:2003,betareg:Ferrari+Cribari-Neto:2004}
+
+also \cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006} and
+\cite{betareg:Simas+Barreto-Souza+Rocha:2009}
+
+generalized linear models \citep{betareg:McCullagh+Nelder:1989}
+
+package for the \proglang{R} system for statistical computing \citep{betareg:R:2009}
+available from the Comprehensive \proglang{R} Archive Network (CRAN) at
+\url{http://CRAN.R-project.org/package=betareg}.
+
+The initial version was written by \cite{betareg:Simas+Rocha:2006} up to version~1.2
+which was orphaned and archived on CRAN in mid-2009. Achim Zeileis took over maintenance
+after rewriting the code, starting from version~2.0-0.
+
+
+
+
+
+
+\bibliography{betareg}
+
+\end{document}

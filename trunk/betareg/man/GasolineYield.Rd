@@ -56,8 +56,8 @@ Ferrari, S.L.P., and Cribari-Neto, F. (2004).
   \emph{Journal of Applied Statistics}, \bold{31}(7), 799--815.
 
 Prater, N.H. (1956).
-  \emph{Estimate Gasoline Yields from Crudes}.
-  New York: Springer-Verlag.
+  Estimate Gasoline Yields from Crudes.
+  \emph{Petroleum Refiner}, \bold{35}(5), 236--238.
 }
 
 \seealso{\code{\link{betareg}}}
