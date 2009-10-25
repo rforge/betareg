@@ -17,7 +17,7 @@ plot.betareg <- function(x, which = 1:4,
 
   res <- residuals(x, type = type)
   n <- length(res)
-  k <- length(x$coefficients) - 1
+  k <- length(x$coefficients$mean)
   show <- rep(FALSE, 5)
   show[which] <- TRUE
   one.fig <- prod(par("mfcol")) == 1
@@ -69,14 +69,15 @@ halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "deviance
 {
   ## extract response y and regressors X
   y <- if(is.null(model$y)) model.response(model.frame(model)) else model$y
-  x <- if(is.null(model$x)) model.matrix(model) else model$x
+  x <- if(is.null(model$x)) model.matrix(model, model = "mean") else model$x$mean
+  z <- if(is.null(model$x)) model.matrix(model, model = "dispersion") else model$x$dispersion
   offset <- if(is.null(model$offset)) rep(0, NROW(x)) else model$offset
   wts <- weights(model)
 
   n <- NROW(x)
   alpha <- (1 - level)/2
   mu <- fitted(model)
-  phi <- tail(model$coefficients, 1)    
+  phi <- predict(model, type = "dispersion")
   res <- residuals(model, type = type)
 
   e <- matrix(0, n, nsim)
@@ -85,7 +86,13 @@ halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "deviance
   
   for(i in 1:nsim) {
     ysim <- rbeta(n, mu * phi, (1 - mu) * phi)
-    fit <- betareg(ysim ~ 0 + x, weights = wts, offset = offset)
+    fit <- suppressWarnings(betareg.fit(x, ysim, z, weights = wts, offset = offset,
+      link = model$link$mean$name, link.phi = model$link$dispersion$name,
+        control = c(model$control, list(phi = model$phi, method = model$method,
+	  hessian = FALSE, start = model$coefficients))))
+    fit$y <- ysim
+    fit$x <- list(mean = x, dispersion = z)
+    class(fit) <- "betareg"
     e[,i] <- sort(abs(residuals(fit, type = type)))
   }
   

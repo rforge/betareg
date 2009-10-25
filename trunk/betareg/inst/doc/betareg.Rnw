@@ -57,10 +57,12 @@ library("betareg")
 \section{Introduction} \label{sec:intro}
 
 beta regression for modeling rates and proportions
-\citep{betareg:Kieschnick+McCullough:2003,betareg:Ferrari+Cribari-Neto:2004}
+\citep{betareg:Ferrari+Cribari-Neto:2004,betareg:Simas+Barreto-Souza+Rocha:2010}
 
 also \cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006} and
-\cite{betareg:Simas+Barreto-Souza+Rocha:2009}
+\cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008}
+
+maybe also \cite{betareg:Kieschnick+McCullough:2003}
 
 generalized linear models \citep{betareg:McCullagh+Nelder:1989}
 
@@ -73,8 +75,17 @@ which was orphaned and archived on CRAN in mid-2009. Achim Zeileis took over mai
 after rewriting the code, starting from version~2.0-0.
 
 
+\section{Illustrations} \label{sec:illustrations}
 
-
+<<eval=FALSE>>=
+set.seed(123)
+y1 <- c(rbeta(150, 0.3 * 4, 0.7 * 4), rbeta(50, 0.5 * 4, 0.5 * 4))
+y2 <- c(rbeta(100, 0.3 * 4, 0.7 * 4), rbeta(100, 0.3 * 8, 0.7 * 8))
+y1.efp <- gefp(y1 ~ 1, fit = betareg)
+y2.efp <- gefp(y2 ~ 1, fit = betareg)
+plot(y1.efp, aggregate = FALSE)
+plot(y2.efp, aggregate = FALSE)
+@
 
 
 \bibliography{betareg}
