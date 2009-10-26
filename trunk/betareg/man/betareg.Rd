@@ -12,7 +12,7 @@
 
 \usage{
 betareg(formula, data, subset, na.action, weights, offset,
-  link = c("logit", "probit", "cloglog", "cauchit", "log"),
+  link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
   link.phi = NULL, control = betareg.control(\dots),
   model = TRUE, y = TRUE, x = FALSE, \dots)
 
@@ -30,7 +30,7 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
     included in the linear predictor.}
   \item{link}{character specification of the link function in
     the mean model (mu). Currently, \code{"logit"}, \code{"probit"},
-    \code{"cloglog"}, \code{"cauchit"}, \code{"log"} are supported.}
+    \code{"cloglog"}, \code{"cauchit"}, \code{"log"}, \code{"loglog"} are supported.}
   \item{link.phi}{character specification of the link function in
     the dispersion model (phi). Currently, \code{"identity"},
     \code{"log"}, \code{"sqrt"} are supported. The default is \code{"log"}
@@ -120,7 +120,7 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
     \code{print}, \code{summary}, \code{coef} etc.,}
   \item{loglik}{log-likelihood of the fitted model,}
   \item{vcov}{covariance matrix of all parameters in the model,}
-  \item{pseudo.R.squared}{pseudo R-squared value (squared correlation of linear predictor
+  \item{pseudo.r.squared}{pseudo R-squared value (squared correlation of linear predictor
     and link-transformed response),}
   \item{link}{a list with elements \code{"mean"} and \code{"dispersion"}
     containing the link objects for the respective models,}

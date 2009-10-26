@@ -12,7 +12,7 @@
 \method{plot}{betareg}(x, which = 1:4,
   caption = c("Residuals vs indices of obs.", "Cook's distance plot",
     "Generalized leverage vs predicted values", "Residuals vs linear predictor", 
-    "Half-normal plot of residuals"),
+    "Half-normal plot of residuals", "Predicted vs observed values"),
     sub.caption = paste(deparse(x$call), collapse = "\n"), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
     \dots, type = "deviance", nsim = 100, level = 0.9)
@@ -45,7 +45,7 @@ data("GasolineYield", package = "betareg")
 gy <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
 
 par(mfrow = c(3, 2))
-plot(gy, which = 1:5)
+plot(gy, which = 1:6)
 }
 
 \keyword{regression}

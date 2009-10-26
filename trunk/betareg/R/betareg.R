@@ -1,5 +1,5 @@
 betareg <- function(formula, data, subset, na.action, weights, offset,
-                    link = c("logit", "probit", "cloglog", "cauchit", "log"),
+                    link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                     link.phi = NULL,
  		    control = betareg.control(...),
 		    model = TRUE, y = TRUE, x = FALSE, ...)
@@ -113,7 +113,18 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
   ## link processing
   linkstr <- link
-  linkobj <- make.link(linkstr)
+  linkobj <- if(linkstr != "loglog") make.link(linkstr) else {
+    structure(list(
+      linkfun = function(mu) -log(-log(mu)),
+      linkinv = function(eta) pmax(pmin(exp(-exp(-eta)), 1 - .Machine$double.eps), .Machine$double.eps),
+      mu.eta = function(eta) {
+        eta <- pmax(-100, pmin(eta, 700))
+        exp(-eta - exp(-eta))
+      },
+      valideta = function(eta) TRUE,
+      name = "loglog"
+    ), class = "link-glm")
+  }
   linkfun <- linkobj$linkfun
   linkinv <- linkobj$linkinv
   mu.eta <- linkobj$mu.eta
@@ -262,7 +273,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
-    pseudo.R.squared = pseudor2,
+    pseudo.r.squared = pseudor2,
     link = list(mean = linkobj, dispersion = phi_linkobj),
     converged = opt$convergence < 1    
   )
@@ -348,7 +359,7 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
   
     cat("\nLog-likelihood:", formatC(x$loglik, digits = digits),
       "on", sum(sapply(x$coefficients, NROW)), "Df\n")
-    cat("Pseudo R-squared:", formatC(x$pseudo.R.squared, digits = digits))
+    cat("Pseudo R-squared:", formatC(x$pseudo.r.squared, digits = digits))
     cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations, "\n"))
   }
   

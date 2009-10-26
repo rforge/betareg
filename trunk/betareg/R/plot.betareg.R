@@ -1,13 +1,13 @@
 plot.betareg <- function(x, which = 1:4,
   caption = c("Residuals vs indices of obs.", "Cook's distance plot",
     "Generalized leverage vs predicted values", "Residuals vs linear predictor", 
-    "Half-normal plot of residuals"),
+    "Half-normal plot of residuals", "Predicted vs observed values"),
     sub.caption = paste(deparse(x$call), collapse = "\n"), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
     ..., type = "deviance", nsim = 100, level = 0.9)
 {
-  if(!is.numeric(which) || any(which < 1) || any(which > 5)) 
-    stop("`which' must be in 1:5")
+  if(!is.numeric(which) || any(which < 1) || any(which > 6)) 
+    stop("`which' must be in 1:6")
     
   types <- c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2")
   Types <- c("Pearson residuals", "Deviance residuals", "Raw response residuals",
@@ -18,47 +18,57 @@ plot.betareg <- function(x, which = 1:4,
   res <- residuals(x, type = type)
   n <- length(res)
   k <- length(x$coefficients$mean)
-  show <- rep(FALSE, 5)
+  show <- rep(FALSE, 6)
   show[which] <- TRUE
+  Main <- rep("", 6)
+  Main[which] <- rep(main, length.out = sum(show))
   one.fig <- prod(par("mfcol")) == 1
   if(ask) {
     op <- par(ask = TRUE)
     on.exit(par(op))
   }
   if(show[1]) {
-    plot(1:n, res, xlab = "Obs. number", ylab = Type, main = main, ...)
+    plot(1:n, res, xlab = "Obs. number", ylab = Type, main = Main[1], ...)
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[1], 3, 0.25)
     abline(h = 0, lty = 3, col = "gray")
   }
   if(show[2]) {
     plot(1:n, cooks.distance(x),
-      xlab = "Obs. number", ylab = "Cook's distance", type = "h", main = main)
+      xlab = "Obs. number", ylab = "Cook's distance", type = "h", main = Main[2])
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[2], 3, 0.25)
   }
   if(show[3]) {
     plot(fitted(x), gleverage(x),
-      xlab = "Predicted values", ylab = "Generalized leverage", main = main, ...)
+      xlab = "Predicted values", ylab = "Generalized leverage", main = Main[3], ...)
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[3], 3, 0.25)
   }
   if(show[4]) {
     plot(predict(x, type = "link"), res,
-      xlab = "Linear predictor", ylab = Type, main = main, ...)
+      xlab = "Linear predictor", ylab = Type, main = Main[4], ...)
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[4], 3, 0.25)
     abline(h = 0, lty = 3, col = "gray")
   }
   if(show[5]) {
     hn <- halfnormal.betareg(x, nsim = nsim, level = level, type = type)
-    plot(hn[,1], hn[,2], ylim = range(hn[,-1]), main = main,
+    plot(hn[,1], hn[,2], ylim = range(hn[,-1]), main = Main[5],
       xlab = "Normal quantiles", ylab = paste(Type, "(absolute values)"), ...)
     lines(hn[,1], hn[,3],lty = 2)
     lines(hn[,1], hn[,4],lty = 1)
     lines(hn[,1], hn[,5],lty = 1)
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[5], 3, 0.25)
+  }
+  if(show[6]) {
+    y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
+    plot(y, fitted(x),
+      xlab = "Observed values", ylab = "Predicted values", main = Main[6], ...)
+    if(one.fig) title(sub = sub.caption, ...)
+    mtext(caption[6], 3, 0.25)
+    abline(0, 1, lty = 3, col = "gray")
   }
 
   if(!one.fig && par("oma")[3] >= 1) mtext(sub.caption, outer = TRUE, cex = 1.25)

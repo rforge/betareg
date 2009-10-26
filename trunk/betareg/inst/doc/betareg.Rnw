@@ -77,10 +77,85 @@ after rewriting the code, starting from version~2.0-0.
 
 \section{Illustrations} \label{sec:illustrations}
 
-<<eval=FALSE>>=
+<<ferrari+cribari-neto, eval=FALSE>>=
+## Section 4 from Ferrari and Cribari-Neto (2004)
+data("GasolineYield", package = "betareg")
+data("FoodExpenditure", package = "betareg")
+
+## Table 1
+gy_logit <- betareg(yield ~ batch + temp, data = GasolineYield)
+summary(gy_logit)
+
+## Figure 2
+par(mfrow = c(3, 2))
+plot(gy_logit, which = 1:4)
+plot(gy_logit, which = 5, type = "deviance", sub.caption = "")
+plot(gy_logit, which = 1, type = "deviance", sub.caption = "")
+
+## exclude 4th observation
+gy_logit4 <- update(gy_logit, subset = -4)
+gy_logit4
+summary(gy_logit4)
+
+## Table 2
+fe_lin <- lm(I(food/income) ~ income + persons, data = FoodExpenditure)
+library("lmtest")
+bptest(fe_lin)
+fe_beta <- betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
+summary(fe_beta)
+@
+
+<<simas+etal, eval=FALSE>>=
+## Section 3 from online supplements to Simas et al. (2010)
+## mean model as in gy above
+## dispersion model with regressor temp
+gy_phi <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
+
+## MLE column in Table 19
+summary(gy_phi)
+
+## LRT row in Table 18
+lrtest(gy_logit, gy_phi)
+@
+
+<<cribari-neta+lima, eval=FALSE>>=
+## Section 5 from Cribari-Neto and Lima (2009)
+## log-log link
+gy_loglog <- betareg(yield ~ batch + temp, data = GasolineYield, link = "loglog")
+
+## clearly improves AIC
+AIC(gy_logit, gy_loglog)
+## (apparently the df did not include phi in Cribari-Neto and Lima, 2009)
+
+## pseudo R-squared can not be reproduced for log-log specification
+summary(gy_logit)$pseudo.r.squared
+summary(gy_loglog)$pseudo.r.squared
+## which is
+cor(qlogis(GasolineYield$yield), predict(gy_loglog, type = "link"))^2
+
+## diagnostic tests (in LR instead of LM version)
+lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "link")^2))
+lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "link")^2))
+## or
+lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "response")^2))
+lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "response")^2))
+## etc.
+
+## diagnostic plots
+par(mfrow = c(1, 2))
+plot(gy_logit, which = 6)
+plot(gy_loglog, which = 6)
+@
+
+<<zeileis, eval=FALSE>>=
+## Section 5.3 from Zeileis (2006), Figure 4
 set.seed(123)
+## change in mu
 y1 <- c(rbeta(150, 0.3 * 4, 0.7 * 4), rbeta(50, 0.5 * 4, 0.5 * 4))
+## change in phi
 y2 <- c(rbeta(100, 0.3 * 4, 0.7 * 4), rbeta(100, 0.3 * 8, 0.7 * 8))
+
+library("strucchange")
 y1.efp <- gefp(y1 ~ 1, fit = betareg)
 y2.efp <- gefp(y2 ~ 1, fit = betareg)
 plot(y1.efp, aggregate = FALSE)
