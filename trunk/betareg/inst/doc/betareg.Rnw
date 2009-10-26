@@ -57,14 +57,27 @@ library("betareg")
 \section{Introduction} \label{sec:intro}
 
 beta regression for modeling rates and proportions
-\citep{betareg:Ferrari+Cribari-Neto:2004,betareg:Simas+Barreto-Souza+Rocha:2010}
+\citep{betareg:Ferrari+Cribari-Neto:2004}, extended with regression
+model for dispersion/precision parameter \citep{betareg:Simas+Barreto-Souza+Rocha:2010}
+
+diagnostics and link functions \citep{betareg:Cribari-Neto+Lima:2007}
 
 also \cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006} and
 \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008}
 
-maybe also \cite{betareg:Kieschnick+McCullough:2003}
+other approaches by \cite{betareg:Paolino:2001} and
+\cite{betareg:Kieschnick+McCullough:2003}
 
 generalized linear models \citep{betareg:McCullagh+Nelder:1989}
+
+data from \cite{betareg:Prater:1956} and \cite{betareg:Griffiths+Hill+Judge:1993}
+
+implementation ideas from \cite{betareg:Zeileis+Kleiber+Jackman:2008},
+employs two-part formulas based on \cite{betareg:Zeileis+Croissant:2009},
+interface including estimating functions from \cite{betareg:Zeileis:2004,betareg:Zeileis:2006a},
+can be plugged into generic inference tools from \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}
+and \pkg{car} \citep{betareg:Fox:2002} such as \code{coeftest}, \code{lrtest}, \code{waldtest},
+or \code{linear.hypothesis}.
 
 package for the \proglang{R} system for statistical computing \citep{betareg:R:2009}
 available from the Comprehensive \proglang{R} Archive Network (CRAN) at
@@ -119,13 +132,13 @@ lrtest(gy_logit, gy_phi)
 @
 
 <<cribari-neta+lima, eval=FALSE>>=
-## Section 5 from Cribari-Neto and Lima (2009)
+## Section 5 from Cribari-Neto and Lima (2007)
 ## log-log link
 gy_loglog <- betareg(yield ~ batch + temp, data = GasolineYield, link = "loglog")
 
 ## clearly improves AIC
 AIC(gy_logit, gy_loglog)
-## (apparently the df did not include phi in Cribari-Neto and Lima, 2009)
+## (apparently the df did not include phi in Cribari-Neto and Lima, 2007)
 
 ## pseudo R-squared can not be reproduced for log-log specification
 summary(gy_logit)$pseudo.r.squared
