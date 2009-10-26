@@ -118,8 +118,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       linkfun = function(mu) -log(-log(mu)),
       linkinv = function(eta) pmax(pmin(exp(-exp(-eta)), 1 - .Machine$double.eps), .Machine$double.eps),
       mu.eta = function(eta) {
-        eta <- pmax(-100, pmin(eta, 700))
-        exp(-eta - exp(-eta))
+        eta <- pmin(eta, 700)
+        pmax(exp(-eta - exp(-eta)), .Machine$double.eps)
       },
       valideta = function(eta) TRUE,
       name = "loglog"
@@ -203,7 +203,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
   psi1 <- trigamma(mu * phi)
   psi2 <- trigamma((1 - mu) * phi)
-  pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, ystar)^2
+  pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
 
   ## compute analytical covariance matrix
   ## <FIXME> 
