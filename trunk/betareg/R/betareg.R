@@ -268,8 +268,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     weights = if(identical(as.vector(weights), rep(1, n))) NULL else weights,
     offset = if(identical(offset, rep(0, n))) NULL else offset,
     n = n,
-    df.null = n - 1, ## FIXME: -1?
-    df.residual = n - k, ## FIXME: -m ?
+    ## df.null = n - 1, ## FIXME: -1?
+    ## df.residual = n - k, ## FIXME: -m ?
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,

@@ -113,8 +113,6 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{weights}{the weights used (if any),}
   \item{offset}{the offset vector used (if any),}
   \item{n}{number of observations,}
-  \item{df.null}{residual degrees of freedom for the null model (= \code{n - 1}) FIXME,}
-  \item{df.residual}{residual degrees of freedom for fitted model,}
   \item{phi}{logical indicating whether the dispersion (phi) coefficients will be
     treated as full model parameters or nuisance parameters in subsequent calls to
     \code{print}, \code{summary}, \code{coef} etc.,}
