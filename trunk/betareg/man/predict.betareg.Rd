@@ -11,7 +11,7 @@
 
 \usage{
 \method{predict}{betareg}(object, newdata = NULL,
-  type = c("response", "link", "dispersion"), na.action = na.pass, \dots)
+  type = c("response", "link", "precision"), na.action = na.pass, \dots)
 }
 
 \arguments{
@@ -19,8 +19,8 @@
   \item{newdata}{optionally, a data frame in which to look for variables with
     which to predict. If omitted, the original observations are used.}
   \item{type}{character indicating type of predictions: fitted means of response (\code{"response"}),
-    corresponding linear predictor (\code{"link"}), or fitted dispersion parameter
-    phi (\code{"dispersion"}).}
+    corresponding linear predictor (\code{"link"}), or fitted precision parameter
+    phi (\code{"precision"}).}
   \item{na.action}{function determining what should be done with missing values
     in \code{newdata}. The default is to predict \code{NA}.}
   \item{\dots}{currently not used.}
@@ -34,7 +34,7 @@ gy2 <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
 cbind(
   predict(gy2, type = "response"),
   predict(gy2, type = "link"),
-  predict(gy2, type = "dispersion")
+  predict(gy2, type = "precision")
 )
 }
 

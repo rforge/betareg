@@ -121,7 +121,7 @@ summary(fe_beta)
 <<simas+etal, eval=FALSE>>=
 ## Section 3 from online supplements to Simas et al. (2010)
 ## mean model as in gy above
-## dispersion model with regressor temp
+## precision model with regressor temp
 gy_phi <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
 
 ## MLE column in Table 19

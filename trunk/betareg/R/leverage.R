@@ -12,7 +12,7 @@ gleverage.betareg <- function(model, ...)
   ## extract response y and regressors X
   y <- if(is.null(model$y)) model.response(model.frame(model)) else model$y
   x <- if(is.null(model$x)) model.matrix(model, model = "mean") else model$x$mean
-  z <- if(is.null(model$x)) model.matrix(model, model = "dispersion") else model$x$dispersion
+  z <- if(is.null(model$x)) model.matrix(model, model = "precision") else model$x$precision
   offset <- if(is.null(model$offset)) rep(0, NROW(x)) else model$offset
   wts <- weights(model)
   if(is.null(wts)) wts <- 1
@@ -20,13 +20,13 @@ gleverage.betareg <- function(model, ...)
   
   ## extract coefficients
   beta <- model$coefficients$mean
-  gamma <- model$coefficients$dispersion
+  gamma <- model$coefficients$precision
 
   ## compute different types of "fitted" values
   eta <- as.vector(x %*% beta + offset)
   phi_eta <- as.vector(z %*% gamma)
   mu <- model$link$mean$linkinv(eta)
-  phi <- model$link$dispersion$linkinv(phi_eta)
+  phi <- model$link$precision$linkinv(phi_eta)
   psi1 <- trigamma(mu * phi)
   psi2 <- trigamma((1 - mu) * phi)
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
@@ -71,20 +71,20 @@ hatvalues.betareg <- function(model, ...)
   ## extract response y and regressors X and Z
   y <- if(is.null(model$y)) model.response(model.frame(model)) else model$y
   x <- if(is.null(model$x)) model.matrix(model, model = "mean") else model$x$mean
-  z <- if(is.null(model$x)) model.matrix(model, model = "dispersion") else model$x$dispersion
+  z <- if(is.null(model$x)) model.matrix(model, model = "precision") else model$x$precision
   offset <- if(is.null(model$offset)) rep(0, NROW(x)) else model$offset
   wts <- weights(model)
   if(is.null(wts)) wts <- 1
   
   ## extract coefficients
   beta <- model$coefficients$mean
-  gamma <- model$coefficients$dispersion
+  gamma <- model$coefficients$precision
 
   ## compute different types of "fitted" values
   eta <- as.vector(x %*% beta + offset)
   phi_eta <- as.vector(z %*% gamma)
   mu <- model$link$mean$linkinv(eta)
-  phi <- model$link$dispersion$linkinv(phi_eta)
+  phi <- model$link$precision$linkinv(phi_eta)
   psi1 <- trigamma(mu * phi)
   psi2 <- trigamma((1 - mu) * phi)
 

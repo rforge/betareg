@@ -7,7 +7,7 @@
 \description{
   Fit beta regression models for rates and proportions via maximum likelihood
   using a parametrization with mean (depending through a link function on the
-  covariates) and dispersion parameter (called phi).
+  covariates) and precision parameter (called phi).
 }
 
 \usage{
@@ -32,7 +32,7 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
     the mean model (mu). Currently, \code{"logit"}, \code{"probit"},
     \code{"cloglog"}, \code{"cauchit"}, \code{"log"}, \code{"loglog"} are supported.}
   \item{link.phi}{character specification of the link function in
-    the dispersion model (phi). Currently, \code{"identity"},
+    the precision model (phi). Currently, \code{"identity"},
     \code{"log"}, \code{"sqrt"} are supported. The default is \code{"log"}
     unless \code{formula} is of type \code{y ~ x} where the default is
     \code{"identity"} (for backward compatibility).}
@@ -42,7 +42,7 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
     of the fit (model frame, response, model matrix) are returned.
     For \code{betareg.fit}, \code{x} should be a numeric regressor matrix
     and \code{y} should be the numeric response vector (with values in (0,1)).}
-  \item{z}{numeric matrix. Regressor matrix for the dispersion model, defaulting
+  \item{z}{numeric matrix. Regressor matrix for the precision model, defaulting
     to an intercept only.}
   \item{\dots}{arguments passed to \code{\link{betareg.control}}.}
 }
@@ -52,23 +52,24 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   by Simas, Barreto-Souza, and Rocha (2010) is implemented in \code{betareg}.
   It is useful in situations where the dependent variable is continuous and restricted to
   the unit interval (0, 1), e.g., resulting from rates or proportions. It is modeled to be
-  beta-distributed with parametrization using mean and dispersion/precision parameter (called phi).
+  beta-distributed with parametrization using mean and precision parameter (called phi).
   The mean is linked, as in generalized linear models (GLMs), to the responses through a link
-  function and a linear predictor. Additionally, the dispersion parameter phi can be linked
-  to another (potentially overlapping) set of regressors through a second link function.  
+  function and a linear predictor. Additionally, the precision parameter phi can be linked
+  to another (potentially overlapping) set of regressors through a second link function,
+  resulting in a model with variable dispersion.  
   Estimation is performed by maximum likelihood (ML) via \code{\link[stats]{optim}} using
   analytical gradients and (by default) starting values from an auxiliary linear regression
   of the transformed response.
 
   In the beta regression as introduced by Ferrari and Cribari-Neto (2004), the mean of
   the response is linked to a linear predictor described by \code{y ~ x1 + x2} using
-  a \code{link} function while the dispersion/precision parameter phi is assumed to be
+  a \code{link} function while the precision parameter phi is assumed to be
   constant. Simas et al. (2009) suggest to extend this model by linking phi to an
   additional set of regressors (\code{z1 + z2}, say): In \code{betareg} this can be
   specified in a formula of type \code{y ~ x1 + x2 | z1 + z2} where the regressors
-  in the two parts can be overlapping. In the dispersion model (for phi), the link
+  in the two parts can be overlapping. In the precision model (for phi), the link
   function \code{link.phi} is used. The default is a \code{"log"} link unless no
-  dispersion model is specified. In the latter case (i.e., when the formula is of type
+  precision model is specified. In the latter case (i.e., when the formula is of type
   \code{y ~ x1 + x2}), the \code{"identity"} link is used by default for backward
   compatibility.
   
@@ -76,7 +77,7 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   bias correction) which are not yet implemented in \code{betareg}.
 
   The main parameters of interest are the coefficients in the linear predictor of the mean
-  model. The additional parameters in the dispersion model (phi) can either
+  model. The additional parameters in the precision model (phi) can either
   be treated as full model parameters (default) or as nuisance parameters. In the latter case
   the estimation does not change, only the reported information in output from \code{print},
   \code{summary}, or \code{coef} (among others) will be different. See also \code{\link{betareg.control}}.
@@ -102,7 +103,7 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
 \value{
   \code{betareg} returns an object of class \code{"betareg"}, i.e., a list with components as follows.
   \code{betareg.fit} returns an unclassed list with components up to \code{converged}.
-  \item{coefficients}{a list with elements \code{"mean"} and \code{"dispersion"}
+  \item{coefficients}{a list with elements \code{"mean"} and \code{"precision"}
     containing the coefficients from the respective models,}
   \item{residuals}{a vector of raw residuals (observed - fitted),}
   \item{fitted.values}{a vector of fitted means,}
@@ -113,27 +114,31 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{weights}{the weights used (if any),}
   \item{offset}{the offset vector used (if any),}
   \item{n}{number of observations,}
-  \item{phi}{logical indicating whether the dispersion (phi) coefficients will be
+  \item{df.null}{residual degrees of freedom in the null model (constant mean and dispersion),
+    i.e., \code{n - 2},}
+  \item{df.residual}{residual degrees of freedom in the fitted model,}
+  \item{phi}{logical indicating whether the precision (phi) coefficients will be
     treated as full model parameters or nuisance parameters in subsequent calls to
     \code{print}, \code{summary}, \code{coef} etc.,}
   \item{loglik}{log-likelihood of the fitted model,}
   \item{vcov}{covariance matrix of all parameters in the model,}
+  \item{hessian}{Hessian matrix, i.e., inverse of the covariance matrix,}
   \item{pseudo.r.squared}{pseudo R-squared value (squared correlation of linear predictor
     and link-transformed response),}
-  \item{link}{a list with elements \code{"mean"} and \code{"dispersion"}
+  \item{link}{a list with elements \code{"mean"} and \code{"precision"}
     containing the link objects for the respective models,}
   \item{converged}{logical indicating successful convergence of \code{optim},}
   \item{call}{the original function call,}
   \item{formula}{the original formula,}  
-  \item{terms}{a list with elements \code{"mean"}, \code{"dispersion"} and
+  \item{terms}{a list with elements \code{"mean"}, \code{"precision"} and
     \code{"full"} containing the terms objects for the respective models,}
   \item{levels}{levels of the categorical regressors,}
-  \item{contrasts}{a list with elements \code{"mean"} and \code{"dispersion"}
+  \item{contrasts}{a list with elements \code{"mean"} and \code{"precision"}
     containing the contrasts corresponding to \code{levels} from the
     respective models,}
   \item{model}{the full model frame (if \code{model = TRUE}),}
   \item{y}{the response proportion vector (if \code{y = TRUE}),}
-  \item{x}{a list with elements \code{"mean"} and \code{"dispersion"}
+  \item{x}{a list with elements \code{"mean"} and \code{"precision"}
     containing the model matrices from the respective models
     (if \code{x = TRUE}).}
 }
@@ -175,7 +180,7 @@ waldtest(fe_beta, fe_beta2)
 
 ## Section 3 from online supplements to Simas et al. (2010)
 ## mean model as in gy above
-## dispersion model with regressor temp
+## precision model with regressor temp
 gy2 <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
 
 ## MLE column in Table 19

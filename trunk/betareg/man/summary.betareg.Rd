@@ -28,8 +28,8 @@
 \usage{
 \method{summary}{betareg}(object, phi = NULL, \dots)
 
-\method{coef}{betareg}(object, model = c("full", "mean", "dispersion"), phi = NULL, \dots)
-\method{vcov}{betareg}(object, model = c("full", "mean", "dispersion"), phi = NULL, \dots)
+\method{coef}{betareg}(object, model = c("full", "mean", "precision"), phi = NULL, \dots)
+\method{vcov}{betareg}(object, model = c("full", "mean", "precision"), phi = NULL, \dots)
 \method{bread}{betareg}(x, phi = NULL, \dots)
 \method{estfun}{betareg}(x, phi = NULL, \dots)
 }
@@ -38,7 +38,7 @@
   \item{object, x}{fitted model object of class \code{"betareg"}.}
   \item{model}{character specifying for which component of the model coefficients/covariance
     should be extracted. (Only used if \code{phi} is \code{NULL}.)}
-  \item{phi}{logical indicating whether the parameters in the dispersion model
+  \item{phi}{logical indicating whether the parameters in the precision model
     (for phi) should be reported as full model parameters (\code{TRUE}) or
     nuisance parameters (\code{FALSE}). The default is taken from
     \code{object$phi}.}
@@ -83,7 +83,7 @@ logLik(gy2)
 AIC(gy2)
 
 coef(gy2, model = "mean")
-coef(gy2, model = "dispersion")
+coef(gy2, model = "precision")
 summary(gy2, phi = FALSE)
 }
 

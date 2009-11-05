@@ -70,12 +70,12 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   ## further model information
   rval$call <- cl
   rval$formula <- oformula
-  rval$terms <- list(mean = mtX, dispersion = mtZ, full = mt)
+  rval$terms <- list(mean = mtX, precision = mtZ, full = mt)
   rval$levels <- .getXlevels(mt, mf)
-  rval$contrasts <- list(mean = attr(X, "contrasts"), dispersion = attr(Z, "contrasts"))
+  rval$contrasts <- list(mean = attr(X, "contrasts"), precision = attr(Z, "contrasts"))
   if(model) rval$model <- mf
   if(y) rval$y <- Y
-  if(x) rval$x <- list(mean = X, dispersion = Z)
+  if(x) rval$x <- list(mean = X, precision = Z)
 
   class(rval) <- "betareg"  
   return(rval)
@@ -157,7 +157,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi <- lm.wfit(z, phi_linkfun(phi_y), weights)$coefficients
     #FIXME# The line above generalizes Ferrari & Cribari-Neto (2004), appropriate?
     #FIXME# Different choice from Simas et al. (2009)
-    start <- list(mean = beta, dispersion = phi)
+    start <- list(mean = beta, precision = phi)
   }
 
   ## objective function and gradient
@@ -244,21 +244,30 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   kbb <- crossprod(sqrt(weights) * sqrt(wbb) * x)
   kpp <- crossprod(sqrt(weights) * sqrt(wpp) * z)
   kbp <- crossprod(weights * wbp * x, z)
-  ## compute K^(-1)
-  vcov <- solve(cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp)))
-
-  ## if specified, use Hessian instead of analytical solution
-  if(hessian) vcov <- -solve(as.matrix(opt$hessian))
+  if(!hessian) {
+    ## put together K
+    hess <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
+    ## compute K^(-1)
+    kbb1 <- chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x)))
+    kpp1 <- solve(kpp - t(kbp) %*% kbb1 %*% kbp)
+    vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
+      -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+    ## vcov <- solve(hess)
+  } else {
+    ## if specified, use numerical Hessian instead of analytical solution
+    hess <- -as.matrix(opt$hessian)
+    vcov <- solve(hess)
+  }
 
   ## names
   names(beta) <- colnames(x)
   names(gamma) <- if(phi_const & phi_linkstr == "identity") "(phi)" else colnames(z)
-  rownames(vcov) <- colnames(vcov) <- c(colnames(x), 
-    if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"))  
+  rownames(vcov) <- colnames(vcov) <- rownames(hess) <- colnames(hess) <- c(colnames(x), 
+    if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"))
 
   ## set up return value
   rval <- list(  
-    coefficients = list(mean = beta, dispersion = gamma),
+    coefficients = list(mean = beta, precision = gamma),
     residuals = y - mu,
     fitted.values = structure(mu, .Names = names(y)),
     optim = opt,
@@ -268,13 +277,14 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     weights = if(identical(as.vector(weights), rep(1, n))) NULL else weights,
     offset = if(identical(offset, rep(0, n))) NULL else offset,
     n = n,
-    ## df.null = n - 1, ## FIXME: -1?
-    ## df.residual = n - k, ## FIXME: -m ?
+    df.null = n - 2,
+    df.residual = n - k -m,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
+    hessian = hess,
     pseudo.r.squared = pseudor2,
-    link = list(mean = linkobj, dispersion = phi_linkobj),
+    link = list(mean = linkobj, precision = phi_linkobj),
     converged = opt$convergence < 1    
   )
 
@@ -293,8 +303,8 @@ print.betareg <- function (x, digits = max(3, getOption("digits") - 3), ...)
       print.default(format(x$coefficients$mean, digits = digits), print.gap = 2, quote = FALSE)
       cat("\n")
       if(x$phi) {
-        cat(paste("Phi coefficients (dispersion model with ", x$link$dispersion$name, " link):\n", sep = ""))
-        print.default(format(x$coefficients$dispersion, digits = digits), print.gap = 2, quote = FALSE)
+        cat(paste("Phi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
+        print.default(format(x$coefficients$precision, digits = digits), print.gap = 2, quote = FALSE)
         cat("\n")
       }
     }
@@ -318,9 +328,9 @@ summary.betareg <- function(object, phi = NULL, ...)
   se <- sqrt(diag(object$vcov))
   cf <- cbind(cf, se, cf/se, 2 * pnorm(-abs(cf/se)))
   colnames(cf) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
-  cf <- list(mean = cf[1:k, , drop = FALSE], dispersion = cf[-(1:k), , drop = FALSE])
+  cf <- list(mean = cf[1:k, , drop = FALSE], precision = cf[-(1:k), , drop = FALSE])
   rownames(cf$mean) <- names(object$coefficients$mean)
-  rownames(cf$dispersion) <- names(object$coefficients$dispersion)
+  rownames(cf$precision) <- names(object$coefficients$precision)
   object$coefficients <- cf
   
   ## number of iterations
@@ -350,8 +360,8 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
     printCoefmat(x$coefficients$mean, digits = digits, signif.legend = FALSE)
   
     if(x$phi) {
-      cat(paste("\nPhi coefficients (dispersion model with ", x$link$dispersion$name, " link):\n", sep = ""))
-      printCoefmat(x$coefficients$dispersion, digits = digits, signif.legend = FALSE)
+      cat(paste("\nPhi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
+      printCoefmat(x$coefficients$precision, digits = digits, signif.legend = FALSE)
     }
     
     if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[,4] < 0.1))
@@ -367,7 +377,7 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
 }
 
 predict.betareg <- function(object, newdata = NULL,
-  type = c("response", "link", "dispersion"), na.action = na.pass, ...) 
+  type = c("response", "link", "precision"), na.action = na.pass, ...) 
 {
   type <- match.arg(type)
   
@@ -380,10 +390,10 @@ predict.betareg <- function(object, newdata = NULL,
       "link" = {
         object$link$mean$linkfun(object$fitted.values)
       },      
-      "dispersion" = {
-        gamma <- object$coefficients$dispersion
-        z <- if(is.null(object$x)) model.matrix(object, model = "dispersion") else object$x$dispersion
-	object$link$dispersion$linkinv(drop(z %*% gamma))
+      "precision" = {
+        gamma <- object$coefficients$precision
+        z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
+	object$link$precision$linkinv(drop(z %*% gamma))
       }
     )
     return(rval)
@@ -392,7 +402,7 @@ predict.betareg <- function(object, newdata = NULL,
 
     mf <- model.frame(delete.response(object$terms$mean), newdata, na.action = na.action, xlev = object$levels)
     X <- model.matrix(delete.response(object$terms$mean), mf, contrasts = object$contrasts$mean)
-    Z <- model.matrix(object$terms$dispersion, mf, contrasts = object$contrasts$dispersion)
+    Z <- model.matrix(object$terms$precision, mf, contrasts = object$contrasts$precision)
     offset <- if(!is.null(off.num <- attr(object$terms$full, "offset")))
   	eval(attr(object$terms$full, "variables")[[off.num + 1]], newdata)
       else if(!is.null(object$offset)) eval(object$call$offset, newdata)
@@ -405,8 +415,8 @@ predict.betareg <- function(object, newdata = NULL,
       "link" = {
         drop(X %*% object$coefficients$mean + offset)
       },      
-      "dispersion" = {
-        object$link$mean$linkinv(drop(Z %*% object$coefficients$dispersion))
+      "precision" = {
+        object$link$mean$linkinv(drop(Z %*% object$coefficients$precision))
       }
     )
     return(rval)
@@ -414,7 +424,7 @@ predict.betareg <- function(object, newdata = NULL,
   }
 }
 
-coef.betareg <- function(object, model = c("full", "mean", "dispersion"), phi = NULL, ...) {
+coef.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...) {
   cf <- object$coefficients
 
   model <- if(is.null(phi)) {
@@ -428,20 +438,20 @@ coef.betareg <- function(object, model = c("full", "mean", "dispersion"), phi = 
     "mean" = {
       cf$mean
     },
-    "dispersion" = {
-      cf$dispersion
+    "precision" = {
+      cf$precision
     },
     "full" = {
       nam1 <- names(cf$mean)
-      nam2 <- names(cf$dispersion)
-      cf <- c(cf$mean, cf$dispersion)
+      nam2 <- names(cf$precision)
+      cf <- c(cf$mean, cf$precision)
       names(cf) <- c(nam1, if(identical(nam2, "(phi)")) "(phi)" else paste("(phi)", nam2, sep = "_"))
       cf
     }
   )
 }
 
-vcov.betareg <- function(object, model = c("full", "mean", "dispersion"), phi = NULL, ...) {
+vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...) {
   vc <- object$vcov
   k <- length(object$coefficients$mean)
 
@@ -456,9 +466,9 @@ vcov.betareg <- function(object, model = c("full", "mean", "dispersion"), phi = 
     "mean" = {
       vc[1:k, 1:k, drop = FALSE]
     },
-    "dispersion" = {
+    "precision" = {
       vc <- vc[-(1:k), -(1:k), drop = FALSE]
-      colnames(vc) <- rownames(vc) <- names(object$coefficients$dispersion)
+      colnames(vc) <- rownames(vc) <- names(object$coefficients$precision)
       vc
     },
     "full" = {
@@ -476,7 +486,7 @@ estfun.betareg <- function(x, phi = NULL, ...)
   ## extract response y and regressors X and Z
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
   xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean
-  zmat <- if(is.null(x$x)) model.matrix(x, model = "dispersion") else x$x$dispersion
+  zmat <- if(is.null(x$x)) model.matrix(x, model = "precision") else x$x$precision
   offset <- if(is.null(x$offset)) rep(0, NROW(xmat)) else x$offset
   wts <- weights(x)
   if(is.null(wts)) wts <- 1
@@ -484,7 +494,7 @@ estfun.betareg <- function(x, phi = NULL, ...)
   
   ## extract coefficients
   beta <- x$coefficients$mean
-  gamma <- x$coefficients$dispersion
+  gamma <- x$coefficients$precision
 
   ## compute y*
   ystar <- qlogis(y)
@@ -493,7 +503,7 @@ estfun.betareg <- function(x, phi = NULL, ...)
   eta <- as.vector(xmat %*% beta + offset)
   phi_eta <- as.vector(zmat %*% gamma)
   mu <- x$link$mean$linkinv(eta)
-  phi <- x$link$dispersion$linkinv(phi_eta)
+  phi <- x$link$precision$linkinv(phi_eta)
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
 
   ## compute scores of beta
@@ -503,7 +513,7 @@ estfun.betareg <- function(x, phi = NULL, ...)
   if(phi_full) {
     rval <- cbind(rval,
       (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
-      as.vector(x$link$dispersion$mu.eta(phi_eta)) * wts * zmat)
+      as.vector(x$link$precision$mu.eta(phi_eta)) * wts * zmat)
     colnames(rval) <- names(coef(x, phi = phi_full))
   }
 
@@ -518,7 +528,7 @@ logLik.betareg <- function(object, ...) {
   structure(object$loglik, df = sum(sapply(object$coefficients, length)), class = "logLik")
 }
 
-terms.betareg <- function(x, model = c("mean", "dispersion"), ...) {
+terms.betareg <- function(x, model = c("mean", "precision"), ...) {
   x$terms[[match.arg(model)]]
 }
 
@@ -530,7 +540,7 @@ model.frame.betareg <- function(formula, ...) {
   NextMethod()
 }
 
-model.matrix.betareg <- function(object, model = c("mean", "dispersion"), ...) {
+model.matrix.betareg <- function(object, model = c("mean", "precision"), ...) {
   model <- match.arg(model)
   rval <- if(!is.null(object$x[[model]])) object$x[[model]]
     else model.matrix(object$terms[[model]], model.frame(object), contrasts = object$contrasts[[model]])
@@ -550,7 +560,7 @@ residuals.betareg <- function(object,
   mu <- fitted(object)
   wts <- weights(object)
   if(is.null(wts)) wts <- 1
-  phi <- predict(object, type = "dispersion")
+  phi <- predict(object, type = "precision")
   
   res <- switch(type,
   

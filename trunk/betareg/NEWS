@@ -1,7 +1,8 @@
 Changes in Version 2.1-0
 
-  o Implemented an optional dispersion model, i.e., dependence
-    of phi parameter on a linear predictor, as suggested by
+  o Implemented an optional precision model, yielding
+    variable dispersion. The precision parameter phi may
+    depend on a linear predictor, as suggested by
     Simas, Barreto-Souza, and Rocha (2010). In single part
     formulas of type y ~ x1 + x2, phi is by default assumed to
     be constant, i.e., an intercept plus identity link. But

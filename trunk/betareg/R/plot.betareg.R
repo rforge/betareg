@@ -80,14 +80,14 @@ halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "deviance
   ## extract response y and regressors X
   y <- if(is.null(model$y)) model.response(model.frame(model)) else model$y
   x <- if(is.null(model$x)) model.matrix(model, model = "mean") else model$x$mean
-  z <- if(is.null(model$x)) model.matrix(model, model = "dispersion") else model$x$dispersion
+  z <- if(is.null(model$x)) model.matrix(model, model = "precision") else model$x$precision
   offset <- if(is.null(model$offset)) rep(0, NROW(x)) else model$offset
   wts <- weights(model)
 
   n <- NROW(x)
   alpha <- (1 - level)/2
   mu <- fitted(model)
-  phi <- predict(model, type = "dispersion")
+  phi <- predict(model, type = "precision")
   res <- residuals(model, type = type)
 
   e <- matrix(0, n, nsim)
@@ -97,11 +97,11 @@ halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "deviance
   for(i in 1:nsim) {
     ysim <- rbeta(n, mu * phi, (1 - mu) * phi)
     fit <- suppressWarnings(betareg.fit(x, ysim, z, weights = wts, offset = offset,
-      link = model$link$mean$name, link.phi = model$link$dispersion$name,
+      link = model$link$mean$name, link.phi = model$link$precision$name,
         control = c(model$control, list(phi = model$phi, method = model$method,
 	  hessian = FALSE, start = model$coefficients))))
     fit$y <- ysim
-    fit$x <- list(mean = x, dispersion = z)
+    fit$x <- list(mean = x, precision = z)
     class(fit) <- "betareg"
     e[,i] <- sort(abs(residuals(fit, type = type)))
   }
