@@ -1,19 +1,14 @@
 \documentclass[nojss]{jss}
 \usepackage{thumbpdf}
 
-%% need no \usepackage{Sweave}
-\SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
-%\VignetteIndexEntry{Beta Regression in R}
-%\VignetteDepends{stats,betareg,car,lmtest,sandwich}
-%\VignetteKeywords{beta regression, rates, proportions, R}
-%\VignettePackage{betareg}
-
-
 %% additional commands
 \newcommand{\squote}[1]{`{#1}'}
 \newcommand{\dquote}[1]{``{#1}''}
 \newcommand{\fct}[1]{{\texttt{#1()}\index{#1@\texttt{#1()}}}}
 \newcommand{\class}[1]{\dquote{\texttt{#1}}}
+%% for internal use
+\newcommand{\fixme}[1]{\emph{\marginpar{FIXME} (#1)}}
+\newcommand{\readme}[1]{\emph{\marginpar{README} (#1)}}
 
 \author{Francisco Cribari-Neto\\Universidade Federal de Pernambuco \And
         Achim Zeileis\\WU Wirtschaftsuniversit\"at Wien}
@@ -47,18 +42,33 @@
   URL: \url{http://statmath.wu-wien.ac.at/~zeileis/}
 }
 
-\begin{document}
+%% Sweave/vignette information and metadata
+%% need no \usepackage{Sweave}
+\SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
+%\VignetteIndexEntry{Beta Regression in R}
+%\VignetteDepends{stats,betareg,car,lmtest,sandwich}
+%\VignetteKeywords{beta regression, rates, proportions, R}
+%\VignettePackage{betareg}
 
 <<preliminaries, echo=FALSE, results=hide>>=
 options(width = 70, prompt = "R> ", continue = "+  ")
 library("betareg")
 @
 
+
+\begin{document}
+
+
+
 \section{Introduction} \label{sec:intro}
 
+
+\fixme{FCN: introduction about basics of why/what/how for beta regression}
+
 beta regression for modeling rates and proportions
-\citep{betareg:Ferrari+Cribari-Neto:2004}, extended with regression
-model for dispersion/precision parameter \citep{betareg:Simas+Barreto-Souza+Rocha:2010}
+\citep{betareg:Ferrari+Cribari-Neto:2004}
+
+extended to variable dispersion model by \cite{betareg:Simas+Barreto-Souza+Rocha:2010}
 
 diagnostics and link functions \citep{betareg:Cribari-Neto+Lima:2007}
 
@@ -68,9 +78,12 @@ also \cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006} and
 other approaches by \cite{betareg:Paolino:2001} and
 \cite{betareg:Kieschnick+McCullough:2003}
 
-generalized linear models \citep{betareg:McCullagh+Nelder:1989}
+related to generalized linear models \citep[GLM,][]{betareg:McCullagh+Nelder:1989}
+but not part of the GLM family
 
-data from \cite{betareg:Prater:1956} and \cite{betareg:Griffiths+Hill+Judge:1993}
+
+
+\fixme{Z: basics of implementation approach}
 
 implementation ideas from \cite{betareg:Zeileis+Kleiber+Jackman:2008},
 employs two-part formulas based on \cite{betareg:Zeileis+Croissant:2009},
@@ -88,89 +101,380 @@ which was orphaned and archived on CRAN in mid-2009. Achim Zeileis took over mai
 after rewriting the code, starting from version~2.0-0.
 
 
+
+\section{Beta regression}
+
+\fixme{FCN: outline theory of beta regression with explicit formulas at least for
+log-likelihood, mean equation, precision equation. further information, e.g.,
+diagnostics, inference, visualization, etc., with references and (if necessary)
+further formulas}
+
+
+
+\section[Implementation in R]{Implementation in \proglang{R}}
+
+\fixme{Z: description of implementation, text still needs improvements}
+
+\begin{Sinput}
+betareg(formula, data, subset, na.action, weights, offset,
+  link = "logit", link.phi = NULL, control = betareg.control(...),
+  model = TRUE, y = TRUE, x = FALSE, ...)
+\end{Sinput}
+
+\fct{betareg.fit} workhorse function
+
+\begin{table}[t!]
+\begin{center}
+\begin{tabular}{|l|p{8.7cm}|}
+\hline
+Function & Description \\ \hline
+\fct{print} & simple printed display with coefficient estimates\\
+\fct{summary} & standard regression output (coefficient estimates, standard errors, partial Wald tests);
+                returns an object of class \class{summary.betareg}
+                containing the relevant summary statistics (which has a \fct{print} method) \\ 	\hline
+\fct{coef} & extract coefficients of model (full or components), a single vector of all coefficients by default \\
+\fct{vcov} & associated covariance matrix (with matching names) \\
+\fct{predict} & predictions (means or probabilities) for new data \\
+\fct{fitted} & fitted means for observed data \\
+\fct{residuals} & extract residuals (response or Pearson) \\ \hline
+\fct{terms} & extract terms of model components \\
+\fct{model.matrix} & extract model matrix of model components \\
+\fct{logLik} & extract fitted log-likelihood \\ \hline
+\fct{coeftest} & partial Wald tests of coefficients \\
+\fct{waldtest} & Wald tests of nested models \\
+\fct{linear.hypothesis} & Wald tests of linear hypotheses \\
+\fct{lrtest} & likelihood ratio tests of nested models \\
+\fct{AIC} & compute information criteria (AIC, BIC, \dots) \\ \hline
+\end{tabular}
+\caption{\label{tab:methods} Functions and methods for objects of class \class{betareg}.
+  The first three blocks refer to methods, the last block contains generic
+  functions whose default methods work because of the information supplied by the methods above.}
+\end{center}
+\end{table}
+
+
 \section{Illustrations} \label{sec:illustrations}
 
-<<ferrari+cribari-neto, eval=FALSE>>=
-## Section 4 from Ferrari and Cribari-Neto (2004)
+\fixme{FCN/Z: illustrate most important usage cases, replicate results
+from other papers}
+
+<<GasolineYield-betareg, echo=FALSE>>=
 data("GasolineYield", package = "betareg")
-data("FoodExpenditure", package = "betareg")
-
-## Table 1
 gy_logit <- betareg(yield ~ batch + temp, data = GasolineYield)
-summary(gy_logit)
+@
 
-## Figure 2
-par(mfrow = c(3, 2))
-plot(gy_logit, which = 1:4)
-plot(gy_logit, which = 5, type = "deviance", sub.caption = "")
-plot(gy_logit, which = 1, type = "deviance", sub.caption = "")
+<<GasolineYield-loglog, echo=FALSE>>=
+gy_loglog <- betareg(yield ~ batch + temp, data = GasolineYield,
+  link = "loglog")
+@
 
-## exclude 4th observation
-gy_logit4 <- update(gy_logit, subset = -4)
-gy_logit4
-summary(gy_logit4)
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=0.75\textwidth}
+<<GasolineYield-visualization, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
+plot(yield ~ temp, data = GasolineYield, type = "n",
+  ylab = "Proportion of crude oil converted to gasoline",
+  xlab = "Temperature at which all gasoline has vaporized",
+  main = "Prater's gasoline yield data")
+points(yield ~ temp, data = GasolineYield, cex = 2, 
+  pch = 19, col = rev(gray.colors(10))[as.numeric(batch)])
+points(yield ~ temp, data = GasolineYield, cex = 2)
+legend("topleft", as.character(1:10),
+  col = rev(gray.colors(10)), pch = 19, bty = "n")
+legend("topleft", as.character(1:10), pch = 1, bty = "n")
+lines(150:500, predict(gy_logit, 
+  newdata = data.frame(temp = 150:500, batch = "6")),
+  col = 4, lwd = 2, lty = 2)
+lines(150:500, predict(gy_loglog, 
+  newdata = data.frame(temp = 150:500, batch = "6")),
+  col = 2, lwd = 2)
+legend("bottomright", c("log-log", "logit"),
+  col = c(2, 4), lty = 1:2, lwd = 2, bty = "n")
+@
+\caption{\label{fig:GasolineYield} Gasoline yield from \cite{betareg:Prater:1956}:
+  Proportion of crude oil converted to gasoline explained by temperature
+  (in degrees Fahrenheit) at which all gasoline has vaporized and given batch
+  (indicated by gray level). Fitted curves correspond to beta regressions 
+  \code{gy\_loglog} with log-log link (solid, red) and \code{gy\_logit} with
+  logit link (dashed, blue). Both curves were evaluated at varying temperature
+  with the intercept for batch 6 (i.e., roughly the average intercept).}
+\end{center}
+\end{figure}
 
-## Table 2
+
+<<FoodExpenditure-lm, echo=FALSE>>=
+data("FoodExpenditure", package = "betareg")
 fe_lin <- lm(I(food/income) ~ income + persons, data = FoodExpenditure)
+@
+
+<<FoodExpenditure-betareg, echo=FALSE>>=
+fe_beta <- betareg(I(food/income) ~ income + persons,
+  data = FoodExpenditure)
+@
+
+<<FoodExpenditure-betareg2, echo=FALSE>>=
+fe_beta2 <- betareg(I(food/income) ~ income + persons | persons,
+  data = FoodExpenditure)
+@
+
+
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=0.75\textwidth}
+<<FoodExpenditure-visualization, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
+plot(I(food/income) ~ income, data = FoodExpenditure,
+  xlab = "Household income", ylab = "Proportion of food expenditures",
+  main = "Food expenditures data", type = "n")
+points(I(food/income) ~ income, data = FoodExpenditure, cex = 2, pch = 19,
+  col = rev(gray.colors(7))[persons])
+points(I(food/income) ~ income, data = FoodExpenditure, cex = 2)
+legend("bottomleft", rev(as.character(sort(unique(FoodExpenditure$persons)))),
+  col = gray.colors(7), pch = 19, bty = "n")
+legend("bottomleft", rev(as.character(sort(unique(FoodExpenditure$persons)))), pch = 1, bty = "n")
+lines(10:100, predict(fe_lin, 
+  newdata = data.frame(income = 10:100, persons = mean(FoodExpenditure$persons))),
+  col = 1, lwd = 2, lty = 2)
+lines(10:100, predict(fe_beta, 
+  newdata = data.frame(income = 10:100, persons = mean(FoodExpenditure$persons))),
+  col = 4, lwd = 2, lty = 5)
+lines(10:100, predict(fe_beta2, 
+  newdata = data.frame(income = 10:100, persons = mean(FoodExpenditure$persons))),
+  col = 2, lwd = 2)
+legend("topright", c("logit, var. disp.", "logit, fix. disp.", "lm"),
+  col = c(2, 4, 1), lty = c(1, 5, 2), lwd = 2, bty = "n")
+@
+\caption{\label{fig:FoodExpenditure} Household food expenditure data from
+  \cite{betareg:Griffiths+Hill+Judge:1993}: Proportion of household income
+  spent on food explained by household income and number of persons in
+  household (indicated by gray level). Fitted curves correspond to beta regressions 
+  \code{fe\_beta} with fixed dispersion (long-dashed, blue),
+  \code{fe\_beta2} with variable dispersion (solid, red),
+  and the linear regression \code{fe\_lin} (dashed, black). All curves were evaluated
+  at varying income with the intercept for mean number of persons
+  ($ = \Sexpr{round(mean(FoodExpenditure$persons), digits = 2)}$).}
+\end{center}
+\end{figure}
+
+
+
+\subsection{The basic model: Estimation, inference, diagnostics}
+
+Section~4 from \cite{betareg:Ferrari+Cribari-Neto:2004}
+
+data from \cite{betareg:Prater:1956}, their Table~1
+
+<<GasolineYield-betareg1>>=
+<<GasolineYield-betareg>>
+summary(gy_logit)
+@
+
+their Figure~2
+
+<<GasolineYield-plot, eval=FALSE>>=
+plot(gy_logit, which = 1:4)
+plot(gy_logit, which = 5, type = "deviance", sub.caption = "", nsim = 5)
+plot(gy_logit, which = 1, type = "deviance", sub.caption = "")
+@
+
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=\textwidth}
+<<GasolineYield-plot1, echo=FALSE, fig=TRUE, width=8.5, height=10>>=
+par(mfrow = c(3, 2))
+<<GasolineYield-plot>>
+@
+\caption{\label{fig:GasolineYield-plot} Diagnostic plots for
+  beta regression model \code{gy\_logit}.}
+\end{center}
+\end{figure}
+
+decide to exclude fourth observation
+
+<<GasolineYield-update>>=
+gy_logit4 <- update(gy_logit, subset = -4)
+summary(gy_logit4)
+@
+
+
+consider second example, based on data from
+\cite{betareg:Griffiths+Hill+Judge:1993}
+
+their Table~2
+
+<<FoodExpenditure-lm1>>=
+<<FoodExpenditure-lm>>
+@
+
+<<FoodExpenditure-bptest>>=
 library("lmtest")
 bptest(fe_lin)
-fe_beta <- betareg(I(food/income) ~ income + persons, data = FoodExpenditure)
+@
+
+<<FoodExpenditure-betareg1>>=
+<<FoodExpenditure-betareg>>
 summary(fe_beta)
 @
 
-<<simas+etal, eval=FALSE>>=
-## Section 3 from online supplements to Simas et al. (2010)
-## mean model as in gy above
-## precision model with regressor temp
-gy_phi <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
+\subsection{Variable dispersion model}
 
-## MLE column in Table 19
-summary(gy_phi)
+Section~3 from online supplements to \cite{betareg:Simas+Barreto-Souza+Rocha:2010}
 
-## LRT row in Table 18
-lrtest(gy_logit, gy_phi)
+mean model as above, but now with an additional regression for precision
+parameter $\phi_i$:
+
+<<GasolineYield-phireg>>=
+gy_logit2 <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
+summary(gy_logit2)
 @
 
-<<cribari-neta+lima, eval=FALSE>>=
-## Section 5 from Cribari-Neto and Lima (2007)
-## log-log link
-gy_loglog <- betareg(yield ~ batch + temp, data = GasolineYield, link = "loglog")
+yields MLE column in Table~19
 
-## clearly improves pseudo R-squared...
+To compare the models with a likelihood-ratio test (see their Table~18)
+
+<<GasolineYield-lrtest>>=
+lrtest(gy_logit, gy_logit2)
+@
+
+<<FoodExpenditure-betareg2a>>=
+<<FoodExpenditure-betareg2>>
+lrtest(fe_beta, fe_beta2)
+AIC(fe_beta, fe_beta2, k = log(nrow(FoodExpenditure)))
+@
+
+\subsection{Selection of different link functions}
+
+Section~5 from \cite{betareg:Cribari-Neto+Lima:2007}
+
+employ log-log link
+
+<<GasolineYield-loglog1>>=
+<<GasolineYield-loglog>>
+@
+
+clearly improves pseudo R-squared...
+
+<<GasolineYield-Rsquared>>=
 summary(gy_logit)$pseudo.r.squared
 summary(gy_loglog)$pseudo.r.squared
-## ... and AIC
-AIC(gy_logit, gy_loglog)
-## (Cribari-Neto and Lima, 2007, did not include phi in the df)
+@
 
-## diagnostic tests (in LR instead of LM version)
+and the AIC
+
+<<GasolineYield-AIC>>=
+AIC(gy_logit, gy_logit2, gy_loglog)
+@
+
+Note that \cite{betareg:Cribari-Neto+Lima:2007} did not account for
+estimation of $\phi$ in their degrees of freedom. Hence, difference of 2.
+
+diagnostic tests (in LR instead of LM version)
+
+<<GasolineYield-reset1>>=
 lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "link")^2))
 lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "link")^2))
-## or
+@
+
+<<GasolineYield-reset2>>=
 lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "response")^2))
 lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "response")^2))
-## etc.
+@
 
-## diagnostic plots
-par(mfrow = c(1, 2))
+etc.
+
+<<GasolineYield-diagnostics, eval=FALSE>>=
 plot(gy_logit, which = 6)
 plot(gy_loglog, which = 6)
 @
 
-<<zeileis, eval=FALSE>>=
-## Section 5.3 from Zeileis (2006), Figure 4
-set.seed(123)
-## change in mu
-y1 <- c(rbeta(150, 0.3 * 4, 0.7 * 4), rbeta(50, 0.5 * 4, 0.5 * 4))
-## change in phi
-y2 <- c(rbeta(100, 0.3 * 4, 0.7 * 4), rbeta(100, 0.3 * 8, 0.7 * 8))
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=\textwidth}
+<<GasolineYield-diagnostics1, echo=FALSE, fig=TRUE, width=8.5, height=4>>=
+par(mfrow = c(1, 2))
+<<GasolineYield-diagnostics>>
+@
+\caption{\label{fig:GasolineYield-diagnostics} Diagnostic plots:
+  Predicted vs.\ observed values for beta regression model
+  \code{gy\_logit} with logit link (left) and \code{gy\_loglog}
+  with log-log link (right).}
+\end{center}
+\end{figure}
 
+Note: link function for $\phi$
+
+<<GasolineYield-loglog>>=
+gy_loglog2 <- update(gy_loglog, link.phi = "log")
+summary(gy_loglog2)$iterations
+@
+
+lower number of iterations than for \code{gy_loglog} which had \Sexpr{summary(gy_loglog)$iterations}
+
+equivalently with
+\code{betareg(yield ~ batch + temp | 1, data = GasolineYield, link = "loglog")}
+
+
+\subsection{Reuse with other packages: Structural change testing}
+
+already illustrated \fct{lrtest}, similarly \fct{coeftest}, \fct{waldtest},
+\fct{linear.hypothesis}.
+
+Section~5.3 from \cite{betareg:Zeileis:2006}
+
+artificial data: \code{y1} has a change in $\mu$, \code{y2} in $\phi$
+
+<<strucchange-data>>=
+set.seed(123)
+y1 <- c(rbeta(150, 0.3 * 4, 0.7 * 4), rbeta(50, 0.5 * 4, 0.5 * 4))
+y2 <- c(rbeta(100, 0.3 * 4, 0.7 * 4), rbeta(100, 0.3 * 8, 0.7 * 8))
+@
+
+<<strucchange-gefp>>=
 library("strucchange")
 y1.efp <- gefp(y1 ~ 1, fit = betareg)
 y2.efp <- gefp(y2 ~ 1, fit = betareg)
+@
+
+
+Figure~4
+
+<<strucchange-plot, echo=TRUE, eval=FALSE>>=
 plot(y1.efp, aggregate = FALSE)
 plot(y2.efp, aggregate = FALSE)
 @
+
+<<strucchange-plot1, eval=FALSE>>=
+plot(y1.efp, aggregate = FALSE)
+@
+<<strucchange-plot2, eval=FALSE>>=
+plot(y2.efp, aggregate = FALSE)
+@
+
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=0.49\textwidth}
+<<strucchange-plot1a, echo=FALSE, fig=TRUE, echo=FALSE, width=4.5, height=5>>=
+<<strucchange-plot1>>
+@
+<<strucchange-plot2a, echo=FALSE, fig=TRUE, echo=FALSE, width=4.5, height=5>>=
+<<strucchange-plot2>>
+@
+\caption{\label{fig:strucchange} Structural change tests
+  for artificial data \code{y1} with change in $\mu$ (left)
+  and \code{y2} with change in $\phi$ (right).}
+\end{center}
+\end{figure}
+
+
+\section{Summary}
+
+\fixme{FCN/Z: todo}
+
+
+\section*{Acknowledgments}
+
+\fixme{Z: underline previous work by Simas/Rocha}
+
+\readme{FCN: any grants or other acknoledgments?}
 
 
 \bibliography{betareg}

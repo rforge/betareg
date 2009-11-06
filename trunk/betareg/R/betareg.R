@@ -334,7 +334,7 @@ summary.betareg <- function(object, phi = NULL, ...)
   object$coefficients <- cf
   
   ## number of iterations
-  object$iterations <- tail(na.omit(object$optim$count), 1)
+  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))
   
   ## delete some slots
   object$fitted.values <- object$terms <- object$model <- object$y <-

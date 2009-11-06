@@ -68,7 +68,7 @@ plot.betareg <- function(x, which = 1:4,
       xlab = "Observed values", ylab = "Predicted values", main = Main[6], ...)
     if(one.fig) title(sub = sub.caption, ...)
     mtext(caption[6], 3, 0.25)
-    abline(0, 1, lty = 3, col = "gray")
+    abline(0, 1, lty = 2, col = "gray")
   }
 
   if(!one.fig && par("oma")[3] >= 1) mtext(sub.caption, outer = TRUE, cex = 1.25)
