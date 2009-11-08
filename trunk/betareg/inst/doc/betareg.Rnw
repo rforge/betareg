@@ -115,31 +115,98 @@ further formulas}
 
 \fixme{Z: description of implementation, text still needs improvements}
 
+To turn the model described in the previous section into computational tools,
+a fairly standard approach in \proglang{R} is employed: There is a model-fitting
+function \fct{betareg} which takes \code{formula} plus \code{data} for data
+specification, then sets up the likelihood and corresponding gradient (or estimating
+function), calls \fct{optim} for maximizing the likelihood, and finally returns
+an object of \proglang{S}3 class \class{betareg} for which a large set of methods to standard
+generics is available. The workhorse function is \fct{betareg.fit} which provides
+the core computations without \code{formula}-related data pre- and post-processing.
+
+The model-fitting function \fct{betareg} and its associated class are designed to
+be as similar as possible to the standard \fct{glm} function \citep{betareg:R:2009}
+for fitting GLMs. An important difference is that there are potentially two equations
+for mean and precision \fixme{formula ref}, respectively, and consequently two regressor matrices,
+two linear predictors, two sets of coefficients, etc. The design of \fct{betareg}
+is similar to the functions described by \cite{betareg:Zeileis+Kleiber+Jackman:2008}
+for fitting zero-inflation and hurdle models which also have two model components.
+The arguments of \fct{betareg} are
+%
 \begin{Sinput}
 betareg(formula, data, subset, na.action, weights, offset,
   link = "logit", link.phi = NULL, control = betareg.control(...),
   model = TRUE, y = TRUE, x = FALSE, ...)
 \end{Sinput}
+%
+where the first line contains the standard model-frame specifications
+\citep[see][]{betareg:Chambers+Hastie:1992},
+the second and third lines have the arguments specific to beta regression models and
+the arguments in the last line control some components of the return value.
 
-\fct{betareg.fit} workhorse function
+If a \code{formula} of type \code{y ~ x1 + x2} is supplied, it describes $y_i$ and $x_i$ 
+for the mean equation of the beta regression \fixme{formula ref}. In this case a constant
+$\phi_i$ is assumed, i.e., $z_i = 1$ and $g_\phi$ is the identity link, corresponding
+to the basic beta regression model as introduced in \cite{betareg:Ferrari+Cribari-Neto:2004}.
+However, a second set of regressors can be specified by a two-part formula of type
+\code{y ~ x1 + x2 | z1 + z2 + z3} as provided in the \pkg{Formula} package
+\citep{betareg:Zeileis+Croissant:2009}. This model has the same mean equation as above but
+the regressors $z_i$ in the precision equation are taken from the \code{~ z1 + z2 + z3} part.
+The default link function in this case is the log link $g_\phi(\cdot) = \log(\cdot)$.
+Consequently, \code{y ~ x1 + x2} and \code{y ~ x1 + x2 | 1} correspond to equivalent
+beta likelihoods but use different parametrizations for $phi_i$: simply $\phi_i = \gamma_1$
+in the former case and $\log(\phi_i) = \gamma_1$ in the latter case. The link for the
+$\phi_i$ precision equation can be changed by \code{link.phi} in both cases where
+\code{"identity"}, \code{"log"}, and \code{"sqrt"} are allowed as admissible values.
+The default for the $\mu_i$ mean equation is always the logit link but all link
+functions for the \code{binomial} family in \fct{glm} are allowed as well as the log-log
+link: \code{"logit"}, \code{"probit"}, \code{"cloglog"}, \code{"cauchit"},
+\code{"log"}, and \code{"loglog"}.
+
+ML estimation of all parameters employing analytical gradients is carried out
+using \proglang{R}'s \fct{optim} with control options set in \fct{betareg.control}.
+Starting values can be user-supplied, otherwise the $\beta$ starting values are estimated by 
+a regression of $g_\mu(y_i)$ on $x_i$ and similarly
+the $\gamma$ starting values are obtained from a regression of a transformed
+$y_i$ on the $z_i$. The transformed $y_i$ are derived in \cite{betareg:Ferrari+Cribari-Neto:2004}
+where only their mean is used as the starting values (corresponding to constant $\phi_i$
+with identity link). The covariance matrix estimate is derived analytically as in
+\cite{betareg:Simas+Barreto-Souza+Rocha:2010}. However, by setting \code{hessian = TRUE}
+the numerical Hessian matrix returned by \fct{optim} can also be obtained.
+
+The returned fitted-model object of class \class{betareg} is a list similar
+to \class{glm} objects. Some of its elements---such as \code{coefficients} or
+\code{terms}---are lists with a mean and precision component,
+respectively.
 
 \begin{table}[t!]
 \begin{center}
-\begin{tabular}{|l|p{8.7cm}|}
+\begin{tabular}{|l|p{10cm}|}
 \hline
 Function & Description \\ \hline
 \fct{print} & simple printed display with coefficient estimates\\
 \fct{summary} & standard regression output (coefficient estimates, standard errors, partial Wald tests);
                 returns an object of class \class{summary.betareg}
                 containing the relevant summary statistics (which has a \fct{print} method) \\ 	\hline
-\fct{coef} & extract coefficients of model (full or components), a single vector of all coefficients by default \\
+\fct{coef} & extract coefficients of model (full or mean/precision components), a single vector of all coefficients by default \\
 \fct{vcov} & associated covariance matrix (with matching names) \\
-\fct{predict} & predictions (means or probabilities) for new data \\
+\fct{predict} & predictions (means, linear predictors, or precision parameter $\phi_i$) for new data \\
 \fct{fitted} & fitted means for observed data \\
-\fct{residuals} & extract residuals (response or Pearson) \\ \hline
+\fct{residuals} & extract residuals \citep[deviance, Pearson, response,
+  or different weighted residuals, see][]{betareg:Espinheira+Ferrari+Cribari-Neto:2008} \\ 
+\fct{estfun} & compute empirical estimating functions (or score functions),
+  evaluated at observed data and estimated parameters \citep[see][]{betareg:Zeileis:2006a} \\
+\fct{bread} & extract ``bread'' matrix for sandwich estimators
+  \citep[see][]{betareg:Zeileis:2006a} \\ \hline
 \fct{terms} & extract terms of model components \\
 \fct{model.matrix} & extract model matrix of model components \\
+\fct{model.frame} & extract full original model frame \\
 \fct{logLik} & extract fitted log-likelihood \\ \hline
+\fct{plot} & diagnostic plots of residuals, predictions, leverages etc. \\
+\fct{hatvalues} & hat values (diagonal of hat matrix) \\
+\fct{cooks.distance} & (approximation of) Cook's distance \\
+\fct{gleverage} & compute generalized leverage \citep{betareg:Wei+Hu+Fung:1998};
+  based on the formula derived for fixed $\phi$ \\ \hline
 \fct{coeftest} & partial Wald tests of coefficients \\
 \fct{waldtest} & Wald tests of nested models \\
 \fct{linear.hypothesis} & Wald tests of linear hypotheses \\
@@ -147,10 +214,22 @@ Function & Description \\ \hline
 \fct{AIC} & compute information criteria (AIC, BIC, \dots) \\ \hline
 \end{tabular}
 \caption{\label{tab:methods} Functions and methods for objects of class \class{betareg}.
-  The first three blocks refer to methods, the last block contains generic
+  The first four blocks refer to methods, the last block contains generic
   functions whose default methods work because of the information supplied by the methods above.}
 \end{center}
 \end{table}
+
+A set of standard extractor functions for fitted model objects is available for
+objects of class \class{betareg}, including the usual \fct{summary} method that
+provides partial Wald tests for all coefficients. No \fct{anova} method is provided,
+but the general \fct{coeftest}, \fct{waldtest} from \pkg{lmtest}, and \fct{linear.hypothesis}
+from \pkg{car} can be used for Wald tests and \fct{lrtest} from \pkg{lmtest}
+for likelihood-ratio tests of nested models. See Table~\ref{tab:methods} for a list
+of all available methods. Most of these are standard in base \proglang{R}, however, methods
+to a few less standard generics are also provided. Specifically, there are tools related
+to specification testing and computation of sandwich covariance matrices as discussed
+by \cite{betareg:Zeileis:2006a} as well as a method to a new generic for computing
+generalized leverages \citep{betareg:Wei+Hu+Fung:1998}.
 
 
 \section{Illustrations} \label{sec:illustrations}
@@ -371,7 +450,7 @@ are very similar: the proportion of household income spent on food decreases
 with the overall income level but increases in the number of persons in the
 household (see also Figure~\ref{fig:FoodExpenditure}).
 
-Below, further extended models will be considered for this data sets and
+Below, further extended models will be considered for these data sets and
 hence all model comparisons are deferred.
 
 
@@ -379,76 +458,129 @@ hence all model comparisons are deferred.
 
 \subsubsection{Prater's gasoline yield data}
 
-Section~3 from online supplements to \cite{betareg:Simas+Barreto-Souza+Rocha:2010}
-
-mean model as above, but now with an additional regression for precision
-parameter $\phi_i$:
-
+Although the beta model already incorporates naturally a certain
+pattern in the variances of the response \fixme{equation ref}, it might
+be natural to incorporate further regressors to account for heteroskadsticity
+as in Equation~\fixme{ref} \citep{betareg:Simas+Barreto-Souza+Rocha:2010}.
+For illustration of this approach, the example from Section~3 of the online
+supplements to \cite{betareg:Simas+Barreto-Souza+Rocha:2010} is considered.
+This investigates Prater's gasoline yield data based on the same
+mean equation as above, but now with temperature \code{temp} as an 
+additional regressor for the precision parameter $\phi_i$:
+%
 <<GasolineYield-phireg>>=
 gy_logit2 <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
 @
-\code{summary(gy_logit2)}
-yields MLE column in Table~19
-
+%
+for which \code{summary(gy_logit2)} yields the MLE column in Table~19
+of \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. To save space, only
+the parameters pertaining to $\phi_i$ are reported here
+%
 <<GasolineYield-phireg-coef, echo=FALSE>>=
 printCoefmat(summary(gy_logit2)$coefficients$precision)
 @
-
-To compare the models with a likelihood-ratio test (see their Table~18)
-
+%
+that signal a significant improvement by including the \code{temp} regressor.
+Instead of using this Wald test, the models can also be compared by means
+of a likelihood-ratio test (see their Table~18) that confirms the results:
+%
 <<GasolineYield-lrtest>>=
 lrtest(gy_logit, gy_logit2)
 @
 
 
-
 \subsubsection{Household food expenditures}
 
+For the household food expenditure data, the Breusch-Pagan test carried out
+above illustrated that there is heteroskedasticity that can be captured
+by the regressors \code{income} and \code{persons}. Closer investigation
+reveals that this is mostly due to the number of persons in the household,
+also brought out graphically by some of the outliers with high values in
+this variable in Figure~\ref{fig:FooxExpenditure}. Hence, it seems natural
+to consider the model employed above with \code{persons} as an additional
+regressor in the precision equation.
+%
 <<FoodExpenditure-betareg2a>>=
 <<FoodExpenditure-betareg2>>
+@
+%
+This leads to significant improvements in terms of the likelihood and
+the associated BIC.
+%
+<<FoodExpenditure-comparison>>=
 lrtest(fe_beta, fe_beta2)
 AIC(fe_beta, fe_beta2, k = log(nrow(FoodExpenditure)))
 @
+%
+Thus, the model \code{fe_beta2} seems to be preferable. As visualized in
+Figure~\ref{fig:FooxExpenditure}, it describes a similar relationship between
+response and explanatory variables although with a somewhat shrinked
+\code{income} slope.
+
 
 \subsection{Selection of different link functions}
 
-Section~5 from \cite{betareg:Cribari-Neto+Lima:2007}
+\subsubsection{Prater's gasoline yield data}
 
-employ log-log link
-
+As in binomial GLMs, selection of an appropriate link function 
+can greatly improve the model fit \citep{betareg:McCullagh+Nelder:1989},
+especially if estreme proportions (close to $0$ or $1$) have been
+observed in the data. To illustrate this problem in beta regressions,
+we replicate parts of the analysis in Section~5 of \cite{betareg:Cribari-Neto+Lima:2007}.
+This reconsiders Prater's gasoline yield data but employs a log-log
+link instead of the previously used (default) logit link
+%
 <<GasolineYield-loglog1>>=
 <<GasolineYield-loglog>>
 @
-
-clearly improves pseudo R-squared
-
+%
+which clearly improves pseudo $R^2$ of the model:
+%
 <<GasolineYield-Rsquared>>=
 summary(gy_logit)$pseudo.r.squared
 summary(gy_loglog)$pseudo.r.squared
 @
-
-and the AIC
-
+Similarly, the AIC\footnote{Note that \cite{betareg:Cribari-Neto+Lima:2007} did not
+account for estimation of $\phi$ in their degrees of freedom. Hence, their reported
+AICs differ by 2.} (and BIC) of the fitted model is not only
+superior to the logit model with fixed dispersion \code{gy_logit}
+but also to the logit model with variable dispersion \code{gy_logit2} considered
+in the previous section.
+%
 <<GasolineYield-AIC>>=
 AIC(gy_logit, gy_logit2, gy_loglog)
 @
+Moreover, if \code{temp} were included as a regressor in the precision
+equation of \code{gy_loglog}, it would no longer yield significant improvements.
+Thus, improvement of the model fit in the mean equation by adoption of the log-log
+link have waived the need for an extended precision equation.
 
-Note that \cite{betareg:Cribari-Neto+Lima:2007} did not account for
-estimation of $\phi$ in their degrees of freedom. Hence, difference of 2.
-
-diagnostic tests (in LR instead of LM version)
-
+To underline the appropriateness of the log-log specification, 
+\cite{betareg:Cribari-Neto+Lima:2007} consider a sequence of diagnostic
+tests inspired by the RESET in linear regression models \citep{betareg:Ramsey:1969}.
+To check for misspecifications, they consider powers of responses or linear predictors
+to be included as auxiliary regressors in the mean equation. In well-specified
+models, these should not yield significant improvements. For the gasoline yield
+model, this can only be obtained for the log-log link while all other link
+functions result in significant results indicating misspecification. Below,
+this is exemplified for a likelihood-ratio test of squared linear predictors.
+Analogous results can be obtained for \code{type = "response"} or higher powers.
+%
 <<GasolineYield-reset>>=
 lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "link")^2))
 lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "link")^2))
 @
-
-etc. (for \code{type = "response"} or other powers or combinations of them).
-
+%
+The improvement of the model fit can also be brought out graphically in a
+display of predicted vs.\ observed values (see Figure~\ref{fig:GasolineYield-diagnostics}).
+%
 <<GasolineYield-diagnostics, eval=FALSE>>=
 plot(gy_logit, which = 6)
 plot(gy_loglog, which = 6)
 @
+%
+This shows that especially for the extreme observations, the log-log link
+leads to better predictions.
 
 \begin{figure}[t!]
 \begin{center}
@@ -464,54 +596,110 @@ par(mfrow = c(1, 2))
 \end{center}
 \end{figure}
 
-Note: link function for $\phi$
-
+In principle, the link function $g_\phi$ in the precision equation could
+also influence the model fit. However, as the best-fitting model 
+\code{gy_loglog} has a constant $\phi$, all links $g_\phi$ lead to 
+estimates of $\phi$ and thus to equivalent fitted log-likelihoods.
+However, the link function can have consequences in terms of the
+inference about $\phi$ and in terms of convergence of the optimization.
+Typically, a log-link leads to somewhat improved quadratic approximations
+of the likelihood and less iterations in the optimization. For example,
+refitting \code{gy_loglog} with $g_\phi(\cdot) = \log(\cdot)$ converges
+more quickly
+%
 <<GasolineYield-loglog>>=
 gy_loglog2 <- update(gy_loglog, link.phi = "log")
 summary(gy_loglog2)$iterations
 @
+%
+with a lower number of iterations than for \code{gy_loglog}
+which had \Sexpr{summary(gy_loglog)$iterations} iterations.
 
-lower number of iterations than for \code{gy_loglog} which had \Sexpr{summary(gy_loglog)$iterations}
-
-equivalently with
-\code{betareg(yield ~ batch + temp | 1, data = GasolineYield, link = "loglog")}
+%% equivalently with
+%% \code{betareg(yield ~ batch + temp | 1, data = GasolineYield, link = "loglog")}
 
 
-\subsection{Reuse with other packages: Structural change testing}
+\subsubsection{Household food expenditures}
 
-already illustrated \fct{lrtest}, similarly \fct{coeftest}, \fct{waldtest},
-\fct{linear.hypothesis}.
+In principle, one could conduct a similar analysis as above for the household
+foox expenditure data. However, as the response takes less extreme observations
+than for the gasoline yield data, the choice of link function is less important.
+In fact, refitting the model with various link functions shows no large
+differences in the resulting log-likelihoods.
+%
+<<FoodExpenditure-links>>=
+sapply(c("logit", "probit", "cloglog", "cauchit", "loglog"), function(x)
+  logLik(betareg(I(food/income) ~ income + persons | persons,
+  link = x, data = FoodExpenditure)))
+@
+%
+However, the Cauchy link performs slightly better than the logit link and might
+hence deserve further investigation.
 
-Section~5.3 from \cite{betareg:Zeileis:2006}
 
-artificial data: \code{y1} has a change in $\mu$, \code{y2} in $\phi$
+\subsection{Inference with other packages: Structural change testing}
 
+As already illustrated above, \class{betareg} objects can be plugged into
+various inference functions from other packages because they provide suitable
+methods to standard generic functions (see Table~\ref{tab:methods}). Hence
+\fct{lrtest} could be used for performing likelihood-ratio tests and similarly
+\fct{coeftest}, \fct{waldtest} from \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}
+and \fct{linear.hypothesis} from \pkg{car} \citep{betareg:Fox:2002} can be
+employed for carrying out different flavors of Wald tests.
+
+In this section, we illustrate yet another generic inference approach implemented
+in the \pkg{strucchange} package for structural change testing. While originally
+written for linear regression models \citep{betareg:Zeileis+Leisch+Hornik:2002},
+\pkg{strucchange} was extended by \cite{betareg:Zeileis:2006} to compute generalized
+fluctation tests for structural change in models that are based on suitable
+estimating functions. If these estimating functions can be extracted by an
+\fct{estfun} method, models can simply be plugged into the \fct{gefp} function
+for computing generalized empirical fluctuation processes. To illustrate
+this, we replicate the example from Section~5.3 in \cite{betareg:Zeileis:2006}.
+
+Two artificial data sets are considered: a series \code{y1} with a change in
+the mean $\mu$, and a series \code{y2} with a change in the precision $\phi$.
+Both simulated series start with the parameters $\mu = 0.3$ and $\phi = 4$
+and for the first series $\mu$ changes to $0.5$ at after 75\% of the observations
+while $\phi$ remains constant whereas for the second series $\phi$ changes to $8$
+after 50\% of the observations and $\mu$ remains constant.
+%
 <<strucchange-data>>=
 set.seed(123)
 y1 <- c(rbeta(150, 0.3 * 4, 0.7 * 4), rbeta(50, 0.5 * 4, 0.5 * 4))
 y2 <- c(rbeta(100, 0.3 * 4, 0.7 * 4), rbeta(100, 0.3 * 8, 0.7 * 8))
 @
-
+%
+To capture instabilities in the parameters over ``time'' (i.e., the ordering of
+the observations), the generalized empirical fluctuation processes can be derived
+via
+%
 <<strucchange-gefp>>=
 library("strucchange")
-y1.efp <- gefp(y1 ~ 1, fit = betareg)
-y2.efp <- gefp(y2 ~ 1, fit = betareg)
+y1_gefp <- gefp(y1 ~ 1, fit = betareg)
+y2_gefp <- gefp(y2 ~ 1, fit = betareg)
 @
-
-
-Figure~4
-
+%
+and visualized by
+%
 <<strucchange-plot1, echo=FALSE, eval=FALSE>>=
-plot(y1.efp, aggregate = FALSE)
+plot(y1_gefp, aggregate = FALSE)
 @
 <<strucchange-plot2, echo=FALSE, eval=FALSE>>=
-plot(y2.efp, aggregate = FALSE)
+plot(y2_gefp, aggregate = FALSE)
 @
-
 <<strucchange-plot, echo=TRUE, eval=FALSE>>=
 <<strucchange-plot1>>
 <<strucchange-plot2>>
 @
+%
+The resulting Figure~\ref{fig:strucchange} \citep[replicating Figure~4 from][]{betareg:Zeileis:2006}
+shows two 2-dimensional fluctuation processes: one for \code{y1} (left) and one for \code{y2} (right).
+Both fluctuation processes behave as expected: There is no excessive fluctuation of the 
+process pertaining to the parameter that remained constant while there is a significant instability
+in the parameter that changed signalled by a boundary crossing and a peak at about the time
+of the change in the corresponding parameter.
+
 
 \begin{figure}[t!]
 \begin{center}
