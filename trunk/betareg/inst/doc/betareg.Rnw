@@ -154,7 +154,7 @@ However, a second set of regressors can be specified by a two-part formula of ty
 the regressors $z_i$ in the precision equation are taken from the \code{~ z1 + z2 + z3} part.
 The default link function in this case is the log link $g_\phi(\cdot) = \log(\cdot)$.
 Consequently, \code{y ~ x1 + x2} and \code{y ~ x1 + x2 | 1} correspond to equivalent
-beta likelihoods but use different parametrizations for $phi_i$: simply $\phi_i = \gamma_1$
+beta likelihoods but use different parametrizations for $\phi_i$: simply $\phi_i = \gamma_1$
 in the former case and $\log(\phi_i) = \gamma_1$ in the latter case. The link for the
 $\phi_i$ precision equation can be changed by \code{link.phi} in both cases where
 \code{"identity"}, \code{"log"}, and \code{"sqrt"} are allowed as admissible values.
@@ -234,8 +234,8 @@ generalized leverages \citep{betareg:Wei+Hu+Fung:1998}.
 
 \section{Illustrations} \label{sec:illustrations}
 
-\fixme{FCN: illustrate most important usage cases, replicate results
-from other papers}
+\fixme{ZFCN: illustrate most important usage cases, replicate results
+from other papers -- some text already written, still needs refinement}
 
 To illustrate the usage of \pkg{betareg} in practice we replicate
 (and slightly extend) some of the analyses from the original papers
