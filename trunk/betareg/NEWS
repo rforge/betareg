@@ -1,4 +1,6 @@
-Changes in Version 2.1-0
+Changes in Version 2.1-1
+
+  o New vignette, FIXME.
 
   o Implemented an optional precision model, yielding
     variable dispersion. The precision parameter phi may
@@ -11,6 +13,11 @@ Changes in Version 2.1-0
 
   o Allowed all link functions (in mean model) that are
     available in make.link() for binary responses.
+
+  o Added data and replication code for Smithson & Verkuilen
+    (2006, Psychological Methods). See ?ReadingSkills,
+    ?MockJurors, ?StressAnxiety as well as the complete
+    replication code in demo("SmithsonVerkuilen2006").
 
 
 Changes in Version 2.0-0

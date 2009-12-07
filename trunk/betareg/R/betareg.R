@@ -368,8 +368,8 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
       cat("---\nSignif. codes: ", "0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", "\n")
   
     cat("\nLog-likelihood:", formatC(x$loglik, digits = digits),
-      "on", sum(sapply(x$coefficients, NROW)), "Df\n")
-    cat("Pseudo R-squared:", formatC(x$pseudo.r.squared, digits = digits))
+      "on", sum(sapply(x$coefficients, NROW)), "Df")
+    if(!is.na(x$pseudo.r.squared)) cat("\nPseudo R-squared:", formatC(x$pseudo.r.squared, digits = digits))
     cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations, "\n"))
   }
   
@@ -377,7 +377,7 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
 }
 
 predict.betareg <- function(object, newdata = NULL,
-  type = c("response", "link", "precision"), na.action = na.pass, ...) 
+  type = c("response", "link", "precision", "variance"), na.action = na.pass, ...) 
 {
   type <- match.arg(type)
   
@@ -394,6 +394,12 @@ predict.betareg <- function(object, newdata = NULL,
         gamma <- object$coefficients$precision
         z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
 	object$link$precision$linkinv(drop(z %*% gamma))
+      },
+      "variance" = {
+        gamma <- object$coefficients$precision
+        z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
+	phi <- object$link$precision$linkinv(drop(z %*% gamma))
+	object$fitted.values * (1 - object$fitted.values) / (1 + phi)
       }
     )
     return(rval)
@@ -416,7 +422,12 @@ predict.betareg <- function(object, newdata = NULL,
         drop(X %*% object$coefficients$mean + offset)
       },      
       "precision" = {
-        object$link$mean$linkinv(drop(Z %*% object$coefficients$precision))
+        object$link$precision$linkinv(drop(Z %*% object$coefficients$precision))
+      },
+      "variance" = {
+        mu <- object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset))
+        phi <- object$link$precision$linkinv(drop(Z %*% object$coefficients$precision))
+	mu * (1 - mu) / (1 + phi)
       }
     )
     return(rval)
