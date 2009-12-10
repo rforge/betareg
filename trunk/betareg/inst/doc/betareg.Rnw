@@ -20,14 +20,22 @@
 \Keywords{beta regression, rates, proportions, \proglang{R}}
 \Plainkeywords{beta regression, rates, proportions, R}
 
-\Abstract{The class of beta regression models is commonly used by 
-practitioners to model variates that assume values in the standard 
-unit interval $(0,1)$. It is based on the assumption that the 
-variate is beta-distributed and that its mean is related to a linear 
-predictor that involves regressors and unknown repression parameters
-through a link function. The model also includes a precision parameter. 
-This paper describes the \pkg{betareg} package for \proglang{R}, which 
-implements the class of beta regressions. 
+\Abstract{
+  The class of beta regression models is commonly used by 
+  practitioners to model variables that assume values in the standard 
+  unit interval $(0, 1)$. It is based on the assumption that the 
+  dependent variable is beta-distributed and that its mean is related to a set
+  of regressors through a linear predictor with unknown coefficients
+  and a link function. The model also includes a precision parameter
+  which may be constant or depend as well on a (potentially different)
+  set of regressors through a link function. This approach naturally
+  incorporates features such as heteroskedasticity or skewness
+  which are commonly observed in data taking values in the standard
+  unit interval, such as rates or proportions. This paper describes
+  the \pkg{betareg} package which provides the class of beta regressions
+  in the \proglang{R} system for statistical computing and graphics. The
+  underlying theory is briefly outlined, the implementation discussed
+  and illustrated in various replication exercises.
 }
 
 \Address{
@@ -68,7 +76,7 @@ library("betareg")
 \section{Introduction} \label{sec:intro}
 
 How should one perform a regression analysis in which the dependent variable
-(response), $y$, assume values in the standard unit interval $(0,1)$? The usual
+(or response variable), $y$, assumes values in the standard unit interval $(0,1)$? The usual
 practice used to be to transform the data so that the transformed response, say
 $\tilde y$, assumes values in the real line and then use it in a standard linear
 regression analysis. A commonly used transformation is the logit $\tilde y = 
@@ -81,18 +89,18 @@ limits of the standard unit interval. Finally, the distributions of rates and
 proportions are typically asymmetric, and thus Gaussian-based approximations for
 interval estimation and hypothesis testing can be quite inaccurate in small
 samples. \cite{betareg:Ferrari+Cribari-Neto:2004} proposed a regression model
-for \fixme{wording:} rates, proportions, income concetration indices and other continuous
-variates that assume values in the standard unit interval. Since the model is
+for continuous variates that assume values in the standard unit interval, e.g.,
+rates, proportions, or income concetration indices. Since the model is
 based on the assumption that the response is beta-distributed, they called their
-model \textit{the beta regression model}. In their model, the regression
+model \emph{the beta regression model}. In their model, the regression
 parameters are interpretable in terms of the mean of $y$ (the variable of
 interest). Additionally, the model is naturally heteroskedastic and easily
 accomodates asymmetries. A variant of the beta regression model that allows for
 nonlinearities and variable dispersion was proposed by
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. In particular, in this more
 general model, the parameter that accounts for the precision of the data is not
-assumed constant across observations is allowed to vary, which leads to the
-\textit{variable dispersion beta regression model}. 
+assumed to be constant across observations but it is allowed to vary, which leads to the
+\emph{variable dispersion beta regression model}. 
 
 In this paper, we describe the \pkg{betareg} package for \proglang{R}, which can
 be used to perform inference in (fixed and variable dispersion) beta
@@ -155,12 +163,12 @@ g_2(\phi_i) &= \eta_{2t} = f_2(z_i^{\top}; \gamma),\label{eqn:variabledispersion
 \end{align}
 where $\beta=(\beta_1, \ldots, \beta_k)^{\top}$, $\gamma=(\gamma_1,\ldots,\gamma_h)^{\top}$, $k+h<n$, $\eta_{1t}$ and $\eta_{2t}$ are predictors, and $x_{i1},\ldots,x_{iq_1}$ and $z_{i1}, \ldots, z_{iq_2}$ are covariates. It is assumed that the matrices $\partial\eta_1/\partial\beta$ and $\partial\eta_2/\partial\gamma$ have full column rank. Again, estimation is carried out by maximum likelihood. As before, the maximum likelihood estimators do not have closed form and are computed by numerically maximizing the log-likelihood function, which is as given above with $\phi$ replaced by $\phi_i$.\footnote{They have also obtained analytical bias corrections for the maximum likelihood estimators of the parameters, thus generalizing the results of \cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006}, who derived bias corrections for fixed dispersion beta regressions.} 
 
-\cite{betareg:Ferrari+Cribari-Neto:2004} defined the following \textit{`standardized ordinary residual'}: 
+\cite{betareg:Ferrari+Cribari-Neto:2004} defined the following \emph{standardized ordinary residual}: 
 $$r_i = \frac{y_i - \hat{\mu}_i}{\sqrt{\widehat{\rm var}(y_i)}},$$
 where
 $\widehat{\rm var}(y_i) = \hat{\mu}_i(1-\hat{\mu}_i)/
 (1+\widehat{\phi})$. Here, $\hat{\mu}_i = g^{-1}(x_i^{\!\top}\,\hat{\beta})$,
-$\hat{\beta}$ and $\hat\phi$ being the maximum likelihood estimators of $\beta$ and $\phi$, respectively. A better residual was proposed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008a}, which they named \textit{`standardized residual 2'}:
+$\hat{\beta}$ and $\hat\phi$ being the maximum likelihood estimators of $\beta$ and $\phi$, respectively. A better residual was proposed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008a}, which they named \emph{standardized residual 2}:
 \begin{equation*}
 r^{ww}_i = \frac{y^*_i - {\hat{{\mu}}^*}_i}{\sqrt{\hat{v}_i(1 - h_{ii})}},
 \label{eqn:residual2}
