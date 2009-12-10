@@ -996,7 +996,7 @@ proposed by \cite{betareg:Rocha+Cribari-Neto:2010}.
 
 FCN gratefully acknowledges financial support from CNPq/Brazil. 
 Both authors are grateful to A.B.~Simas and A.V.~Rocha for their
-work on the previous version of the \pkg{betareg} package (up to
+work on the previous versions of the \pkg{betareg} package (up to
 version~1.2).
 
 
