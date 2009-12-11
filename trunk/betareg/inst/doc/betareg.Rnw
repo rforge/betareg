@@ -90,7 +90,7 @@ proportions are typically asymmetric, and thus Gaussian-based approximations for
 interval estimation and hypothesis testing can be quite inaccurate in small
 samples. \cite{betareg:Ferrari+Cribari-Neto:2004} proposed a regression model
 for continuous variates that assume values in the standard unit interval, e.g.,
-rates, proportions, or income concetration indices. Since the model is
+rates, proportions, or income concentration indices. Since the model is
 based on the assumption that the response is beta-distributed, they called their
 model \emph{the beta regression model}. In their model, the regression
 parameters are interpretable in terms of the mean of $y$ (the variable of
@@ -118,8 +118,9 @@ before Section~\ref{sec:implementation} describes its implementation in \proglan
 Sections~\ref{sec:illustrations} and \ref{sec:replications} provide various
 empirical applications: The former focuses on illustrating various aspects
 of beta regressions in practice while the latter provides further replications
-of previously published empirical research. Section~\ref{sec:conclusion} contains
-concluding remarks and directions for future research and implementation. 
+of previously published empirical research. Section~\ref{sec:dispersiontesting} describes a score test for fixed dispersion and Section~\ref{sec:conclusion} 
+contains concluding remarks and directions for future research and 
+implementation. 
 
 
 \section{Beta regression}\label{sec:model} 
@@ -129,9 +130,9 @@ The class of beta regregression models, as introduced by
 variables $y$ that assume  values in the open standard unit interval $(0,1)$.
 Note that if the variable takes on values in $(a, b)$ (with $a < b$ known) one
 can model $(y - a)/(b - a)$. Furthermore, if $y$ also assumes the extremes $0$ and $1$, 
-a useful transformation in practice is $(y \cdot (n ­ 1) + 0.5) / n$
+a useful transformation in practice is $(y \times (n - 1) + 0.5) / n$
 where $n$ is the sample size \citep{betareg:Smithson+Verkuilen:2006}.
-\readme{Z: I think this is useful in practice but maybe here is a little bit too prominent?}
+\readme{Z: I think this is useful in practice but maybe here is a little bit too prominent? F: A colleague of mine is developing an inflated beta regression model for situations where the data contain zeros and/or ones.}
 
 The beta regression model is based on an alternative parameterization of the beta density in
 terms of the  variate mean and of a precision parameter. The beta density is
@@ -184,7 +185,7 @@ with further extensions) by \cite{betareg:Simas+Barreto-Souza+Rocha:2010}
 is the variable dispersion beta regression model. In this model the
 precision parameter is not constant for all observations but instead
 modelled in a similar fashion as the mean parameter. More specifically,
-$y\,\sim\, {\mathcal B}(\mu_i, \phi_i)$, $i=1,\ldots,n$, and 
+$y_i\,\stackrel{\mathrm{ind.}}{\sim}\, {\mathcal B}(\mu_i, \phi_i)$, $i=1,\ldots,n$, and 
 \begin{eqnarray}
   g_1(\mu_i) & = & \eta_{1i} = x_i^\top \beta, \label{eqn:meanmodel} \\
   g_2(\phi_i) & = & \eta_{2i} = z_i^\top \gamma,\label{eqn:precisionmodel}
@@ -219,7 +220,7 @@ and $\hat{\phi}_i = g_2^{-1}(z_i^\top\,\hat{\beta})$. Similarly, deviance residu
 can be defined in the standard way via signed contributions to the excess likelihood.
 Further residuals were proposed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008a},
 in particular one residual with better properties that they named
-\emph{standardized weighted residual 2} \readme{Z: Should this be the default in the residuals() method?}:
+\emph{standardized weighted residual 2} \readme{Z: Should this be the default in the residuals() method? F: In my opinion, yes.}:
 \begin{equation*}
   r^{ww}_i = \frac{y^*_i - {\hat{{\mu}}^*}_i}{\sqrt{\hat{v}_i(1 - h_{ii})}},
 \label{eqn:residual2}
@@ -235,7 +236,7 @@ As before, hats denote evaluation at the ML estimates.
 %% $w_i = \phi v_i [1 / \{g'(\mu_i)\}^2]$, with  
 
 \readme{Z: I have omitted the description of the RESET-type test here. It is
-briefly introduced with reference in the illustrations section.}
+briefly introduced with reference in the illustrations section. F: OK.}
 %% A RESET-type misspecification test for fixed dispersion beta regression, similar
 %% to that of \cite{betareg:Ramsey:1969} for linear regressions, was proposed by
 %% \cite{betareg:Cribari-Neto+Lima:2007}. The authors considered different variants
@@ -594,7 +595,7 @@ summary(fe_beta)
 @
 %
 This replicates Table~2 from \cite{betareg:Ferrari+Cribari-Neto:2004}.
-The predicted means of the linear and the beta regression model, respecitvely,
+The predicted means of the linear and the beta regression model, respectively,
 are very similar: the proportion of household income spent on food decreases
 with the overall income level but increases in the number of persons in the
 household (see also Figure~\ref{fig:FoodExpenditure}).
@@ -707,7 +708,7 @@ To underline the appropriateness of the log-log specification,
 \cite{betareg:Cribari-Neto+Lima:2007} consider a sequence of diagnostic
 tests inspired by the RESET \citep[regression specification error test;][]{betareg:Ramsey:1969}
 in linear regression models.
-To check for misspecifications, they consider powers of responses or linear predictors
+To check for misspecifications, they consider powers of fitted means or linear predictors
 to be included as auxiliary regressors in the mean equation. In well-specified
 models, these should not yield significant improvements. For the gasoline yield
 model, this can only be obtained for the log-log link while all other link
@@ -771,7 +772,7 @@ which had \Sexpr{summary(gy_loglog)$iterations} iterations.
 \subsubsection{Household food expenditures}
 
 One could conduct a similar analysis as above for the household
-foox expenditure data. However, as the response takes less extreme observations
+food expenditure data. However, as the response takes less extreme observations
 than for the gasoline yield data, the choice of link function is less important.
 In fact, refitting the model with various link functions shows no large
 differences in the resulting log-likelihoods.
@@ -868,9 +869,9 @@ coeftest(rs_ols)
 %
 The interaction effect does not appear to be significant, however this is a result
 of the poor fit of the linear regression as will be shown below. Figure~\ref{fig:ReadingSkills}
-clearly shows that the data asymmetric and heteroskedastic (especially in the control
+clearly shows that the data are asymmetric and heteroskedastic (especially in the control
 group). Hence, \cite{betareg:Smithson+Verkuilen:2006} fit a beta regression model,
-again with separate means for both groups, but also allow the dispersion depend on the
+again with separate means for both groups, but also allow the dispersion to depend on the
 main effects of both variables.
 %
 <<ReadingSkills-beta1>>=
@@ -883,6 +884,8 @@ in the mean equation there is a significant interaction between \code{iq} and \c
 As Figure~\ref{fig:ReadingSkills} illustrates, the beta regression fit does not differ
 much from the OLS fit for the dyslexics group (with responses close to $0.5$) but fits
 much better in the control group (with responses close to $1$).
+
+\readme{The circles used for control and dyslexic observations in Figure 5 (blue and red) are not easily distinguishable when printed in a black and whire laser printer. Is it possible to use filled and unfilled circles? }
 
 The estimates above replicate those in Table~5 of \cite{betareg:Smithson+Verkuilen:2006},
 except for the signs of the coefficients of the dispersion submodel which they defined
@@ -903,7 +906,8 @@ script with comments.
 As already illustrated in Section~\ref{sec:illustrations}, \class{betareg} objects can be plugged into
 various inference functions from other packages because they provide suitable
 methods to standard generic functions (see Table~\ref{tab:methods}). Hence
-\fct{lrtest} could be used for performing likelihood-ratio tests and similarly
+\fct{lrtest} could be used for performing likelihood-ratio testing
+inference and similarly
 \fct{coeftest}, \fct{waldtest} from \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}
 and \fct{linear.hypothesis} from \pkg{car} \citep{betareg:Fox:2002} can be
 employed for carrying out different flavors of Wald tests.
@@ -912,7 +916,7 @@ In this section, we illustrate yet another generic inference approach implemente
 in the \pkg{strucchange} package for structural change testing. While originally
 written for linear regression models \citep{betareg:Zeileis+Leisch+Hornik:2002},
 \pkg{strucchange} was extended by \cite{betareg:Zeileis:2006} to compute generalized
-fluctation tests for structural change in models that are based on suitable
+fluctuation tests for structural change in models that are based on suitable
 estimating functions. If these estimating functions can be extracted by an
 \fct{estfun} method, models can simply be plugged into the \fct{gefp} function
 for computing generalized empirical fluctuation processes. To illustrate
@@ -977,6 +981,19 @@ of the change in the corresponding parameter.
 \end{center}
 \end{figure}
 
+\section{Testing for fixed dispersion}\label{sec:dispersiontesting}
+
+We note that it is possible to test the null hypothesis that the precision (or dispersion) is constant for all observations, i.e., $\mathcal{H}_0: \phi_1 = \cdots = \phi_n = \phi$ ($0 < \phi < \infty$), using Rao's score test. At the outset, note that we can write the null hypothesis as $\mathcal{H}_0: \gamma_{q-1}=0$, where $\gamma_{q-1}$ is the $(q-1)$-vector containing all but the first parameter in the precision submodel (Equation~\ref{eqn:precisionmodel}) 
+ with $z_{i1} = 1$ for all $i$. 
+Let $U_{(q-1)\gamma}$ be the vector of log-likelihood derivatives with respect to the $q-1$ parameters of interst and let $K_{*(q-1)\times(q-1)}^{\gamma\gamma}$
+be the $(q-1)\times (q-1)$ matrix that contains the last $q-1$ rows and the last $q-1$ columns of Fisher's information inverse. The score test statistic is \citep{betareg:Espinheira:2007}  
+\begin{equation*}\omega = \tilde{U}^{T}_{(q-1)\gamma} \left(\tilde{K}_{*(q-1)\times(q-1)}^{\gamma\gamma}\right)^{-1}
+\tilde{U}_{(q-1)\gamma}, 
+\end{equation*}
+where tildes indicate evaluation at the restricted maximum likelihood parameter estimates. Under the null hypothesis, 
+$\omega$ converges in distribution to $\chi^2_{q-1}$. So, the null hypothesis is rejected at the nominal level $0 < \alpha < 1$ if $\omega > \chi^2_{1-\alpha, q-1}$ (the appropriate quantile of the limiting null distribution). 
+\readme{F: I think it would be useful to implement this test in betareg. If you agree, we could keep this section and include here an application of the test to the reading accuracy data.}
+
 
 \section{Summary}\label{sec:conclusion}
 
@@ -986,7 +1003,8 @@ how one can model rates and proportions using \pkg{betareg} and presented severa
 reproducing previously published results. Future
 research and implementation shall focus on the situation where the data contain zeros and/or ones
 \citep[see, e.g.,][]{betareg:Kieschnick+McCullough:2003}. An additional line of research and
-implementation is that of dynamic beta regression models, such as the class of BARMA models
+implementation is that of dynamic beta regression models, such as the class of 
+$\beta$ARMA models
 proposed by \cite{betareg:Rocha+Cribari-Neto:2010}.  
 
 
