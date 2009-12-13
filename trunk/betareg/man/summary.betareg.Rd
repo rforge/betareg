@@ -26,7 +26,7 @@
 }
 
 \usage{
-\method{summary}{betareg}(object, phi = NULL, \dots)
+\method{summary}{betareg}(object, phi = NULL, type = "sweighted2", \dots)
 
 \method{coef}{betareg}(object, model = c("full", "mean", "precision"), phi = NULL, \dots)
 \method{vcov}{betareg}(object, model = c("full", "mean", "precision"), phi = NULL, \dots)
@@ -36,12 +36,14 @@
 
 \arguments{
   \item{object, x}{fitted model object of class \code{"betareg"}.}
-  \item{model}{character specifying for which component of the model coefficients/covariance
-    should be extracted. (Only used if \code{phi} is \code{NULL}.)}
   \item{phi}{logical indicating whether the parameters in the precision model
     (for phi) should be reported as full model parameters (\code{TRUE}) or
     nuisance parameters (\code{FALSE}). The default is taken from
     \code{object$phi}.}
+  \item{type}{character specifying type of residuals to be included in the
+    summary output, see \code{\link{residuals.betareg}}.}
+  \item{model}{character specifying for which component of the model coefficients/covariance
+    should be extracted. (Only used if \code{phi} is \code{NULL}.)}
   \item{\dots}{currently not used.}
 }
 

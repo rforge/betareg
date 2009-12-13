@@ -15,7 +15,7 @@
     "Half-normal plot of residuals", "Predicted vs observed values"),
     sub.caption = paste(deparse(x$call), collapse = "\n"), main = "", 
     ask = prod(par("mfcol")) < length(which) && dev.interactive(), 
-    \dots, type = "deviance", nsim = 100, level = 0.9)
+    \dots, type = "sweighted2", nsim = 100, level = 0.9)
 }
 
 \arguments{
@@ -46,6 +46,7 @@ gy <- betareg(yield ~ gravity + pressure + temp10 + temp, data = GasolineYield)
 
 par(mfrow = c(3, 2))
 plot(gy, which = 1:6)
+par(mfrow = c(1, 1))
 }
 
 \keyword{regression}

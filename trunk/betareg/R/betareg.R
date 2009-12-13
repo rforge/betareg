@@ -13,8 +13,8 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   mf$drop.unused.levels <- TRUE
 
   ## formula
-  oformula <- formula
-  formula <- Formula(formula)
+  oformula <- as.formula(formula)
+  formula <- as.Formula(formula)
   if(length(formula)[2] < 2L) {
     formula <- as.Formula(formula(formula), ~ 1)
     simple_formula <- TRUE
@@ -159,6 +159,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     #FIXME# Different choice from Simas et al. (2009)
     start <- list(mean = beta, precision = phi)
   }
+  if(is.list(start)) start <- do.call("c", start)
 
   ## objective function and gradient
   loglikfun <- function(par) {
@@ -189,7 +190,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   }
 
   ## optimize likelihood  
-  opt <- optim(par = do.call("c", start), fn = loglikfun, gr = gradfun,
+  opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = hessian, control = control)
   if(opt$convergence > 0) warning("optimization failed to converge")
 
@@ -278,7 +279,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     offset = if(identical(offset, rep(0, n))) NULL else offset,
     n = n,
     df.null = n - 2,
-    df.residual = n - k -m,
+    df.residual = n - k - m,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
@@ -291,7 +292,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   return(rval)
 }
 
-print.betareg <- function (x, digits = max(3, getOption("digits") - 3), ...) 
+print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...) 
 {
   cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.85)), "", sep = "\n")
 
@@ -314,13 +315,15 @@ print.betareg <- function (x, digits = max(3, getOption("digits") - 3), ...)
   invisible(x)
 }
 
-summary.betareg <- function(object, phi = NULL, ...)
+summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
 {
   ## treat phi as full model parameter?
   if(!is.null(phi)) object$phi <- phi
   
-  ## store deviance residuals
-  object$residuals <- residuals(object, type = "deviance")
+  ## residuals
+  type <- match.arg(type, c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2"))
+  object$residuals <- residuals(object, type = type)
+  object$residuals.type <- type
   
   ## extend coefficient table
   k <- length(object$coefficients$mean)
@@ -334,7 +337,7 @@ summary.betareg <- function(object, phi = NULL, ...)
   object$coefficients <- cf
   
   ## number of iterations
-  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))
+  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))  
   
   ## delete some slots
   object$fitted.values <- object$terms <- object$model <- object$y <-
@@ -352,7 +355,10 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
   if(!x$converged) {
     cat("model did not converge\n")
   } else {
-    cat("Deviance residuals:\n")
+    types <- c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2")
+    Types <- c("Pearson residuals", "Deviance residuals", "Raw response residuals",
+      "Weighted residuals", "Standardized weighted residuals", "Standardized weighted residuals 2")  
+    cat(sprintf("%s:\n", Types[types == match.arg(x$residuals.type, types)]))
     print(structure(round(as.vector(quantile(x$residuals)), digits = digits),
       .Names = c("Min", "1Q", "Median", "3Q", "Max")))
   
@@ -559,7 +565,7 @@ model.matrix.betareg <- function(object, model = c("mean", "precision"), ...) {
 }
 
 residuals.betareg <- function(object,
-  type = c("deviance", "pearson", "response", "weighted", "sweighted", "sweighted2"), ...)
+  type = c("sweighted2", "deviance", "pearson", "response", "weighted", "sweighted"), ...)
 {
   ## raw response residuals and desired type
   res <- object$residuals
@@ -604,16 +610,34 @@ residuals.betareg <- function(object,
       ystar <- qlogis(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
       v <- trigamma(mu * phi) + trigamma((1 - mu) * phi)
-      sqrt(wts) * (ystar - mustar) / sqrt(v * hatvalues(object))
+      sqrt(wts) * (ystar - mustar) / sqrt(v * (1 - hatvalues(object)))
     })
 
   return(res)
 }
 
-cooks.distance.betareg <- function (model, ...) 
+cooks.distance.betareg <- function(model, ...) 
 {
     h <- hatvalues(model)
     k <- length(model$coefficients$mean)
     res <- residuals(model, type = "pearson")
     h * (res^2)/(k * (1 - h)^2)
+}
+
+update.betareg <- function (object, formula., ..., evaluate = TRUE)
+{
+  call <- object$call
+  if(is.null(call)) stop("need an object with call component")
+  extras <- match.call(expand.dots = FALSE)$...
+  if(!missing(formula.)) call$formula <- formula(update(Formula(formula(object)), formula.))
+  if(length(extras)) {
+    existing <- !is.na(match(names(extras), names(call)))
+    for (a in names(extras)[existing]) call[[a]] <- extras[[a]]
+    if(any(!existing)) {
+      call <- c(as.list(call), extras[!existing])
+      call <- as.call(call)
+    }
+  }
+  if(evaluate) eval(call, parent.frame())
+  else call
 }

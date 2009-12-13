@@ -132,17 +132,15 @@ Note that if the variable takes on values in $(a, b)$ (with $a < b$ known) one
 can model $(y - a)/(b - a)$. Furthermore, if $y$ also assumes the extremes $0$ and $1$, 
 a useful transformation in practice is $(y \times (n - 1) + 0.5) / n$
 where $n$ is the sample size \citep{betareg:Smithson+Verkuilen:2006}.
-\readme{Z: I think this is useful in practice but maybe here is a little bit too prominent? F: A colleague of mine is developing an inflated beta regression model for situations where the data contain zeros and/or ones.}
 
 The beta regression model is based on an alternative parameterization of the beta density in
 terms of the  variate mean and of a precision parameter. The beta density is
 usually expressed as 
-\begin{equation*}
-%\label{dens}
+\begin{equation*} %\label{eqn:density0}
 f(y;p,q) = \frac{\Gamma(p+q)}{\Gamma(p)\Gamma(q)}y^{p-1}(1-y)^{q-1}, \quad 0<y<1, 
 \end{equation*}
 where $p,q >0$ and $\Gamma(\cdot)$ is the gamma function. \cite{betareg:Ferrari+Cribari-Neto:2004} proposed a different parameterization by setting $\mu = p/(p+q)$ and $\phi = p+q$:
-\begin{equation*}
+\begin{equation*} %\label{eqn:density}
 f(y;\mu,\phi) = \frac{\Gamma(\phi)}{\Gamma(\mu\phi)\Gamma((1-\mu)\phi)}y^{\mu\phi-1}(1-y)^{(1-\mu)\phi-1}, \quad 0<y<1,
 \end{equation*}
 with $0<\mu<1$ and $\phi>0$.
@@ -171,11 +169,11 @@ model based on this parameterization naturally heteroskedastic. In particular,
 \end{equation} 
   
 The log-likelihood function is $\ell(\beta,\phi)=\sum_{i=1}^n\ell_i(\mu_i,\phi)$, where 
-\begin{eqnarray*} \label{eqn:loglik}
+\begin{eqnarray} \label{eqn:loglik}
   \ell_i(\mu_i,\phi) & = & \log \Gamma(\phi)-\log\Gamma(\mu_i\phi) - 
                            \log \Gamma((1-\mu_i)\phi) +(\mu_i\phi-1)\log y_i \\
                      &   & + \{(1-\mu_i)\phi-1\}\log(1-y_i).
-\end{eqnarray*}
+\end{eqnarray}
 Notice that $\mu_i=g^{-1}(x_i^{\top}\beta)$ is a function of $\beta$, the vector
 of regression parameters. Parameter estimation is performed by maximum likelihood (ML).
 
@@ -185,7 +183,7 @@ with further extensions) by \cite{betareg:Simas+Barreto-Souza+Rocha:2010}
 is the variable dispersion beta regression model. In this model the
 precision parameter is not constant for all observations but instead
 modelled in a similar fashion as the mean parameter. More specifically,
-$y_i\,\stackrel{\mathrm{ind.}}{\sim}\, {\mathcal B}(\mu_i, \phi_i)$, $i=1,\ldots,n$, and 
+$y_i \, \sim \, {\mathcal B}(\mu_i, \phi_i)$ independently, $i=1,\ldots,n$, and 
 \begin{eqnarray}
   g_1(\mu_i) & = & \eta_{1i} = x_i^\top \beta, \label{eqn:meanmodel} \\
   g_2(\phi_i) & = & \eta_{2i} = z_i^\top \gamma,\label{eqn:precisionmodel}
@@ -209,22 +207,21 @@ short references and do not provide detailed formulas.
 Various types of residuals are available for beta regression models. The raw
 response residuals $y_i - \hat \mu_i$ are typically not used due to the heteroskedasticity
 inherent in the model (see Equation~\ref{eqn:variance}). Hence, a natural
-alternative are Pearson residuals which \cite{betareg:Ferrari+Cribari-Neto:2004}
+alternative are \emph{Pearson residuals} which \cite{betareg:Ferrari+Cribari-Neto:2004}
 call \emph{standardized ordinary residual} and define as:
-\begin{equation*}
-  r_i = \frac{y_i - \hat{\mu}_i}{\sqrt{\widehat{\VAR}(y_i)}},
-\end{equation*}
+\begin{equation} \label{eqn:pearson}
+  r_{\mathrm{P}, i} = \frac{y_i - \hat{\mu}_i}{\sqrt{\widehat{\VAR}(y_i)}},
+\end{equation}
 where $\widehat{\VAR}(y_i) = \hat{\mu}_i(1-\hat{\mu}_i)/
 (1+\widehat{\phi_i})$, $\hat{\mu}_i = g_1^{-1}(x_i^\top\,\hat{\beta})$,
 and $\hat{\phi}_i = g_2^{-1}(z_i^\top\,\hat{\beta})$. Similarly, deviance residuals
 can be defined in the standard way via signed contributions to the excess likelihood.
 Further residuals were proposed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008a},
 in particular one residual with better properties that they named
-\emph{standardized weighted residual 2} \readme{Z: Should this be the default in the residuals() method? F: In my opinion, yes.}:
-\begin{equation*}
-  r^{ww}_i = \frac{y^*_i - {\hat{{\mu}}^*}_i}{\sqrt{\hat{v}_i(1 - h_{ii})}},
-\label{eqn:residual2}
-\end{equation*}
+\emph{standardized weighted residual~2}:
+\begin{equation} \label{eqn:sweighted2}
+  r_{\mathrm{sw2}, i} = \frac{y^*_i - {\hat{{\mu}}^*}_i}{\sqrt{\hat{v}_i(1 - h_{ii})}},
+\end{equation}
 where $y_i^* = \log\{ y_i / (1-y_i)\}$ and  $\mu_i^* = \psi(\mu_i\phi)- \psi((1-\mu_i)\phi)$,
 $\psi(\cdot)$ denoting the digamma function. Standardization is then by
 $v_i = \left\{ \psi'(\mu_i\phi) + \psi'((1-\mu_i)\phi)\right\}$
@@ -235,8 +232,6 @@ As before, hats denote evaluation at the ML estimates.
 %% Here, $W$ is $n\times n$ diagonal matrix with typical element given by
 %% $w_i = \phi v_i [1 / \{g'(\mu_i)\}^2]$, with  
 
-\readme{Z: I have omitted the description of the RESET-type test here. It is
-briefly introduced with reference in the illustrations section. F: OK.}
 %% A RESET-type misspecification test for fixed dispersion beta regression, similar
 %% to that of \cite{betareg:Ramsey:1969} for linear regressions, was proposed by
 %% \cite{betareg:Cribari-Neto+Lima:2007}. The authors considered different variants
@@ -328,7 +323,8 @@ Function & Description \\ \hline
                 precision parameter $\phi_i$, or variances $\mu_i (1 - \mu_i) / (1 + \phi_i)$) for new data \\
 \fct{fitted} & fitted means for observed data \\
 \fct{residuals} & extract residuals \citep[deviance, Pearson, response,
-  or different weighted residuals, see][]{betareg:Espinheira+Ferrari+Cribari-Neto:2008a} \\ 
+  or different weighted residuals, see][]{betareg:Espinheira+Ferrari+Cribari-Neto:2008a},
+  defaulting to standardized weighted residuals~2 from Equation~\ref{eqn:sweighted2} \\ 
 \fct{estfun} & compute empirical estimating functions (or score functions),
   evaluated at observed data and estimated parameters \citep[see][]{betareg:Zeileis:2006a} \\
 \fct{bread} & extract ``bread'' matrix for sandwich estimators
@@ -468,13 +464,11 @@ which replicates their Table~1. The goodness of fit is assessed using
 different types of diagnostic displays shown in their Figure~2. This
 graphic can be reproduced (in a slightly different order) using the
 \fct{plot} method for \class{betareg} objects, see Figure~\ref{fig:GasolineYield-plot}.
-\fixme{Z: omit nsim before release, just used at the moment to make recompilation
-of the .Rnw more convenient}
 %
 <<GasolineYield-plot, eval=FALSE>>=
 set.seed(123)
-plot(gy_logit, which = 1:4)
-plot(gy_logit, which = 5, type = "deviance", sub.caption = "", nsim = 5)
+plot(gy_logit, which = 1:4, type = "pearson")
+plot(gy_logit, which = 5, type = "deviance", sub.caption = "")
 plot(gy_logit, which = 1, type = "deviance", sub.caption = "")
 @
 %
@@ -604,7 +598,7 @@ Below, further extended models will be considered for these data sets and
 hence all model comparisons are deferred.
 
 
-\subsection{Variable dispersion model}
+\subsection{Variable dispersion model} \label{sec:vardisp}
 
 \subsubsection{Prater's gasoline yield data}
 
@@ -637,6 +631,9 @@ of a likelihood-ratio test (see their Table~18) that confirms the results:
 <<GasolineYield-lrtest>>=
 lrtest(gy_logit, gy_logit2)
 @
+Note that this can also be interpreted as testing the null hypothesis of equidispersion
+against a specific alternative of variable dispersion.
+
 
 \subsubsection{Household food expenditures}
 
@@ -661,10 +658,10 @@ lrtest(fe_beta, fe_beta2)
 AIC(fe_beta, fe_beta2, k = log(nrow(FoodExpenditure)))
 @
 %
-Thus, the model \code{fe_beta2} seems to be preferable. As visualized in
-Figure~\ref{fig:FoodExpenditure}, it describes a similar relationship between
-response and explanatory variables although with a somewhat shrinked
-\code{income} slope.
+Thus, there is evidence for variable dispersion and model \code{fe_beta2} seems
+to be preferable. As visualized in Figure~\ref{fig:FoodExpenditure}, it
+describes a similar relationship between response and explanatory variables
+although with a somewhat shrinked \code{income} slope.
 
 
 \subsection{Selection of different link functions}
@@ -832,9 +829,10 @@ eight years five months to twelve years three months; mean reading accuracy was
 cl1 <- hcl(c(260, 0), 90, 40)
 cl2 <- hcl(c(260, 0), 10, 95)
 plot(accuracy ~ iq, data = ReadingSkills, col = cl2[as.numeric(dyslexia)],
-  main = "Reading skills data",
-  pch = 19, xlab = "IQ score", ylab = "Reading accuracy", cex = 1.5)
-points(accuracy ~ iq, data = ReadingSkills, col = cl1[as.numeric(dyslexia)], cex = 1.5)
+  main = "Reading skills data", xlab = "IQ score", ylab = "Reading accuracy",
+  pch = c(19, 17)[as.numeric(dyslexia)], cex = 1.5)
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5,
+  pch = (1:2)[as.numeric(dyslexia)], col = cl1[as.numeric(dyslexia)])
 nd <- data.frame(dyslexia = "no", iq = -30:30/10)
 lines(nd$iq, predict(rs_beta, nd), col = cl1[1], lwd = 2)
 lines(nd$iq, plogis(predict(rs_ols, nd)), col = cl1[1], lty = 2, lwd = 2)
@@ -842,10 +840,10 @@ nd <- data.frame(dyslexia = "yes", iq = -30:30/10)
 lines(nd$iq, predict(rs_beta, nd), col = cl1[2], lwd = 2)
 lines(nd$iq, plogis(predict(rs_ols, nd)), col = cl1[2], lty = 2, lwd = 2)
 legend("topleft", c("control", "dyslexic", "betareg", "lm"),
-  lty = c(NA, NA, 1:2), pch = c(19, 19, NA, NA), lwd = 2,
+  lty = c(NA, NA, 1:2), pch = c(19, 17, NA, NA), lwd = 2,
   col = c(cl2, 1, 1), bty = "n")
 legend("topleft", c("control", "dyslexic", "betareg", "lm"),
-  lty = c(NA, NA, 1:2), pch = c(1, 1, NA, NA),
+  lty = c(NA, NA, 1:2), pch = c(1, 2, NA, NA),
   col = c(cl1, NA, NA), bty = "n")
 @
 \caption{\label{fig:ReadingSkills} Reading skills data from \cite{betareg:Smithson+Verkuilen:2006}:
@@ -885,20 +883,19 @@ As Figure~\ref{fig:ReadingSkills} illustrates, the beta regression fit does not 
 much from the OLS fit for the dyslexics group (with responses close to $0.5$) but fits
 much better in the control group (with responses close to $1$).
 
-\readme{The circles used for control and dyslexic observations in Figure 5 (blue and red) are not easily distinguishable when printed in a black and whire laser printer. Is it possible to use filled and unfilled circles? }
-
 The estimates above replicate those in Table~5 of \cite{betareg:Smithson+Verkuilen:2006},
 except for the signs of the coefficients of the dispersion submodel which they defined
 in the opposite way. Note that their results have been obtained with numeric rather than
 analytic standard errors hence \code{hessian = TRUE} is set above for replication. The results
 are also confirmed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008b}, who have also
-concluded that the dispersion is variable.
+concluded that the dispersion is variable. As pointed out in Section~\ref{sec:vardisp}, to 
+formally test equidispersion against variable dispersion \code{lrtest(rs_beta, . ~ . | 1)}
+(or the analogous \fct{waldtest}) can be used.
 
-\cite{betareg:Smithson+Verkuilen:2006} also consider two other applications of beta
-regressions which are also replicated in the \pkg{betareg} package: see \code{?MockJurors}
-and \code{?StressAnxiety} for the data description and
-\code{demo("SmithsonVerkuilen2006", package = "betareg")} for a full replication
-script with comments.
+\cite{betareg:Smithson+Verkuilen:2006} also consider two other psychometric applications of beta
+regressions the data for which are also provided in the \pkg{betareg} package: see \code{?MockJurors}
+and \code{?StressAnxiety}. Furthermore, \code{demo("SmithsonVerkuilen2006", package = "betareg")}
+is a full replication script with comments.
 
 
 \subsection{Structural change testing in beta regressions}
@@ -981,18 +978,17 @@ of the change in the corresponding parameter.
 \end{center}
 \end{figure}
 
-\section{Testing for fixed dispersion}\label{sec:dispersiontesting}
-
-We note that it is possible to test the null hypothesis that the precision (or dispersion) is constant for all observations, i.e., $\mathcal{H}_0: \phi_1 = \cdots = \phi_n = \phi$ ($0 < \phi < \infty$), using Rao's score test. At the outset, note that we can write the null hypothesis as $\mathcal{H}_0: \gamma_{q-1}=0$, where $\gamma_{q-1}$ is the $(q-1)$-vector containing all but the first parameter in the precision submodel (Equation~\ref{eqn:precisionmodel}) 
- with $z_{i1} = 1$ for all $i$. 
-Let $U_{(q-1)\gamma}$ be the vector of log-likelihood derivatives with respect to the $q-1$ parameters of interst and let $K_{*(q-1)\times(q-1)}^{\gamma\gamma}$
-be the $(q-1)\times (q-1)$ matrix that contains the last $q-1$ rows and the last $q-1$ columns of Fisher's information inverse. The score test statistic is \citep{betareg:Espinheira:2007}  
-\begin{equation*}\omega = \tilde{U}^{T}_{(q-1)\gamma} \left(\tilde{K}_{*(q-1)\times(q-1)}^{\gamma\gamma}\right)^{-1}
-\tilde{U}_{(q-1)\gamma}, 
-\end{equation*}
-where tildes indicate evaluation at the restricted maximum likelihood parameter estimates. Under the null hypothesis, 
-$\omega$ converges in distribution to $\chi^2_{q-1}$. So, the null hypothesis is rejected at the nominal level $0 < \alpha < 1$ if $\omega > \chi^2_{1-\alpha, q-1}$ (the appropriate quantile of the limiting null distribution). 
-\readme{F: I think it would be useful to implement this test in betareg. If you agree, we could keep this section and include here an application of the test to the reading accuracy data.}
+%% \section{Testing for fixed dispersion}\label{sec:dispersiontesting}
+%% 
+%% We note that it is possible to test the null hypothesis that the precision (or dispersion) is constant for all observations, i.e., $\mathcal{H}_0: \phi_1 = \cdots = \phi_n = \phi$ ($0 < \phi < \infty$), using Rao's score test. At the outset, note that we can write the null hypothesis as $\mathcal{H}_0: \gamma_{q-1}=0$, where $\gamma_{q-1}$ is the $(q-1)$-vector containing all but the first parameter in the precision submodel (Equation~\ref{eqn:precisionmodel}) 
+%%  with $z_{i1} = 1$ for all $i$. 
+%% Let $U_{(q-1)\gamma}$ be the vector of log-likelihood derivatives with respect to the $q-1$ parameters of interst and let $K_{*(q-1)\times(q-1)}^{\gamma\gamma}$
+%% be the $(q-1)\times (q-1)$ matrix that contains the last $q-1$ rows and the last $q-1$ columns of Fisher's information inverse. The score test statistic is \citep{betareg:Espinheira:2007}  
+%% \begin{equation*}\omega = \tilde{U}^{T}_{(q-1)\gamma} \left(\tilde{K}_{*(q-1)\times(q-1)}^{\gamma\gamma}\right)^{-1}
+%% \tilde{U}_{(q-1)\gamma}, 
+%% \end{equation*}
+%% where tildes indicate evaluation at the restricted maximum likelihood parameter estimates. Under the null hypothesis, 
+%% $\omega$ converges in distribution to $\chi^2_{q-1}$. So, the null hypothesis is rejected at the nominal level $0 < \alpha < 1$ if $\omega > \chi^2_{1-\alpha, q-1}$ (the appropriate quantile of the limiting null distribution). 
 
 
 \section{Summary}\label{sec:conclusion}
