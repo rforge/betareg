@@ -27,8 +27,8 @@
   dependent variable is beta-distributed and that its mean is related to a set
   of regressors through a linear predictor with unknown coefficients
   and a link function. The model also includes a precision parameter
-  which may be constant or depend as well on a (potentially different)
-  set of regressors through a link function. This approach naturally
+  which may be constant or depend on a (potentially different)
+  set of regressors through a link function as well. This approach naturally
   incorporates features such as heteroskedasticity or skewness
   which are commonly observed in data taking values in the standard
   unit interval, such as rates or proportions. This paper describes
@@ -83,7 +83,8 @@ regression analysis. A commonly used transformation is the logit $\tilde y =
 \log(y/(1-y))$. This approach, nonetheless, has shortcomings. First, the
 regression parameters are interpretable in terms of the mean of $\tilde y$, and
 not in terms of the mean of $y$ (given Jensen's inequality). Second, regressions
-involving rates and proportions are typically heteroskedastic: they display more
+involving data from the unit interval such as rates and proportions are
+typically heteroskedastic: they display more
 variation around the mean and less variation as we approach the lower and upper
 limits of the standard unit interval. Finally, the distributions of rates and
 proportions are typically asymmetric, and thus Gaussian-based approximations for
@@ -94,7 +95,7 @@ rates, proportions, or income concentration indices. Since the model is
 based on the assumption that the response is beta-distributed, they called their
 model \emph{the beta regression model}. In their model, the regression
 parameters are interpretable in terms of the mean of $y$ (the variable of
-interest). Additionally, the model is naturally heteroskedastic and easily
+interest) and the model is naturally heteroskedastic and easily
 accomodates asymmetries. A variant of the beta regression model that allows for
 nonlinearities and variable dispersion was proposed by
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. In particular, in this more
@@ -109,8 +110,9 @@ for statistical computing \citep{betareg:R:2009} and available
 from the Comprehensive \proglang{R} Archive Network (CRAN) at
 \url{http://CRAN.R-project.org/package=betareg}. The initial version of the
 package was written by \cite{betareg:Simas+Rocha:2006} up to version~1.2
-which was orphaned and archived on CRAN in mid-2009. Achim Zeileis took over maintenance
-after rewriting the code, starting from version~2.0-0.
+which was orphaned and archived on CRAN in mid-2009. Starting from version~2.0-0,
+Achim Zeileis took over maintenance after rewriting/extending the package's
+functionality.
 
 The paper unfolds as follows:
 Section~\ref{sec:model} outlines the theory underlying the beta regression model
@@ -130,11 +132,11 @@ The class of beta regregression models, as introduced by
 variables $y$ that assume  values in the open standard unit interval $(0,1)$.
 Note that if the variable takes on values in $(a, b)$ (with $a < b$ known) one
 can model $(y - a)/(b - a)$. Furthermore, if $y$ also assumes the extremes $0$ and $1$, 
-a useful transformation in practice is $(y \times (n - 1) + 0.5) / n$
+a useful transformation in practice is $(y \cdot (n - 1) + 0.5) / n$
 where $n$ is the sample size \citep{betareg:Smithson+Verkuilen:2006}.
 
 The beta regression model is based on an alternative parameterization of the beta density in
-terms of the  variate mean and of a precision parameter. The beta density is
+terms of the  variate mean and a precision parameter. The beta density is
 usually expressed as 
 \begin{equation*} %\label{eqn:density0}
 f(y;p,q) = \frac{\Gamma(p+q)}{\Gamma(p)\Gamma(q)}y^{p-1}(1-y)^{q-1}, \quad 0<y<1, 
@@ -144,7 +146,8 @@ where $p,q >0$ and $\Gamma(\cdot)$ is the gamma function. \cite{betareg:Ferrari+
 f(y;\mu,\phi) = \frac{\Gamma(\phi)}{\Gamma(\mu\phi)\Gamma((1-\mu)\phi)}y^{\mu\phi-1}(1-y)^{(1-\mu)\phi-1}, \quad 0<y<1,
 \end{equation*}
 with $0<\mu<1$ and $\phi>0$.
-We write $y \,\sim\, \mathcal{B}(\mu, \phi)$. Here, $\E(y) = \mu$ and $\VAR(y) = \mu(1-\mu)/(1+\phi)$. The parameter $\phi$ is known as the precision parameter, since for fixed $\mu$, the larger $\phi$ the smaller the variance of $y$; $\phi^{-1}$ is a dispersion parameter. 
+We write $y \,\sim\, \mathcal{B}(\mu, \phi)$. Here, $\E(y) = \mu$ and $\VAR(y) = \mu(1-\mu)/(1+\phi)$. The
+parameter $\phi$ is known as the precision parameter since, for fixed $\mu$, the larger $\phi$ the smaller the variance of $y$; $\phi^{-1}$ is a dispersion parameter. 
 
 Let $y_1,\ldots,y_n$ be a random sample such that $y_i \sim 
 {\mathcal{B}}(\mu_i,\phi)$, $i=1,\ldots,n$. The beta regression model is 
@@ -225,7 +228,7 @@ in particular one residual with better properties that they named
 where $y_i^* = \log\{ y_i / (1-y_i)\}$ and  $\mu_i^* = \psi(\mu_i\phi)- \psi((1-\mu_i)\phi)$,
 $\psi(\cdot)$ denoting the digamma function. Standardization is then by
 $v_i = \left\{ \psi'(\mu_i\phi) + \psi'((1-\mu_i)\phi)\right\}$
-and $h_{ii}$, the $i$th diagonal element of hat matrix
+and $h_{ii}$, the $i$th diagonal element of the hat matrix
 \citep[for details see][]{betareg:Ferrari+Cribari-Neto:2004,betareg:Espinheira+Ferrari+Cribari-Neto:2008a}.
 As before, hats denote evaluation at the ML estimates.
 %% $H ={\hat{W}}^{1/2}X(X^\top\hat{W}X)^{-1}X^\top {\hat{W}}^{1/2}$.
@@ -285,7 +288,7 @@ betareg(formula, data, subset, na.action, weights, offset,
 %
 where the first line contains the standard model-frame specifications
 \citep[see][]{betareg:Chambers+Hastie:1992},
-the second line have the arguments specific to beta regression models and
+the second line has the arguments specific to beta regression models and
 the arguments in the last line control some components of the return value.
 
 If a \code{formula} of type \code{y ~ x1 + x2} is supplied, it describes $y_i$ and $x_i$ 
@@ -317,7 +320,7 @@ Function & Description \\ \hline
 \fct{summary} & standard regression output (coefficient estimates, standard errors, partial Wald tests);
                 returns an object of class \class{summary.betareg}
                 containing the relevant summary statistics (which has a \fct{print} method) \\ 	\hline
-\fct{coef} & extract coefficients of model (full or mean/precision components), a single vector of all coefficients by default \\
+\fct{coef} & extract coefficients of model (full, mean, or precision components), a single vector of all coefficients by default \\
 \fct{vcov} & associated covariance matrix (with matching names) \\
 \fct{predict} & predictions (of means $\mu_i$, linear predictors $\eta_{1i}$,
                 precision parameter $\phi_i$, or variances $\mu_i (1 - \mu_i) / (1 + \phi_i)$) for new data \\
@@ -355,7 +358,7 @@ using \proglang{R}'s \fct{optim} with control options set in \fct{betareg.contro
 Starting values can be user-supplied, otherwise the $\beta$ starting values are estimated by 
 a regression of $g_1(y_i)$ on $x_i$ and similarly
 the $\gamma$ starting values are obtained from a regression of a transformed
-$y_i$ on the $z_i$. The transformed $y_i$ are derived in \cite{betareg:Ferrari+Cribari-Neto:2004}
+$y_i$ on the $z_i$. The transformed $y_i$ are derived in \citet[][p.~805]{betareg:Ferrari+Cribari-Neto:2004}
 where only their mean is used as the starting values (corresponding to constant $\phi_i$
 with identity link). The covariance matrix estimate is derived analytically as in
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. However, by setting \code{hessian = TRUE}
@@ -368,11 +371,11 @@ respectively.
 %
 A set of standard extractor functions for fitted model objects is available for
 objects of class \class{betareg}, including the usual \fct{summary} method that
-provides partial Wald tests for all coefficients. No \fct{anova} method is provided,
-but the general \fct{coeftest}, \fct{waldtest} from
+includes partial Wald tests for all coefficients. No \fct{anova} method is provided,
+but the general \fct{coeftest} and \fct{waldtest} from
 \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}, and \fct{linear.hypothesis}
-from \pkg{car} \citep{betareg:Fox:2002} can be used for Wald tests and \fct{lrtest} from \pkg{lmtest}
-for likelihood-ratio tests of nested models. See Table~\ref{tab:methods} for a list
+from \pkg{car} \citep{betareg:Fox:2002} can be used for Wald tests while \fct{lrtest} from \pkg{lmtest}
+provides for likelihood-ratio tests of nested models. See Table~\ref{tab:methods} for a list
 of all available methods. Most of these are standard in base \proglang{R}, however, methods
 to a few less standard generics are also provided. Specifically, there are tools related
 to specification testing and computation of sandwich covariance matrices as discussed
@@ -385,8 +388,8 @@ generalized leverages \citep{betareg:Wei+Hu+Fung:1998}.
 To illustrate the usage of \pkg{betareg} in practice we replicate
 and slightly extend some of the analyses from the original papers
 that suggested the methodology. More specifically, we estimate and
-compare various flavours of beta regression models for the gasoline
-yield of \cite{betareg:Prater:1956}, see Figure~\ref{fig:GasolineYield},
+compare various flavors of beta regression models for the gasoline
+yield data of \cite{betareg:Prater:1956}, see Figure~\ref{fig:GasolineYield},
 and for the household food expenditure data taken from
 \cite{betareg:Griffiths+Hill+Judge:1993}, see Figure~\ref{fig:FoodExpenditure}. 
 Further pure replication exercises are provided in Section~\ref{sec:replications}.
@@ -408,7 +411,7 @@ gy_loglog <- betareg(yield ~ batch + temp, data = GasolineYield,
 The basic beta regression model as suggested by \cite{betareg:Ferrari+Cribari-Neto:2004}
 is illustrated in Section~4 of their paper using two empirical examples.
 The first example employs the well-known gasoline yield data taken from
-\cite{betareg:Prater:1956}. The variable interest is \code{yield},
+\cite{betareg:Prater:1956}. The variable of interest is \code{yield},
 the proportion of crude oil converted to gasoline after distillation
 and fractionation, for which a beta regression model is rather
 natural. \cite{betareg:Ferrari+Cribari-Neto:2004} employ two explanatory
@@ -422,6 +425,7 @@ in Figure~\ref{fig:GasolineYield}.
 \begin{center}
 \setkeys{Gin}{width=0.75\textwidth}
 <<GasolineYield-visualization, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
+redblue <- hcl(c(0, 260), 90, 40)
 plot(yield ~ temp, data = GasolineYield, type = "n",
   ylab = "Proportion of crude oil converted to gasoline",
   xlab = "Temperature at which all gasoline has vaporized",
@@ -434,14 +438,14 @@ legend("topleft", as.character(1:10), title = "Batch",
 legend("topleft", as.character(1:10), title = "Batch", pch = 1, bty = "n")
 lines(150:500, predict(gy_logit, 
   newdata = data.frame(temp = 150:500, batch = "6")),
-  col = 4, lwd = 2, lty = 2)
+  col = redblue[2], lwd = 2, lty = 2)
 lines(150:500, predict(gy_loglog, 
   newdata = data.frame(temp = 150:500, batch = "6")),
-  col = 2, lwd = 2)
+  col = redblue[1], lwd = 2)
 legend("bottomright", c("log-log", "logit"),
-  col = c(2, 4), lty = 1:2, lwd = 2, bty = "n")
+  col = redblue, lty = 1:2, lwd = 2, bty = "n")
 @
-\caption{\label{fig:GasolineYield} Gasoline yield from \cite{betareg:Prater:1956}:
+\caption{\label{fig:GasolineYield} Gasoline yield data from \cite{betareg:Prater:1956}:
   Proportion of crude oil converted to gasoline explained by temperature
   (in degrees Fahrenheit) at which all gasoline has vaporized and given batch
   (indicated by gray level). Fitted curves correspond to beta regressions 
@@ -526,6 +530,7 @@ living in the household. All three variables are visualized in Figure~\ref{fig:F
 \begin{center}
 \setkeys{Gin}{width=0.75\textwidth}
 <<FoodExpenditure-visualization, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
+redblueblack <- hcl(c(0, 260, 0), c(90, 90, 0), c(40, 40, 0))
 plot(I(food/income) ~ income, data = FoodExpenditure,
   xlab = "Household income", ylab = "Proportion of food expenditures",
   main = "Food expenditures data", type = "n", ylim = c(0.04, 0.57))
@@ -538,15 +543,15 @@ legend("bottomleft", rev(as.character(sort(unique(FoodExpenditure$persons)))),
   title = "Persons", pch = 1, bty = "n")
 lines(10:100, predict(fe_lm, 
   newdata = data.frame(income = 10:100, persons = mean(FoodExpenditure$persons))),
-  col = 1, lwd = 2, lty = 2)
+  col = redblueblack[3], lwd = 2, lty = 2)
 lines(10:100, predict(fe_beta, 
   newdata = data.frame(income = 10:100, persons = mean(FoodExpenditure$persons))),
-  col = 4, lwd = 2, lty = 5)
+  col = redblueblack[2], lwd = 2, lty = 5)
 lines(10:100, predict(fe_beta2, 
   newdata = data.frame(income = 10:100, persons = mean(FoodExpenditure$persons))),
-  col = 2, lwd = 2)
+  col = redblueblack[1], lwd = 2)
 legend("topright", c("logit, var. disp.", "logit, fix. disp.", "lm"),
-  col = c(2, 4, 1), lty = c(1, 5, 2), lwd = 2, bty = "n")
+  col = redblueblack, lty = c(1, 5, 2), lwd = 2, bty = "n")
 @
 \caption{\label{fig:FoodExpenditure} Household food expenditure data from
   \cite{betareg:Griffiths+Hill+Judge:1993}: Proportion of household income
@@ -610,7 +615,7 @@ For illustration of this approach, the example from Section~3 of the online
 supplements to \cite{betareg:Simas+Barreto-Souza+Rocha:2010} is considered.
 This investigates Prater's gasoline yield data based on the same
 mean equation as above, but now with temperature \code{temp} as an 
-additional regressor for the precision parameter $\phi_i$:
+additional regressor for the precision parameter~$\phi_i$:
 %
 <<GasolineYield-phireg>>=
 gy_logit2 <- betareg(yield ~ batch + temp | temp, data = GasolineYield)
@@ -699,7 +704,7 @@ AIC(gy_logit, gy_logit2, gy_loglog)
 Moreover, if \code{temp} were included as a regressor in the precision
 equation of \code{gy_loglog}, it would no longer yield significant improvements.
 Thus, improvement of the model fit in the mean equation by adoption of the log-log
-link have waived the need for an extended precision equation.
+link have waived the need for a variable precision equation.
 
 To underline the appropriateness of the log-log specification, 
 \cite{betareg:Cribari-Neto+Lima:2007} consider a sequence of diagnostic
@@ -810,7 +815,7 @@ rs_beta <- betareg(accuracy ~ dyslexia * iq | dyslexia + iq,
   data = ReadingSkills, hessian = TRUE)
 @
 
-We consider an application that models reading accuracy data for nondyslexic
+We consider an application that analyzes reading accuracy data for nondyslexic
 and dyslexic Australian children \citep{betareg:Smithson+Verkuilen:2006}.  
 The variable of interest is \code{accuracy} providing the scores on a test of 
 reading accuracy taken by 44 children, which is predicted by the two regressors
@@ -853,10 +858,10 @@ regression with logit-transformed dependent variable \code{rs\_ols} (dashed).}
 \end{center}
 \end{figure}
 
-\cite{betareg:Smithson+Verkuilen:2006} want to investigate whether \code{dyslexia}
+\cite{betareg:Smithson+Verkuilen:2006} set out to investigate whether \code{dyslexia}
 contributes to the explanation of \code{accuracy} even when corrected for \code{iq} score
 (which is on average lower for dyslexics). Hence, they consider separate regressions
-for both groups fitted by the interaction of both regressors. To show that OLS
+for the two groups fitted by the interaction of both regressors. To show that OLS
 regression is no suitable tool in this situation, they first fit a linear regression
 of the logit-transformed response:
 %
@@ -869,7 +874,7 @@ The interaction effect does not appear to be significant, however this is a resu
 of the poor fit of the linear regression as will be shown below. Figure~\ref{fig:ReadingSkills}
 clearly shows that the data are asymmetric and heteroskedastic (especially in the control
 group). Hence, \cite{betareg:Smithson+Verkuilen:2006} fit a beta regression model,
-again with separate means for both groups, but also allow the dispersion to depend on the
+again with separate means for both groups, but they also allow the dispersion to depend on the
 main effects of both variables.
 %
 <<ReadingSkills-beta1>>=
@@ -895,7 +900,7 @@ formally test equidispersion against variable dispersion \code{lrtest(rs_beta, .
 \cite{betareg:Smithson+Verkuilen:2006} also consider two other psychometric applications of beta
 regressions the data for which are also provided in the \pkg{betareg} package: see \code{?MockJurors}
 and \code{?StressAnxiety}. Furthermore, \code{demo("SmithsonVerkuilen2006", package = "betareg")}
-is a full replication script with comments.
+is a complete replication script with comments.
 
 
 \subsection{Structural change testing in beta regressions}
@@ -922,7 +927,7 @@ this, we replicate the example from Section~5.3 in \cite{betareg:Zeileis:2006}.
 Two artificial data sets are considered: a series \code{y1} with a change in
 the mean $\mu$, and a series \code{y2} with a change in the precision $\phi$.
 Both simulated series start with the parameters $\mu = 0.3$ and $\phi = 4$
-and for the first series $\mu$ changes to $0.5$ at after 75\% of the observations
+and for the first series $\mu$ changes to $0.5$ after 75\% of the observations
 while $\phi$ remains constant whereas for the second series $\phi$ changes to $8$
 after 50\% of the observations and $\mu$ remains constant.
 %
@@ -998,7 +1003,7 @@ This paper addressed the \proglang{R} implementation of the class of beta regres
 how one can model rates and proportions using \pkg{betareg} and presented several empirical examples
 reproducing previously published results. Future
 research and implementation shall focus on the situation where the data contain zeros and/or ones
-\citep[see, e.g.,][]{betareg:Kieschnick+McCullough:2003}. An additional line of research and
+\citep[see e.g.,][]{betareg:Kieschnick+McCullough:2003}. An additional line of research and
 implementation is that of dynamic beta regression models, such as the class of 
 $\beta$ARMA models
 proposed by \cite{betareg:Rocha+Cribari-Neto:2010}.  
