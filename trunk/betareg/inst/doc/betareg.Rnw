@@ -118,7 +118,7 @@ before Section~\ref{sec:implementation} describes its implementation in \proglan
 Sections~\ref{sec:illustrations} and \ref{sec:replications} provide various
 empirical applications: The former focuses on illustrating various aspects
 of beta regressions in practice while the latter provides further replications
-of previously published empirical research. Section~\ref{sec:dispersiontesting} describes a score test for fixed dispersion and Section~\ref{sec:conclusion} 
+of previously published empirical research. Finally, Section~\ref{sec:conclusion} 
 contains concluding remarks and directions for future research and 
 implementation. 
 
@@ -208,7 +208,7 @@ Various types of residuals are available for beta regression models. The raw
 response residuals $y_i - \hat \mu_i$ are typically not used due to the heteroskedasticity
 inherent in the model (see Equation~\ref{eqn:variance}). Hence, a natural
 alternative are \emph{Pearson residuals} which \cite{betareg:Ferrari+Cribari-Neto:2004}
-call \emph{standardized ordinary residual} and define as:
+call \emph{standardized ordinary residual} and define as
 \begin{equation} \label{eqn:pearson}
   r_{\mathrm{P}, i} = \frac{y_i - \hat{\mu}_i}{\sqrt{\widehat{\VAR}(y_i)}},
 \end{equation}
