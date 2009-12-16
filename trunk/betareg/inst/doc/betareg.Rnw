@@ -53,7 +53,7 @@
   Augasse 2--6\\
   1090 Wien, Austria\\
   E-mail: \email{Achim.Zeileis@R-project.org}\\
-  URL: \url{http://statmath.wu-wien.ac.at/~zeileis/}
+  URL: \url{http://statmath.wu.ac.at/~zeileis/}
 }
 
 %% Sweave/vignette information and metadata
@@ -127,7 +127,7 @@ implementation.
 
 \section{Beta regression}\label{sec:model} 
 
-The class of beta regregression models, as introduced by
+The class of beta regression models, as introduced by
 \cite{betareg:Ferrari+Cribari-Neto:2004}, is useful for modeling continuous
 variables $y$ that assume  values in the open standard unit interval $(0,1)$.
 Note that if the variable takes on values in $(a, b)$ (with $a < b$ known) one
@@ -153,7 +153,7 @@ Let $y_1,\ldots,y_n$ be a random sample such that $y_i \sim
 {\mathcal{B}}(\mu_i,\phi)$, $i=1,\ldots,n$. The beta regression model is 
 defined as 
 \begin{equation*}
-g(\mu_i)=x_{i}^\top \beta_i=\eta_i,
+g(\mu_i) = x_{i}^\top \beta = \eta_i,
 \end{equation*}
 where $\beta=(\beta_1,\ldots,\beta_k)^\top$ is a $k \times 1$ vector of unknown 
 regression parameters ($k<n$), $\eta_i$ is a linear 
@@ -174,7 +174,7 @@ model based on this parameterization naturally heteroskedastic. In particular,
 The log-likelihood function is $\ell(\beta,\phi)=\sum_{i=1}^n\ell_i(\mu_i,\phi)$, where 
 \begin{eqnarray} \label{eqn:loglik}
   \ell_i(\mu_i,\phi) & = & \log \Gamma(\phi)-\log\Gamma(\mu_i\phi) - 
-                           \log \Gamma((1-\mu_i)\phi) +(\mu_i\phi-1)\log y_i \\
+                           \log \Gamma((1-\mu_i)\phi) +(\mu_i\phi-1)\log y_i \\ \nonumber
                      &   & + \{(1-\mu_i)\phi-1\}\log(1-y_i).
 \end{eqnarray}
 Notice that $\mu_i=g^{-1}(x_i^{\top}\beta)$ is a function of $\beta$, the vector
@@ -211,13 +211,13 @@ Various types of residuals are available for beta regression models. The raw
 response residuals $y_i - \hat \mu_i$ are typically not used due to the heteroskedasticity
 inherent in the model (see Equation~\ref{eqn:variance}). Hence, a natural
 alternative are \emph{Pearson residuals} which \cite{betareg:Ferrari+Cribari-Neto:2004}
-call \emph{standardized ordinary residual} and define as
+call \emph{standardized ordinary residuals} and define as
 \begin{equation} \label{eqn:pearson}
   r_{\mathrm{P}, i} = \frac{y_i - \hat{\mu}_i}{\sqrt{\widehat{\VAR}(y_i)}},
 \end{equation}
 where $\widehat{\VAR}(y_i) = \hat{\mu}_i(1-\hat{\mu}_i)/
 (1+\widehat{\phi_i})$, $\hat{\mu}_i = g_1^{-1}(x_i^\top\,\hat{\beta})$,
-and $\hat{\phi}_i = g_2^{-1}(z_i^\top\,\hat{\beta})$. Similarly, deviance residuals
+and $\hat{\phi}_i = g_2^{-1}(z_i^\top\,\hat{\gamma})$. Similarly, deviance residuals
 can be defined in the standard way via signed contributions to the excess likelihood.
 Further residuals were proposed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008a},
 in particular one residual with better properties that they named
@@ -255,7 +255,7 @@ in \proglang{R}, it helps to emphasize some properties of the model: It is a sta
 maximum likelihood (ML) task for which there is no closed-form solution but numerical
 optimization is required. Furthermore, the model shares some properties (such as
 linear predictor, link function, dispersion parameter) with
-generalized linear models \citep[GLMs][]{betareg:McCullagh+Nelder:1989}, but it
+generalized linear models \citep[GLMs;][]{betareg:McCullagh+Nelder:1989}, but it
 is not a special case of this framework (not even for fixed dispersion). There are various
 models with implementations in \proglang{R} that have similar features -- here, we
 specifically reuse some of the ideas employed for generalized count data regression
@@ -263,7 +263,7 @@ by \cite{betareg:Zeileis+Kleiber+Jackman:2008}.
 
 The main model-fitting function in \pkg{betareg} is \fct{betareg} which takes
 a fairly standard approach for implementing ML regression models in \proglang{R}:
-\code{formula} plus \code{data} is used for data
+\code{formula} plus \code{data} is used for model and data
 specification, then the likelihood and corresponding gradient (or estimating
 function) is set up, \fct{optim} is called for maximizing the likelihood, and finally
 an object of \proglang{S}3 class \class{betareg} is returned for which a large set of methods to standard
@@ -365,8 +365,8 @@ with identity link). The covariance matrix estimate is derived analytically as i
 the numerical Hessian matrix returned by \fct{optim} can also be obtained.
 
 The returned fitted-model object of class \class{betareg} is a list similar
-to \class{glm} objects. Some of its elements---such as \code{coefficients} or
-\code{terms}---are lists with a mean and precision component,
+to \class{glm} objects. Some of its elements -- such as \code{coefficients} or
+\code{terms} -- are lists with a mean and precision component,
 respectively.
 %
 A set of standard extractor functions for fitted model objects is available for
@@ -566,7 +566,7 @@ legend("topright", c("logit, var. disp.", "logit, fix. disp.", "lm"),
 \end{figure}
 
 To start their analysis, \cite{betareg:Ferrari+Cribari-Neto:2004} consider
-a simple linear regression model fitted by ordinary least squares (OLS)
+a simple linear regression model fitted by ordinary least squares (OLS):
 %
 <<FoodExpenditure-lm1>>=
 <<FoodExpenditure-lm>>
@@ -685,7 +685,7 @@ link instead of the previously used (default) logit link
 <<GasolineYield-loglog>>
 @
 %
-which clearly improves pseudo $R^2$ of the model:
+which clearly improves the pseudo $R^2$ of the model:
 %
 <<GasolineYield-Rsquared>>=
 summary(gy_logit)$pseudo.r.squared
