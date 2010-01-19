@@ -41,7 +41,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
   ## sanity checks
   if(length(Y) < 1) stop("empty model")
-  if(!(min(Y) >= 0 & max(Y) <= 1)) stop("invalid dependent variable, must be in [0, 1]")
+  if(!(min(Y) > 0 & max(Y) < 1)) stop("invalid dependent variable, must be in (0, 1)")
 
   ## convenience variables
   n <- length(Y)
