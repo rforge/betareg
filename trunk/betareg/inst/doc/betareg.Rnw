@@ -11,7 +11,7 @@
 \newcommand{\readme}[1]{\emph{\marginpar{README} (#1)}}
 
 \author{Francisco Cribari-Neto\\Universidade Federal de Pernambuco \And
-        Achim Zeileis\\WU Wirtschaftsuniversit\"at Wien}
+        Achim Zeileis\\Universit\"at Innsbruck}
 \Plainauthor{Francisco Cribari-Neto, Achim Zeileis}
 
 \title{Beta Regression in \proglang{R}}
@@ -48,10 +48,10 @@
   URL: \url{http://www.de.ufpe.br/~cribari/}\\
   
   Achim Zeileis\\
-  Department of Statistics and Mathematics\\
-  WU Wirtschaftsuniversit\"at Wien\\
-  Augasse 2--6\\
-  1090 Wien, Austria\\
+  Institute for Statistics\\
+  Universit\"at Innsbruck\\
+  Universit\"atsstr.~15\\
+  6020 Innsbruck, Austria\\
   E-mail: \email{Achim.Zeileis@R-project.org}\\
   URL: \url{http://statmath.wu.ac.at/~zeileis/}
 }
@@ -60,7 +60,7 @@
 %% need no \usepackage{Sweave}
 \SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
 %\VignetteIndexEntry{Beta Regression in R}
-%\VignetteDepends{stats,betareg,car,lmtest,sandwich}
+%\VignetteDepends{stats,betareg,car,lmtest,sandwich,strucchange}
 %\VignetteKeywords{beta regression, rates, proportions, R}
 %\VignettePackage{betareg}
 
@@ -102,6 +102,56 @@ nonlinearities and variable dispersion was proposed by
 general model, the parameter that accounts for the precision of the data is not
 assumed to be constant across observations but it is allowed to vary, which leads to the
 \emph{variable dispersion beta regression model}. 
+
+\fixme{Z: Reviewers asked for motivation of beta distribution as a flexible
+distribution. Based on your code I have already added the graphic, but the
+text is still missing.}
+
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=\textwidth}
+<<beta-distributions, echo=FALSE, fig=TRUE, width=8.5, height=4.5>>=
+par(mfrow = c(1, 2), mar = c(4.1, 4.1, 4.1, 0.1))
+dbeta2 <- function(x, mu, phi = 1) dbeta(x, mu * phi, (1 - mu) * phi)
+x <- seq(from = 0.01, to = 0.99, length = 200)
+xx <- cbind(x, x, x, x, x)
+
+yy <- cbind(
+  dbeta2(x, 0.10, 5),
+  dbeta2(x, 0.25, 5),
+  dbeta2(x, 0.50, 5),
+  dbeta2(x, 0.75, 5),
+  dbeta2(x, 0.90, 5)
+)
+matplot(xx, yy, type = "l", xlab = "y", ylab = "Density", main = expression(phi == 5),
+  lty = 1, col = "black", ylim = c(0, 15))
+text(0.05, 12  , "0.10")
+text(0.95, 12  , "0.90")
+text(0.22,  2.8, "0.25")
+text(0.78,  2.8, "0.75")
+text(0.50,  2.3, "0.50")
+
+yy <- cbind(
+  dbeta2(x, 0.10, 100),
+  dbeta2(x, 0.25, 100),
+  dbeta2(x, 0.50, 100),
+  dbeta2(x, 0.75, 100),
+  dbeta2(x, 0.90, 100)
+)
+matplot(xx, yy, type = "l", xlab = "y", ylab = "", main = expression(phi == 100),
+  lty = 1, col = "black", ylim = c(0, 15))
+text(0.10, 14.5, "0.10")
+text(0.90, 14.5, "0.90")
+text(0.25,  9.8, "0.25")
+text(0.75,  9.8, "0.75")
+text(0.50,  8.6, "0.50")
+@
+\caption{\label{fig:beta-distributions} Probability density functions for
+  beta distributions with varying parameters $\mu = 0.10, 0.25, 0.50, 0.75, 0.90$ and
+  $\phi = 5$ (left) and $\phi = 100$ (right).}
+\end{center}
+\end{figure}
+
 
 In this paper, we describe the \pkg{betareg} package which can
 be used to perform inference in both fixed and variable dispersion beta
@@ -356,11 +406,12 @@ Function & Description \\ \hline
 ML estimation of all parameters employing analytical gradients is carried out
 using \proglang{R}'s \fct{optim} with control options set in \fct{betareg.control}.
 Starting values can be user-supplied, otherwise the $\beta$ starting values are estimated by 
-a regression of $g_1(y_i)$ on $x_i$ and similarly
-the $\gamma$ starting values are obtained from a regression of a transformed
-$y_i$ on the $z_i$. The transformed $y_i$ are derived in \citet[][p.~805]{betareg:Ferrari+Cribari-Neto:2004}
-where only their mean is used as the starting values (corresponding to constant $\phi_i$
-with identity link). The covariance matrix estimate is derived analytically as in
+a regression of $g_1(y_i)$ on $x_i$. The starting values for the $\gamma$ intercept
+are chosen as described in \cite[][p.~805]{betareg:Ferrari+Cribari-Neto:2004}, corresponding
+to a constant $\phi_i$ (plus a link transformation, if any). All further
+$\gamma$ coefficients (if any) are initially set to zero.
+\readme{Z: New choice of starting values in dispersion model, as discussed by e-mail.}
+The covariance matrix estimate is derived analytically as in
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. However, by setting \code{hessian = TRUE}
 the numerical Hessian matrix returned by \fct{optim} can also be obtained.
 
@@ -468,11 +519,13 @@ which replicates their Table~1. The goodness of fit is assessed using
 different types of diagnostic displays shown in their Figure~2. This
 graphic can be reproduced (in a slightly different order) using the
 \fct{plot} method for \class{betareg} objects, see Figure~\ref{fig:GasolineYield-plot}.
+\fixme{Z: Note to self, I will change back the nsim argument at the
+very end of the revision.}
 %
 <<GasolineYield-plot, eval=FALSE>>=
 set.seed(123)
 plot(gy_logit, which = 1:4, type = "pearson")
-plot(gy_logit, which = 5, type = "deviance", sub.caption = "")
+plot(gy_logit, which = 5, type = "deviance", sub.caption = "", nsim = 1)
 plot(gy_logit, which = 1, type = "deviance", sub.caption = "")
 @
 %
@@ -656,7 +709,9 @@ regressor in the precision equation.
 @
 %
 This leads to significant improvements in terms of the likelihood and
-the associated BIC.
+the associated BIC\footnote{In \proglang{R}, the BIC can be computed by means of
+\fct{AIC} when $\log(n)$ is supplied as the penalty term \code{k}}.
+\readme{Z: Added BIC remark as suggested by reviewer~1.}
 %
 <<FoodExpenditure-comparison>>=
 lrtest(fe_beta, fe_beta2)
@@ -723,28 +778,35 @@ lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "link")^2))
 lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "link")^2))
 @
 %
-The improvement of the model fit can also be brought out graphically in a
-display of predicted vs.\ observed values (see Figure~\ref{fig:GasolineYield-diagnostics}).
+The improvement of the model fit can also be brought out graphically by comparing
+absolute raw residuals (i.e., $y_i - \hat \mu_i$) from both models as in
+Figure~\ref{fig:GasolineYield-diagnostics}.
+\readme{Z: Reviewer~1 wanted a different display. This was the best I could think of.}
 %
 <<GasolineYield-diagnostics, eval=FALSE>>=
-plot(gy_logit, which = 6)
-plot(gy_loglog, which = 6)
+plot(abs(residuals(gy_loglog, type = "response")),
+  abs(residuals(gy_logit, type = "response")))
+abline(0, 1, lty = 2)
 @
 %
-This shows that especially for the extreme observations, the log-log link
-leads to better predictions.
+This shows that there are a few observations clearly above the diagonal
+(where the log-log-link fits better than the logit link) whereas
+there are fewer such observations below the diagonal. A different
+diagnostic display that is useful in this situation 
+\citep[and is employed by][]{betareg:Cribari-Neto+Lima:2007} is a 
+plot of predicted values ($\hat \mu_i$) vs.\ observed values ($y_i$)
+for each model. This can be created by \code{plot(gy_logit, which = 6)} and
+\code{plot(gy_loglog, which = 6)}, respectively.
 
 \begin{figure}[t!]
 \begin{center}
-\setkeys{Gin}{width=\textwidth}
-<<GasolineYield-diagnostics1, echo=FALSE, fig=TRUE, width=8.5, height=4>>=
-par(mfrow = c(1, 2))
+\setkeys{Gin}{width=0.75\textwidth}
+<<GasolineYield-diagnostics1, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
 <<GasolineYield-diagnostics>>
 @
-\caption{\label{fig:GasolineYield-diagnostics} Diagnostic plots:
-  Predicted vs.\ observed values for beta regression model
-  \code{gy\_logit} with logit link (left) and \code{gy\_loglog}
-  with log-log link (right).}
+\caption{\label{fig:GasolineYield-diagnostics} Scatterplot comparing
+  the absolute raw residuals from beta regression modes with log-log
+  link (x-axis) and logit link (y-axis).}
 \end{center}
 \end{figure}
 
@@ -777,15 +839,19 @@ One could conduct a similar analysis as above for the household
 food expenditure data. However, as the response takes less extreme observations
 than for the gasoline yield data, the choice of link function is less important.
 In fact, refitting the model with various link functions shows no large
-differences in the resulting log-likelihoods.
+differences in the resulting log-likelihoods. These can be easily
+extracted from fitted models using the \fct{logLik} function, e.g.,
+\code{logLik(fe_beta2)}. Below we use a compact \fct{sapply} call to
+obtain this for updated version of \code{fe_beta2} with all available link
+functions. \readme{Z: This interrupts the reading flow somewhat but
+still better than doing everything `by hand' as implied by reviewer~1.}
 %
 <<FoodExpenditure-links>>=
-sapply(c("logit", "probit", "cloglog", "cauchit", "loglog"), function(x)
-  logLik(betareg(I(food/income) ~ income + persons | persons,
-  link = x, data = FoodExpenditure)))
+sapply(c("logit", "probit", "cloglog", "cauchit", "loglog"),
+  function(x) logLik(update(fe_beta2, link = x)))
 @
 %
-Only the Cauchy link performs slightly better than the logit link and might
+Only the Cauchy link performs somewhat better than the logit link and might
 hence deserve further investigation.
 
 
@@ -915,14 +981,30 @@ and \fct{linear.hypothesis} from \pkg{car} \citep{betareg:Fox:2002} can be
 employed for carrying out different flavors of Wald tests.
 
 In this section, we illustrate yet another generic inference approach implemented
-in the \pkg{strucchange} package for structural change testing. While originally
+in the \pkg{strucchange} package for structural change testing. This is concerned
+with a different testing problem compared to the functions above: It assesses
+whether the model parameters are stable throughout the entire the sample or
+whether they change over the observations $i = 1, \dots, n$. This is of particular
+interest in time series applications where the regression coefficients $\beta$ and
+$\gamma$ change at some unknown time in the sample period
+\citep[see][for more details and references to the literature]{betareg:Zeileis:2006}.
+\readme{Z: I added some more details about structural change methods. See also
+below. Hopefully, these give a somewhat clearer picture of what is going on.}
+
+While originally
 written for linear regression models \citep{betareg:Zeileis+Leisch+Hornik:2002},
 \pkg{strucchange} was extended by \cite{betareg:Zeileis:2006} to compute generalized
 fluctuation tests for structural change in models that are based on suitable
-estimating functions. If these estimating functions can be extracted by an
-\fct{estfun} method, models can simply be plugged into the \fct{gefp} function
-for computing generalized empirical fluctuation processes. To illustrate
-this, we replicate the example from Section~5.3 in \cite{betareg:Zeileis:2006}.
+estimating functions. The idea is to capture systematic deviations from parameter
+stability by cumulative sums of the empirical estimating functions: If the
+parameters are stable, the cumulative sum process should fluctuate randomly around
+zero. However, if there is an abrupt shift in the parameters, the cumulative sums
+will deviate clearly from zero and have a peak at around the time of the shift.
+If the estimating functions can be extracted by an \fct{estfun} method (as for
+\class{betareg} objects), models can simply be plugged into the \fct{gefp} function
+for computing these cumulative sums (also known as generalized empirical
+fluctuation processes). To illustrate this, we replicate the example from
+Section~5.3 in \cite{betareg:Zeileis:2006}.
 
 Two artificial data sets are considered: a series \code{y1} with a change in
 the mean $\mu$, and a series \code{y2} with a change in the precision $\phi$.
@@ -963,10 +1045,10 @@ plot(y2_gefp, aggregate = FALSE)
 The resulting Figure~\ref{fig:strucchange} \citep[replicating Figure~4 from][]{betareg:Zeileis:2006}
 shows two 2-dimensional fluctuation processes: one for \code{y1} (left) and one for \code{y2} (right).
 Both fluctuation processes behave as expected: There is no excessive fluctuation of the 
-process pertaining to the parameter that remained constant while there is a significant instability
-in the parameter that changed signalled by a boundary crossing and a peak at about the time
-of the change in the corresponding parameter.
-
+process pertaining to the parameter that remained constant while there is a clear peak
+at about the time of the change in the parameter with the shift. In both series
+the structural change is significant due to the crossing of the red boundary that
+corresponds to the 5\% critical value. For further details see \cite{betareg:Zeileis:2006}.
 
 \begin{figure}[t!]
 \begin{center}
@@ -1016,7 +1098,9 @@ proposed by \cite{betareg:Rocha+Cribari-Neto:2010}.
 FCN gratefully acknowledges financial support from CNPq/Brazil. 
 Both authors are grateful to A.B.~Simas and A.V.~Rocha for their
 work on the previous versions of the \pkg{betareg} package (up to
-version~1.2).
+version~1.2). Furthermore, detailed and constructive feedback from
+two anonymous reviewers, the associated editor, as well as from
+B.~Gr{\"u}n was very helpful for enhancing both software and manuscript.
 
 
 \bibliography{betareg}
