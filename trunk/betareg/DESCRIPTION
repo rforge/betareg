@@ -1,6 +1,6 @@
 Package: betareg
 Version: 2.2-0
-Date: 2010-03-10
+Date: 2010-03-12
 Title: Beta Regression
 Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
             person(given = c("Francisco"), family = "Cribari-Neto", role = "ctb"),
