@@ -281,7 +281,7 @@ and \ref{eqn:precisionmodel}. Also, they have obtained analytical bias
 corrections for the ML estimators of the parameters, thus generalizing the results of
 \cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006}, who derived bias
 corrections for fixed dispersion beta regressions. However, as these extensions
-are not (yet) part of the \pkg{betareg} package, we confine ourselve to these
+are not (yet) part of the \pkg{betareg} package, we confine ourselves to these
 short references and do not provide detailed formulas.
 
 Various types of residuals are available for beta regression models. The raw
@@ -293,7 +293,7 @@ call \emph{standardized ordinary residuals} and define as
   r_{\mathrm{P}, i} = \frac{y_i - \hat{\mu}_i}{\sqrt{\widehat{\VAR}(y_i)}},
 \end{equation}
 where $\widehat{\VAR}(y_i) = \hat{\mu}_i(1-\hat{\mu}_i)/
-(1+\widehat{\phi_i})$, $\hat{\mu}_i = g_1^{-1}(x_i^\top\,\hat{\beta})$,
+(1+\hat{\phi_i})$, $\hat{\mu}_i = g_1^{-1}(x_i^\top\,\hat{\beta})$,
 and $\hat{\phi}_i = g_2^{-1}(z_i^\top\,\hat{\gamma})$. Similarly, deviance residuals
 can be defined in the standard way via signed contributions to the excess likelihood.
 Further residuals were proposed by \cite{betareg:Espinheira+Ferrari+Cribari-Neto:2008a},
@@ -307,7 +307,7 @@ $\psi(\cdot)$ denoting the digamma function. Standardization is then by
 $v_i = \left\{ \psi'(\mu_i\phi) + \psi'((1-\mu_i)\phi)\right\}$
 and $h_{ii}$, the $i$th diagonal element of the hat matrix
 \citep[for details see][]{betareg:Ferrari+Cribari-Neto:2004,betareg:Espinheira+Ferrari+Cribari-Neto:2008a}.
-As before, hats denote evaluation at the ML estimates.
+Hats denote evaluation at the ML estimates.
 %% $H ={\hat{W}}^{1/2}X(X^\top\hat{W}X)^{-1}X^\top {\hat{W}}^{1/2}$.
 %% Here, $W$ is $n\times n$ diagonal matrix with typical element given by
 %% $w_i = \phi v_i [1 / \{g'(\mu_i)\}^2]$, with  
@@ -751,8 +751,8 @@ regressor in the precision equation.
 @
 %
 This leads to significant improvements in terms of the likelihood and
-the associated BIC\footnote{In \proglang{R}, the BIC can be computed by means of
-\fct{AIC} when $\log(n)$ is supplied as the penalty term \code{k}}.
+the associated BIC.\footnote{In \proglang{R}, the BIC can be computed by means of
+\fct{AIC} when $\log(n)$ is supplied as the penalty term \code{k}}
 %
 <<FoodExpenditure-comparison>>=
 lrtest(fe_beta, fe_beta2)
@@ -800,7 +800,7 @@ AIC(gy_logit, gy_logit2, gy_loglog)
 Moreover, if \code{temp} were included as a regressor in the precision
 equation of \code{gy_loglog}, it would no longer yield significant improvements.
 Thus, improvement of the model fit in the mean equation by adoption of the log-log
-link have waived the need for a variable precision equation.
+link has waived the need for a variable precision equation.
 
 To underline the appropriateness of the log-log specification, 
 \cite{betareg:Cribari-Neto+Lima:2007} consider a sequence of diagnostic
