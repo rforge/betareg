@@ -1,4 +1,4 @@
-\documentclass[nojss,letter]{jss}
+\documentclass[nojss]{jss}
 \usepackage{amsmath,amssymb,amsfonts,thumbpdf}
 
 %% additional commands
@@ -21,6 +21,10 @@
 \Plainkeywords{beta regression, rates, proportions, R}
 
 \Abstract{
+  This introduction to the \proglang{R} package \pkg{betareg} is a (slightly)
+  modified version of \cite{betareg:Cribari-Neto+Zeileis:2010}, published in the
+  \emph{Journal of Statistical Software}.
+
   The class of beta regression models is commonly used by 
   practitioners to model variables that assume values in the standard 
   unit interval $(0, 1)$. It is based on the assumption that the 
@@ -571,6 +575,19 @@ plot(gy_logit, which = 5, type = "deviance", sub.caption = "")
 plot(gy_logit, which = 1, type = "deviance", sub.caption = "")
 @
 %
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=\textwidth}
+<<GasolineYield-plot1, echo=FALSE, fig=TRUE, width=8.5, height=10>>=
+par(mfrow = c(3, 2))
+<<GasolineYield-plot>>
+@
+\caption{\label{fig:GasolineYield-plot} Diagnostic plots for
+  beta regression model \code{gy\_logit}.}
+\end{center}
+\vspace*{-0.2cm}
+\end{figure}
+%
 As observation~4 corresponds to a large Cook's distance and large
 residual, \cite{betareg:Ferrari+Cribari-Neto:2004} decided to refit
 the model excluding this observation. While this does not change the
@@ -583,17 +600,6 @@ coef(gy_logit, model = "precision")
 coef(gy_logit4, model = "precision")
 @
 
-\begin{figure}[p!] % \fixme{change to t! in final version?}
-\begin{center}
-\setkeys{Gin}{width=\textwidth}
-<<GasolineYield-plot1, echo=FALSE, fig=TRUE, width=8.5, height=10>>=
-par(mfrow = c(3, 2))
-<<GasolineYield-plot>>
-@
-\caption{\label{fig:GasolineYield-plot} Diagnostic plots for
-  beta regression model \code{gy\_logit}.}
-\end{center}
-\end{figure}
 
 
 \subsubsection{Household food expenditures}
@@ -621,7 +627,7 @@ The dependent variable is \code{food/income}, the proportion of household
 the previously mentioned household \code{income} and the number of \code{persons}
 living in the household. All three variables are visualized in Figure~\ref{fig:FoodExpenditure}.
 
-\begin{figure}[t!]
+\begin{figure}[b!]
 \begin{center}
 \setkeys{Gin}{width=0.75\textwidth}
 <<FoodExpenditure-visualization, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
@@ -819,21 +825,14 @@ lrtest(gy_logit, . ~ . + I(predict(gy_logit, type = "link")^2))
 lrtest(gy_loglog, . ~ . + I(predict(gy_loglog, type = "link")^2))
 @
 %
-The improvement of the model fit can also be brought out graphically by comparing
-absolute raw residuals (i.e., $y_i - \hat \mu_i$) from both models as in
-Figure~\ref{fig:GasolineYield-diagnostics}.
-%
-<<GasolineYield-diagnostics, eval=FALSE>>=
-plot(abs(residuals(gy_loglog, type = "response")),
-  abs(residuals(gy_logit, type = "response")))
-abline(0, 1, lty = 2)
-@
 %
 \begin{figure}[t!]
 \begin{center}
 \setkeys{Gin}{width=0.75\textwidth}
-<<GasolineYield-diagnostics1, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
-<<GasolineYield-diagnostics>>
+<<GasolineYield-diagnostics, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
+plot(abs(residuals(gy_loglog, type = "response")),
+  abs(residuals(gy_logit, type = "response")))
+abline(0, 1, lty = 2)
 @
 \caption{\label{fig:GasolineYield-diagnostics} Scatterplot comparing
   the absolute raw residuals from beta regression modes with log-log
@@ -841,6 +840,13 @@ abline(0, 1, lty = 2)
 \end{center}
 \end{figure}
 %
+The improvement of the model fit can also be brought out graphically by comparing
+absolute raw residuals (i.e., $y_i - \hat \mu_i$) from both models as in
+Figure~\ref{fig:GasolineYield-diagnostics}.
+%
+<<GasolineYield-diagnostics1, eval=FALSE>>=
+<<GasolineYield-diagnostics>>
+@
 This shows that there are a few observations clearly above the diagonal
 (where the log-log-link fits better than the logit link) whereas
 there are fewer such observations below the diagonal. A different
