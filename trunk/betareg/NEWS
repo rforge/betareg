@@ -1,3 +1,10 @@
+Changes in Version 2.2-1
+
+  o Package now published in Journal of Statistical Software,
+    see http://www.jstatsoft.org/vXX/iYY/
+    and citation("betareg") within R.
+
+
 Changes in Version 2.2-0
 
   o dbeta(..., log = TRUE) is now used for computing the

@@ -1,5 +1,5 @@
 Package: betareg
-Version: 2.2-0
+Version: 2.2-1
 Date: 2010-03-12
 Title: Beta Regression
 Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),

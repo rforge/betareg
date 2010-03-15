@@ -79,7 +79,7 @@ How should one perform a regression analysis in which the dependent variable
 (or response variable), $y$, assumes values in the standard unit interval $(0,1)$? The usual
 practice used to be to transform the data so that the transformed response, say
 $\tilde y$, assumes values in the real line and then apply a standard linear
-regression analysis. A commonly used transformation is the logit $\tilde y = 
+regression analysis. A commonly used transformation is the logit, $\tilde y = 
 \log(y/(1-y))$. This approach, nonetheless, has shortcomings. First, the
 regression parameters are interpretable in terms of the mean of $\tilde y$, and
 not in terms of the mean of $y$ (given Jensen's inequality). Second, regressions
@@ -211,7 +211,7 @@ f(y;p,q) = \frac{\Gamma(p+q)}{\Gamma(p)\Gamma(q)}y^{p-1}(1-y)^{q-1}, \quad 0<y<1
 \end{equation*}
 where $p,q >0$ and $\Gamma(\cdot)$ is the gamma function.\footnote{A beta regression model
 based on this parameterization was proposed by \cite{betareg:Vasconcellos+Cribari-Neto:2005}.
-We shall, however, focus on the parameterization that indexed by the mean and a precision
+We shall, however, focus on the parameterization indexed by the mean and a precision
 parameter.} \cite{betareg:Ferrari+Cribari-Neto:2004} proposed a different parameterization
 by setting $\mu = p/(p+q)$ and $\phi = p+q$:
 \begin{equation*} %\label{eqn:density}
@@ -329,7 +329,7 @@ allow practitioners to model continuous variates that assume values in the
 unit interval such as rates, proportions, and concentration or inequality
 indices (e.g., Gini). However, the data types that can be modeled using beta regressions
 also encompass proportions of ``successes'' from a number of trials, if the
-that number of trials is large enough to justify a continuous model. In this
+number of trials is large enough to justify a continuous model. In this
 case, beta regression is similar to a binomial generalized linear model (GLM)
 but provides some more flexibility -- in particular when the trials are not
 independent and the standard binomial model might be too strict. 
@@ -446,7 +446,7 @@ link: \code{"logit"}, \code{"probit"}, \code{"cloglog"}, \code{"cauchit"},
 
 ML estimation of all parameters employing analytical gradients is carried out
 using \proglang{R}'s \fct{optim} with control options set in \fct{betareg.control}.
-All of \fct{optim}'s methods are available but the default is to to 
+All of \fct{optim}'s methods are available but the default is  
 \code{"BFGS"}, which is typically regarded to be the best-performing method
 \cite[][Section~8.13]{betareg:Mittelhammer+Judge+Miller:2000} with the most
 effective updating formula of all quasi-Newton methods \cite[][p.~197]{betareg:Nocedal+Wright:1999}.
@@ -762,7 +762,7 @@ AIC(fe_beta, fe_beta2, k = log(nrow(FoodExpenditure)))
 Thus, there is evidence for variable dispersion and model \code{fe_beta2} seems
 to be preferable. As visualized in Figure~\ref{fig:FoodExpenditure}, it
 describes a similar relationship between response and explanatory variables
-although with a somewhat shrinked \code{income} slope.
+although with a somewhat shrunken \code{income} slope.
 
 
 \subsection{Selection of different link functions}
@@ -1022,7 +1022,7 @@ employed for carrying out different flavors of Wald tests.
 In this section, we illustrate yet another generic inference approach implemented
 in the \pkg{strucchange} package for structural change testing. This is concerned
 with a different testing problem compared to the functions above: It assesses
-whether the model parameters are stable throughout the entire the sample or
+whether the model parameters are stable throughout the entire sample or
 whether they change over the observations $i = 1, \dots, n$. This is of particular
 interest in time series applications where the regression coefficients $\beta$ and
 $\gamma$ change at some unknown time in the sample period
