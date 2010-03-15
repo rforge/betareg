@@ -52,7 +52,7 @@
   URL: \url{http://www.de.ufpe.br/~cribari/}\\
   
   Achim Zeileis\\
-  Institute for Statistics\\
+  Department of Statistics\\
   Universit\"at Innsbruck\\
   Universit\"atsstr.~15\\
   6020 Innsbruck, Austria\\
