@@ -39,7 +39,7 @@ gleverage.betareg <- function(model, ...)
     "logit" = { dlogis(eta) * (1 - 2 * exp(eta)/(1 + exp(eta))) },
     "probit" = { -dnorm(eta) * eta },
     "cloglog" = { exp(-exp(eta)) * exp(eta) * (1 - exp(eta)) },
-    "cauchit" = { -2 * eta / (pi * (1 + eta^2)^2) },
+    "cauchit" = { -2 * eta/(1 + eta^2) * dcauchy(eta) },
     "log" = { mu },
     "loglog" = { exp(-exp(-eta)) * exp(-eta) * (exp(-eta) - 1) }
   )
@@ -72,7 +72,7 @@ gleverage.betareg <- function(model, ...)
   
   ## equation 11
   GL <- D %*% solve(L) %*% Lty
-  ## GL <- D %*% vcov(model) %*% Lty else 
+  ## GL <- D %*% vcov(model) %*% Lty
   return(wts * diag(GL))
 }
 
