@@ -1,8 +1,22 @@
+Changes in Version 2.2-3
+
+  o fixed data handling bug in predict() method.
+  
+
+Changes in Version 2.2-2
+
+  o documentation updates for ?gleverage.
+  
+
 Changes in Version 2.2-1
 
   o Package now published in Journal of Statistical Software,
-    see http://www.jstatsoft.org/vXX/iYY/
+    see http://www.jstatsoft.org/v34/i02/
     and citation("betareg") within R.
+
+  o Bug fix and improvements in gleverage() method for "betareg"
+    objects: Analytic second derivatives are now used and
+    variable dispersion models are handled correctly.
 
 
 Changes in Version 2.2-0

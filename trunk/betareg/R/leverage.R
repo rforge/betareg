@@ -56,10 +56,10 @@ gleverage.betareg <- function(model, ...)
   Qbb <- phi * (phi * a * dmu^2 - (ystar - mustar) * d2mu)
   Qbg <- (phi * (mu * a - psi2) + mustar - ystar) * dmu * dphi
   Qgg <- b * dphi^2 - v * d2phi
-  L <- crossprod(x,  Qbg * z)
+  L <- crossprod(x,  Qbg * wts * z)
   L <- rbind(
-    cbind(crossprod(x, Qbb * x), L),
-    cbind(t(L), crossprod(z, Qgg * z))
+    cbind(crossprod(x, Qbb * wts * x), L),
+    cbind(t(L), crossprod(z, Qgg * wts * z))
   )
 
   ## compute D (below equation 11)
@@ -68,11 +68,10 @@ gleverage.betareg <- function(model, ...)
   ## compute Lty (below equation 11)
   Mb <- 1/(y * (1 - y))
   Mg <- (mu - y)/(y * (1 - y))
-  Lty <- t(cbind(phi * dmu * Mb * x, dphi * Mg * z))
+  Lty <- wts * t(cbind(phi * dmu * Mb * x, dphi * Mg * z))
   
   ## equation 11
   GL <- D %*% solve(L) %*% Lty
-  ## GL <- D %*% vcov(model) %*% Lty
   return(wts * diag(GL))
 }
 

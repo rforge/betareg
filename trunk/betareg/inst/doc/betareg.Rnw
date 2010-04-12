@@ -414,8 +414,7 @@ Function & Description \\ \hline
 \fct{plot} & diagnostic plots of residuals, predictions, leverages etc. \\
 \fct{hatvalues} & hat values (diagonal of hat matrix) \\
 \fct{cooks.distance} & (approximation of) Cook's distance \\
-\fct{gleverage} & compute generalized leverage \citep{betareg:Wei+Hu+Fung:1998};
-  based on the formula derived for fixed $\phi$ \\ \hline
+\fct{gleverage} & compute generalized leverage \citep{betareg:Wei+Hu+Fung:1998,betareg:Rocha+Simas:2010} \\ \hline
 \fct{coeftest} & partial Wald tests of coefficients \\
 \fct{waldtest} & Wald tests of nested models \\
 \fct{linear.hypothesis} & Wald tests of linear hypotheses \\
@@ -434,7 +433,7 @@ $\phi_i$ is assumed, i.e., $z_i = 1$ and $g_2$ is the identity link, correspondi
 to the basic beta regression model as introduced in \cite{betareg:Ferrari+Cribari-Neto:2004}.
 However, a second set of regressors can be specified by a two-part formula of type
 \code{y ~ x1 + x2 | z1 + z2 + z3} as provided in the \pkg{Formula} package
-\citep{betareg:Zeileis+Croissant:2009}. This model has the same mean equation as above but
+\citep{betareg:Zeileis+Croissant:2010}. This model has the same mean equation as above but
 the regressors $z_i$ in the precision equation (\ref{eqn:precisionmodel}) are taken from
 the \code{~ z1 + z2 + z3} part.
 The default link function in this case is the log link $g_2(\cdot) = \log(\cdot)$.

@@ -6,14 +6,14 @@ citEntry(entry = "Article",
                    as.person("Achim Zeileis")),
   journal      = "Journal of Statistical Software",
   year         = "2010",
-  volume       = "XX",
-  number       = "YY",
+  volume       = "34",
+  number       = "2",
   pages        = "1--24",
-  url          = "http://www.jstatsoft.org/v29/i10/",
+  url          = "http://www.jstatsoft.org/v34/i02/",
 
   textVersion  =
   paste("Francisco Cribari-Neto, Achim Zeileis (2010).",
         "Beta Regression in R.",
-        "Journal of Statistical Software XX(YY), 1-24.",
-        "URL http://www.jstatsoft.org/vXX/iYY/.")
+        "Journal of Statistical Software 34(2), 1-24.",
+        "URL http://www.jstatsoft.org/v34/i02/.")
 )

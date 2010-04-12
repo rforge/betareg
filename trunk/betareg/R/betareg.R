@@ -424,7 +424,7 @@ predict.betareg <- function(object, newdata = NULL,
 
   } else {
 
-    mf <- model.frame(delete.response(object$terms$mean), newdata, na.action = na.action, xlev = object$levels)
+    mf <- model.frame(delete.response(object$terms$full), newdata, na.action = na.action, xlev = object$levels)
     X <- model.matrix(delete.response(object$terms$mean), mf, contrasts = object$contrasts$mean)
     Z <- model.matrix(object$terms$precision, mf, contrasts = object$contrasts$precision)
     offset <- if(!is.null(off.num <- attr(object$terms$full, "offset")))
