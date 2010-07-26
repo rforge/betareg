@@ -32,7 +32,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   mf <- eval(mf, parent.frame())
   
   ## extract terms, model matrix, response
-  mt <- attr(mf, "terms")
+  mt <- terms(formula, data = data)
   mtX <- terms(formula, data = data, rhs = 1)
   mtZ <- delete.response(terms(formula, data = data, rhs = 2))
   Y <- model.response(mf, "numeric")
