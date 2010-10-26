@@ -1,6 +1,6 @@
 Package: betareg
-Version: 2.2-3
-Date: 2010-04-13
+Version: 2.3-0
+Date: 2010-10-26
 Title: Beta Regression
 Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
             person(given = "Francisco", family = "Cribari-Neto", role = "aut"),
@@ -11,5 +11,5 @@ Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
 Description: Beta regression for modeling beta-distributed dependent variables, e.g., rates and proportions.
 Depends: R (>= 2.6.0), stats, Formula
 Imports: graphics, sandwich, lmtest
-Suggests: car, lmtest, sandwich, strucchange
+Suggests: car, lmtest, modeltools, party, sandwich, strucchange
 License: GPL-2

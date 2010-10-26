@@ -8,8 +8,8 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   cl <- match.call()
   if(missing(data)) data <- environment(formula)
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "na.action", "weights", "offset"), names(mf), 0)
-  mf <- mf[c(1, m)]
+  m <- match(c("formula", "data", "subset", "na.action", "weights", "offset"), names(mf), 0L)
+  mf <- mf[c(1L, m)]
   mf$drop.unused.levels <- TRUE
 
   ## formula
@@ -26,11 +26,11 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
     simple_formula <- FALSE
   }
   mf$formula <- formula
-  
+
   ## evaluate model.frame
-  mf[[1]] <- as.name("model.frame")
+  mf[[1L]] <- as.name("model.frame")
   mf <- eval(mf, parent.frame())
-  
+
   ## extract terms, model matrix, response
   mt <- terms(formula, data = data)
   mtX <- terms(formula, data = data, rhs = 1)

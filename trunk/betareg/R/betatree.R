@@ -7,7 +7,7 @@ betatree <- function(formula, partition, data, subset = NULL, na.action = na.omi
 		    link = "logit", link.phi = "log",
  		    control = betareg.control(), ...)
 {
-  ## beta regression trees only work when party is available
+  ## beta regression trees rely on party package
   stopifnot(require("party"))
 
   ## transform formula
@@ -77,7 +77,8 @@ coef.betatree <- function (object, node = NULL, ...)
 ############################################
 
 ## StatModel creator function for plug-in to mob()
-betaReg <- function(control = betareg.control(...))  
+betaReg <- function(control = betareg.control()) {
+  stopifnot(require("modeltools"))
   new("StatModel",
     capabilities = new("StatModelCapabilities"),
     name = "beta regression model",
@@ -134,7 +135,7 @@ betaReg <- function(control = betareg.control(...))
       z
     }
   )
-
+}
 
 ## modify/simply some methods
 estfun.betaReg <- function(object, ...) {
@@ -148,8 +149,8 @@ print.betaReg <- function(x, digits = max(3, getOption("digits") - 3), ...)
     invisible(x)
 }
 
-summary.betaReg <- function(x, type = "response", ...)
-  betareg:::summary.betareg(x, type = type, ...)
+summary.betaReg <- function(object, type = "response", ...)
+  betareg:::summary.betareg(object, type = type, ...)
 
 reweight.betaReg <- function(object, weights, ...) {
      fit <- betaReg(betareg.control(
