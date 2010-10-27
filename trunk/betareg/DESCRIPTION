@@ -9,7 +9,7 @@ Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), 
 Author: Achim Zeileis [aut, cre], Francisco Cribari-Neto [aut], Alexandre B. Simas [ctb] (earlier version by), Andrea V. Rocha [ctb] (earlier version by)
 Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
 Description: Beta regression for modeling beta-distributed dependent variables, e.g., rates and proportions.
-Depends: R (>= 2.6.0), stats, Formula
-Imports: graphics, sandwich, lmtest
+Depends: R (>= 2.6.0), stats, Formula, flexmix
+Imports: graphics, sandwich, lmtest, methods, modeltools, flexmix
 Suggests: car, lmtest, modeltools, party, sandwich, strucchange
 License: GPL-2

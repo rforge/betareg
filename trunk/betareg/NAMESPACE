@@ -4,6 +4,19 @@ importFrom("sandwich", "estfun")
 importFrom("sandwich", "bread")
 importFrom("lmtest", "coeftest")
 
+importClassFrom("flexmix", "FLXM")
+importClassFrom("flexmix", "FLXMR")
+
+importFrom("flexmix", "existGradient")
+importFrom("flexmix", "FLXdeterminePostunscaled")
+importFrom("flexmix", "FLXgetModelmatrix")
+importFrom("flexmix", "FLXgradlogLikfun")
+importFrom("flexmix", "FLXmstep")
+importFrom("flexmix", "FLXreplaceParameters")
+importFrom("flexmix", "refit_optim")
+importFrom("flexmix", "summary")
+importFrom("modeltools", "posterior")
+
 export(
   ## beta regression
   "betareg",
@@ -15,7 +28,10 @@ export(
   "betatree",
   "betaReg",
   "reweight.betaReg",
-  "sctest.betatree"  
+  "sctest.betatree",
+
+  ## beta mixture models
+  "betamix"
 )
 
 ## methods for class betareg
@@ -51,3 +67,12 @@ S3method("plot", "betatree")
 S3method("print", "betatree")
 S3method("summary", "betatree")
 S3method("weights", "betatree")
+
+## methods for class betamix
+S3method("coef", "betamix")
+S3method("logLik", "betamix")
+S3method("print", "betamix")
+S3method("summary", "betamix")
+exportMethods("fitted")
+exportMethods("posterior")
+exportMethods("predict")
