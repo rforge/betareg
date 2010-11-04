@@ -14,8 +14,13 @@ importFrom("flexmix", "FLXgradlogLikfun")
 importFrom("flexmix", "FLXmstep")
 importFrom("flexmix", "FLXreplaceParameters")
 importFrom("flexmix", "refit_optim")
+importFrom("flexmix", "logLik")
 importFrom("flexmix", "summary")
+importFrom("flexmix", "predict")
+importFrom("flexmix", "fitted")
+
 importFrom("modeltools", "posterior")
+importFrom("modeltools", "clusters")
 
 export(
   ## beta regression
@@ -75,4 +80,5 @@ S3method("print", "betamix")
 S3method("summary", "betamix")
 exportMethods("fitted")
 exportMethods("posterior")
+exportMethods("clusters")
 exportMethods("predict")

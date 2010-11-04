@@ -10,6 +10,6 @@ Author: Achim Zeileis [aut, cre], Francisco Cribari-Neto [aut], Alexandre B. Sim
 Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
 Description: Beta regression for modeling beta-distributed dependent variables, e.g., rates and proportions.
 Depends: R (>= 2.6.0), stats, Formula, flexmix
-Imports: graphics, sandwich, lmtest, methods, modeltools, flexmix
-Suggests: car, lmtest, modeltools, party, sandwich, strucchange
+Imports: graphics, sandwich, lmtest, methods, modeltools
+Suggests: car, flexmix, lattice, lmtest, modeltools, party, sandwich, strucchange
 License: GPL-2

@@ -2,46 +2,54 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
                     link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                     link.phi = "log", 
  		    control = betareg.control(...),
-                    ID, nrep = 1, FLXcontrol = list(), cluster = NULL, ...)
+                    ID, nstart = 1, FLXcontrol = list(), cluster = NULL, which = "BIC", ...)
 {
-  ## Determine model.frame as in betareg
-  ## add variable cluster in m
+  ## beta regression mixtures rely on flexmix package
+  stopifnot(require("flexmix"))
+  ## Determine model.frame similar to betareg
 
   ## call
   cl <- match.call()
   if(missing(data)) data <- environment(formula)
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "na.action", "weights", "offset", "cluster"), names(mf), 0)
+  m <- match(c("formula", "data", "subset", "na.action", "weights", "offset"), names(mf), 0)
   mf <- mf[c(1, m)]
   mf$drop.unused.levels <- TRUE
   
   ## formula
   oformula <- as.formula(formula)
-  formula <- as.Formula(formula)
-  if(length(formula)[2] < 2L) {
-    formula <- as.Formula(formula(formula), ~ 1)
-    simple_formula <- TRUE
+  formula <- Formula(formula)
+  stopifnot(length(formula)[1] == 1L & length(formula)[2] >= 1L)
+  if(length(formula)[2] == 1L) {
+    precision <- ~ 1
   } else {
-    if(length(formula)[2] > 2L) {
-      formula <- Formula(formula(formula, rhs = 1:2))
-      warning("formula must not have more than two RHS parts")
-    }
-    simple_formula <- FALSE
+    precision <- formula(formula, lhs = 0, rhs = 2)
+    formula <- formula(formula, lhs = 1, rhs = 1)
   }
   mf$formula <- if (missing(ID)) formula else as.Formula(formula(formula), ID) 
   
   ## evaluate model.frame
   mf[[1]] <- as.name("get_all_vars")
   mf <- na.omit(eval(mf, parent.frame()))
-
+  if (!missing(cluster)) {
+    if (is(attr(mf, "na.action"), "omit")) {
+      cluster <- if (is(cluster, "matrix")) cluster[-attr(mf, "na.action"),,drop = FALSE]
+                 else cluster[-attr(mf, "na.action")]
+    }
+  }
+  
   n <- nrow(mf)
   
   ## weights
   weights <- model.weights(mf)
-  if(is.null(weights)) weights <- 1
-  if(length(weights) == 1) weights <- rep(weights, n)
-  weights <- as.vector(weights)
-  names(weights) <- rownames(mf)
+  if(!is.null(weights)) {
+    if(length(weights) == 1) weights <- rep(weights, n)
+    weights <- as.vector(weights)
+    names(weights) <- rownames(mf)
+    if (!all.equal(as.integer(weights), as.numeric(weights)))
+      stop("only integer weights allowed")
+    weights <- as.integer(weights)
+  }
   
   ## offset
   offset <- model.offset(mf)
@@ -51,17 +59,19 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
   }
 
   fullformula <- formula(formula, rhs = 1, lhs = 1)
-  precisionformula <- if (length(Formula(oformula))[2] > 1) 
-    formula(formula, lhs = 0, rhs = 2) else FALSE
   if (!missing(ID)) fullformula <- formula(as.Formula(formula(fullformula), ID))
 
-  if (!all.equal(as.integer(weights), as.numeric(weights)))
-    stop("only integer weights allowed")
-
-  rval <- flexmix:::stepFlexmix(fullformula, data = mf, k = k, weights = as.integer(weights),
-                                model = FLXMRbeta(precision = precisionformula,
+  if (missing(k)) {
+    if (is.null(cluster)) stop("either k or cluster must be specified")
+    k <- if (is(cluster, "matrix")) ncol(cluster)
+         else max(cluster)
+  }
+  
+  rval <- flexmix:::stepFlexmix(fullformula, data = mf, k = k, weights = weights,
+                                model = FLXMRbeta(precision = precision,
                                   offset = offset, link = link, link.phi = link.phi, control = control),
-                                control = FLXcontrol, nrep = nrep, cluster = mf[["(cluster)"]])
+                                control = FLXcontrol, nrep = nstart, cluster = cluster)
+  if (is(rval, "stepFlexmix")) rval <- getModel(rval, which = which)
   structure(list(flexmix = rval, call = cl), class = "betamix")
 }
 
@@ -70,6 +80,7 @@ setOldClass("betamix")
 ## hand-crafted "Next()" to bridge to
 ## exported S4 classes "flexmix", argh!
 print.betamix <- function(x, ...) {
+  x$flexmix@call <- x$call
   show(x$flexmix, ...)
   invisible(x)
 }
@@ -80,23 +91,39 @@ posterior.betamix <- function(object, newdata, ...) {
   else return(posterior(object$flexmix, newdata = newdata, ...))
 }
 setMethod("posterior", "betamix", posterior.betamix)
+clusters.betamix <- function(object, newdata, ...) {
+  if (missing(newdata)) return(clusters(object$flexmix, ...))
+  else return(clusters(object$flexmix, newdata = newdata, ...))
+}
+setMethod("clusters", "betamix", clusters.betamix)
+predict.betamix <- function(object, newdata, ...) {
+  if (missing(newdata)) return(predict(object$flexmix, ...))
+  else return(predict(object$flexmix, newdata = newdata, ...))
+}
+setMethod("predict", "betamix", predict.betamix)
+fitted.betamix <- function(object, ...) fitted(object$flexmix, ...)
+setMethod("fitted", "betamix", fitted.betamix)
 ## want to have
 ## sctest.betamix
-coef.betamix <- function(object, model = c("full", "mean", "precision"), 
-                         transpose = TRUE, ...) {
+coef.betamix <- function(object, model = c("full", "mean", "precision"), ...) {
   model <- match.arg(model)
   if (model == "full") {
-    COEFS <- parameters(object$flexmix, ...)
+    coefs <- parameters(object$flexmix, ...)
+    nam <- rownames(coefs)
+    nam <- gsub("mean.", "", nam, fixed = TRUE)
+    nam <- gsub("precision.(phi)", "(phi)", fixed = TRUE)
+    nam <- gsub("precision.", "(phi)_", nam, fixed = TRUE)
+    rownames(coefs) <- nam
   }
   else {
-    COEFS <- lapply(parameters(object$flexmix, simplify = FALSE, drop = FALSE, ...),
+    coefs <- lapply(parameters(object$flexmix, simplify = FALSE, drop = FALSE, ...),
                     function(x) {
                       z <- sapply(x, "[[", model)
                       if (!is(z, "matrix")) z <- matrix(z, ncol = object$flexmix@k,
                                                         dimnames = list(model, names(x)))
                       z})[[1]]
   }
-  t(COEFS)
+  t(coefs)
 }
 
 setClass("FLXMRbeta",
