@@ -111,7 +111,7 @@ coef.betamix <- function(object, model = c("full", "mean", "precision"), ...) {
     coefs <- parameters(object$flexmix, ...)
     nam <- rownames(coefs)
     nam <- gsub("mean.", "", nam, fixed = TRUE)
-    nam <- gsub("precision.(phi)", "(phi)", fixed = TRUE)
+    nam <- gsub("precision.(phi)", "(phi)", nam, fixed = TRUE)
     nam <- gsub("precision.", "(phi)_", nam, fixed = TRUE)
     rownames(coefs) <- nam
   }
