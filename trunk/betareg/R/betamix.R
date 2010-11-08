@@ -1,4 +1,4 @@
-betamix <- function(formula, data, k, subset, na.action, weights, offset,
+betamix <- function(formula, data, k, subset, na.action, offset,
                     link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                     link.phi = "log", 
  		    control = betareg.control(...),
@@ -12,7 +12,7 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
   cl <- match.call()
   if(missing(data)) data <- environment(formula)
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "na.action", "weights", "offset"), names(mf), 0)
+  m <- match(c("formula", "data", "subset", "na.action", "offset"), names(mf), 0)
   mf <- mf[c(1, m)]
   mf$drop.unused.levels <- TRUE
   
@@ -40,17 +40,6 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
   
   n <- nrow(mf)
   
-  ## weights
-  weights <- model.weights(mf)
-  if(!is.null(weights)) {
-    if(length(weights) == 1) weights <- rep(weights, n)
-    weights <- as.vector(weights)
-    names(weights) <- rownames(mf)
-    if (!all.equal(as.integer(weights), as.numeric(weights)))
-      stop("only integer weights allowed")
-    weights <- as.integer(weights)
-  }
-  
   ## offset
   offset <- model.offset(mf)
   if(!is.null(offset)) {
@@ -67,7 +56,7 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
          else max(cluster)
   }
   
-  rval <- flexmix:::stepFlexmix(fullformula, data = mf, k = k, weights = weights,
+  rval <- flexmix:::stepFlexmix(fullformula, data = mf, k = k, 
                                 model = FLXMRbeta(precision = precision,
                                   offset = offset, link = link, link.phi = link.phi, control = control),
                                 control = FLXcontrol, nrep = nstart, cluster = cluster)

@@ -14,7 +14,7 @@
   covariates) and precision parameter (called phi).
 }
 \usage{
-betamix(formula, data, k, subset, na.action, weights, offset,
+betamix(formula, data, k, subset, na.action, offset,
         link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
         link.phi = "log", control = betareg.control(...), ID, nstart = 1,
         FLXcontrol = list(), cluster = NULL, which = "BIC",...)
@@ -27,7 +27,6 @@ betamix(formula, data, k, subset, na.action, weights, offset,
   \item{k}{a vector of integers indicating the number of components of
     the finite mixture; passed in turn to the \code{k} argument
     of \code{\link[flexmix]{stepFlexmix}}.}
-  \item{weights}{optional numeric vector of weights.}
   \item{offset}{optional numeric vector with an a priori known component to be
     included in the linear predictor.}
   \item{link}{character specification of the link function in
