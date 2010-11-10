@@ -157,10 +157,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     yhat <- linkinv(auxreg$fitted.values)
     dlink <- 1/mu.eta(linkfun(yhat))
     res <- auxreg$residuals
-    sigma2 <- sum((weights * res)^2)/((n - k) * (dlink)^2)
-    phi_y <- yhat * (1 - yhat)/sigma2 - 1
+    sigma2 <- sum(weights * res^2)/((sum(weights) - k) * (dlink)^2)
+    phi_y <- weights * yhat * (1 - yhat)/(sum(weights) * sigma2) - 1/n
     phi <- rep(0, ncol(z))
-    phi[1] <- phi_linkfun(mean(phi_y))
+    phi[1] <- phi_linkfun(sum(phi_y))
     ## i.e., start out from the fixed dispersion model as described
     ## in Ferrari & Cribari-Neto (2004) (and differing from Simas et al. 2009)
     ## An alternative would be
