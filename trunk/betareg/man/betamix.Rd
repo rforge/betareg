@@ -5,6 +5,7 @@
 \alias{posterior,betamix,ANY-method}
 \alias{clusters,betamix,ANY-method}
 \alias{predict,FLXMRbeta-method}
+\alias{predict,FLXMRbetafix-method}
 \alias{predict,betamix-method}
 \title{Finite Mixtures of Beta Regression for Rates and Proportions}
 \description{
@@ -14,9 +15,10 @@
   covariates) and precision parameter (called phi).
 }
 \usage{
-betamix(formula, data, k, subset, na.action, offset,
+betamix(formula, data, k, fixed, subset, na.action, 
         link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
-        link.phi = "log", control = betareg.control(...), ID, nstart = 1,
+        link.phi = "log", control = betareg.control(...),
+        FLXconcomitant = NULL, ID, nstart = 1,
         FLXcontrol = list(), cluster = NULL, which = "BIC",...)
 }
 \arguments{
@@ -27,8 +29,8 @@ betamix(formula, data, k, subset, na.action, offset,
   \item{k}{a vector of integers indicating the number of components of
     the finite mixture; passed in turn to the \code{k} argument
     of \code{\link[flexmix]{stepFlexmix}}.}
-  \item{offset}{optional numeric vector with an a priori known component to be
-    included in the linear predictor.}
+  \item{fixed}{symbolic description of the model for the parameters
+    fixed over components (of type \code{~ x | z})}.
   \item{link}{character specification of the link function in
     the mean model (mu). Currently, \code{"logit"}, \code{"probit"},
     \code{"cloglog"}, \code{"cauchit"}, \code{"log"}, \code{"loglog"} are supported.
@@ -41,6 +43,9 @@ betamix(formula, data, k, subset, na.action, offset,
     Alternatively, an object of class \code{"link-glm"} can be supplied.}
   \item{control}{a list of control arguments specified via
     \code{\link{betareg.control}}.}
+  \item{FLXconcomitant}{concomitant variable model; object of class
+    \code{FLXP}. Default is the object returned by calling
+    \code{\link{FLXPconstant}}.}
   \item{ID}{grouping variable indicating if observations are from the same
     individual, i.e. the component membership is restricted to be the
     same for these observations.}

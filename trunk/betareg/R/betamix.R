@@ -1,7 +1,8 @@
-betamix <- function(formula, data, k, subset, na.action, offset,
+betamix <- function(formula, data, k, fixed, subset, na.action, 
                     link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                     link.phi = "log", 
- 		    control = betareg.control(...),
+                    control = betareg.control(...),
+                    FLXconcomitant = NULL,
                     ID, nstart = 1, FLXcontrol = list(), cluster = NULL, which = "BIC", ...)
 {
   ## beta regression mixtures rely on flexmix package
@@ -12,9 +13,25 @@ betamix <- function(formula, data, k, subset, na.action, offset,
   cl <- match.call()
   if(missing(data)) data <- environment(formula)
   mf <- match.call(expand.dots = FALSE)
-  m <- match(c("formula", "data", "subset", "na.action", "offset"), names(mf), 0)
+  m <- match(c("formula", "data", "subset", "na.action"), names(mf), 0)
   mf <- mf[c(1, m)]
   mf$drop.unused.levels <- TRUE
+  
+  ## evaluate model.frame
+  mf$formula <- if (missing(ID)) formula else as.Formula(formula(formula), ID)
+  if (!missing(fixed))
+    mf$formula <- as.Formula(formula(mf$formula), fixed)
+  if (!missing(FLXconcomitant) & is(FLXconcomitant, "FLXP"))
+    mf$formula <- as.Formula(formula(mf$formula), FLXconcomitant@formula)
+  mf[[1]] <- as.name("get_all_vars")
+  mf <- na.omit(eval(mf, parent.frame()))
+  if (!missing(cluster)) {
+    if (is(attr(mf, "na.action"), "omit")) {
+      cluster <- if (is(cluster, "matrix")) cluster[-attr(mf, "na.action"),,drop = FALSE]
+                 else cluster[-attr(mf, "na.action")]
+    }
+  }
+  n <- nrow(mf)
   
   ## formula
   oformula <- as.formula(formula)
@@ -26,40 +43,41 @@ betamix <- function(formula, data, k, subset, na.action, offset,
     precision <- formula(formula, lhs = 0, rhs = 2)
     formula <- formula(formula, lhs = 1, rhs = 1)
   }
-  mf$formula <- if (missing(ID)) formula else as.Formula(formula(formula), ID) 
   
-  ## evaluate model.frame
-  mf[[1]] <- as.name("get_all_vars")
-  mf <- na.omit(eval(mf, parent.frame()))
-  if (!missing(cluster)) {
-    if (is(attr(mf, "na.action"), "omit")) {
-      cluster <- if (is(cluster, "matrix")) cluster[-attr(mf, "na.action"),,drop = FALSE]
-                 else cluster[-attr(mf, "na.action")]
+  ## fixed formula
+  if (!missing(fixed)) {
+    ofixed <- as.formula(fixed)
+    fixed <- Formula(fixed)
+    stopifnot(length(fixed)[1] == 0L & length(fixed)[2] >= 1L)
+    if(length(fixed)[2] == 1L) {
+      fixed_precision <- ~ 0
+    } else {
+      fixed_precision <- formula(fixed, lhs = 0, rhs = 2)
+      if (length(formula)[2] == 1L) precision <- ~ 0
     }
+    fixed <- formula(fixed, lhs = 1, rhs = 1)
   }
   
-  n <- nrow(mf)
-  
-  ## offset
-  offset <- model.offset(mf)
-  if(!is.null(offset)) {
-    if(length(offset) == 1) offset <- rep(offset, n)
-    offset <- as.vector(offset)
-  }
-
   fullformula <- formula(formula, rhs = 1, lhs = 1)
   if (!missing(ID)) fullformula <- formula(as.Formula(formula(fullformula), ID))
-
+  
   if (missing(k)) {
     if (is.null(cluster)) stop("either k or cluster must be specified")
     k <- if (is(cluster, "matrix")) ncol(cluster)
          else max(cluster)
   }
-  
-  rval <- flexmix:::stepFlexmix(fullformula, data = mf, k = k, 
-                                model = FLXMRbeta(precision = precision,
-                                  offset = offset, link = link, link.phi = link.phi, control = control),
-                                control = FLXcontrol, nrep = nstart, cluster = cluster)
+  rval <- if (missing(fixed)) {
+    flexmix::stepFlexmix(fullformula, data = mf, k = k, nrep = nstart, 
+                          model = FLXMRbeta(precision = precision,
+                            link = link, link.phi = link.phi, control = control),
+                         concomitant = FLXconcomitant, control = FLXcontrol)
+  } else {
+    flexmix::stepFlexmix(fullformula, data = mf, k = k, nrep = nstart,
+                          model = FLXMRbetafix(precision = precision,
+                            fixed = fixed, fixed_precision = fixed_precision,
+                            link = link, link.phi = link.phi, control = control),
+                         concomitant = FLXconcomitant, control = FLXcontrol)
+  }
   if (is(rval, "stepFlexmix")) rval <- getModel(rval, which = which)
   structure(list(flexmix = rval, call = cl), class = "betamix")
 }
@@ -74,7 +92,7 @@ print.betamix <- function(x, ...) {
   invisible(x)
 }
 logLik.betamix <- function(object, ...) logLik(object$flexmix, ...)
-summary.betamix <- function(object, ...) summary(refit(object$flexmix, ...), ...)
+summary.betamix <- function(object, which = c("model", "concomitant"), ...) summary(refit(object$flexmix, ...), which = which)
 posterior.betamix <- function(object, newdata, ...) {
   if (missing(newdata)) return(posterior(object$flexmix, ...))
   else return(posterior(object$flexmix, newdata = newdata, ...))
@@ -120,25 +138,24 @@ setClass("FLXMRbeta",
                         link="character",
                         link.phi="character",
                         z="matrix",
-                        precision.terms="ANY",
-                        precision.xlevels="ANY",
-                        precision.contrasts="ANY",
+                        terms_precision="ANY",
+                        xlevels_precision="ANY",
+                        contrasts_precision="ANY",
                         control="ANY"),
          contains = "FLXMR")
 
-
-FLXMRbeta <- function(formula = .~., precision = FALSE, offset = NULL,
+FLXMRbeta <- function(formula = .~., precision = ~ 1, offset = NULL,
                       link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                       link.phi = "log", control = betareg.control())
 {
   link <- match.arg(link)
   
-  if (!(is(precision, "logical") | is(precision, "formula")))
-    stop("precision needs to be either a logical or a formula")
+  if (!is(precision, "formula"))
+    stop("precision needs to be a formula")
 
   object <- new("FLXMRbeta", weighted=TRUE, formula=formula, precision=precision,
-                link = link, link.phi = link.phi, control = control,
-                name=paste("FLXMRbeta(link='", link, "', link.phi='", link.phi, "')", sep = ""))
+                link=link, link.phi=link.phi, control=control,
+                name=paste("FLXMRbeta(link='", link, "', link.phi='", link.phi, "')", sep=""))
 
   object@defineComponent <- expression({
     predict <- function(x, z, ...) {
@@ -163,7 +180,7 @@ FLXMRbeta <- function(formula = .~., precision = FALSE, offset = NULL,
         logLik=logLik, predict=predict,
         df=df)
   })
-  
+
   object@fit <- function(x, y, z, w){
     fit <- betareg.fit(x, as.vector(y), z, weights=w, offset=offset, link = link, link.phi = link.phi,
                        control = control)
@@ -178,23 +195,14 @@ FLXMRbeta <- function(formula = .~., precision = FALSE, offset = NULL,
 setMethod("FLXgetModelmatrix", signature(model="FLXMRbeta"),
 function(model, data, formula, lhs=TRUE, ...) {
   model <- callNextMethod(model, data, formula, lhs, ...)
-  if (is(model@precision, "logical")) {
-    if(model@precision) {
-      model@z <- model@x
-      model@precision.terms <- model@terms
-      model@precision.contrasts <- model@contrasts
-      model@precision.xlevels <- model@xlevels
-    } else {
-      model@z <- matrix(1, nrow = nrow(model@x), ncol = 1)
-    }
-  } else {
-    mt1 <- if (is.null(model@precision.terms)) terms(model@precision, data=data) else model@precision.terms
-    mf <- model.frame(delete.response(mt1), data=data, na.action = NULL)
-    model@precision.terms<- attr(mf, "terms")
-    model@z <- model.matrix(model@precision.terms, data=mf)
-    model@precision.contrasts <- attr(model@z, "contrasts")
-    model@precision.xlevels <- .getXlevels(model@precision.terms, mf)
-  }
+  model_precision <- model
+  model_precision@formula <- . ~ .
+  model_precision@terms <- NULL
+  model_precision <- callNextMethod(model_precision, data, model@precision, lhs = FALSE, ...)
+  model@z <- model_precision@x
+  model@terms_precision <- model_precision@terms
+  model@contrasts_precision <- model_precision@contrasts
+  model@xlevels_precision <- model_precision@xlevels
   model
 })
 
@@ -226,7 +234,7 @@ setMethod("FLXdeterminePostunscaled", signature(model = "FLXMRbeta"), function(m
 
 setMethod("FLXreplaceParameters", signature(object="FLXMRbeta"),
 function(object, components, parms) {
-  Design <- flexmix:::FLXgetDesign(object, components)
+  Design <- FLXgetDesign(object, components)
   lapply(seq_along(components), function(k) {
     Parameters <- list()
     parms_k <- parms[as.logical(Design[k,])]
@@ -248,7 +256,7 @@ function(object, components, parms) {
 
 setMethod("refit_optim", signature(object = "FLXMRbeta"),
 function(object, components, coef, se) {
-  Design <- flexmix:::FLXgetDesign(object, components)
+  Design <- FLXgetDesign(object, components)
   x <- lapply(1:nrow(Design), function(k) {
     rval <- cbind(Estimate = coef[as.logical(Design[k,])],
                   "Std. Error" = se[as.logical(Design[k,])])
