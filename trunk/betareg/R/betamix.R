@@ -3,12 +3,16 @@ betamix <- function(formula, data, k, fixed, subset, na.action,
                     link.phi = "log", 
                     control = betareg.control(...),
                     FLXconcomitant = NULL,
+                    extra_components, verbose = FALSE, 
                     ID, nstart = 1, FLXcontrol = list(), cluster = NULL, which = "BIC", ...)
 {
   ## beta regression mixtures rely on flexmix package
   stopifnot(require("flexmix"))
   ## Determine model.frame similar to betareg
 
+  if (!missing(extra_components) & !missing(fixed))
+    stop("it is currently not possible to a-priori specify a component and fit a fixed effect for the other components")
+  
   ## call
   cl <- match.call()
   if(missing(data)) data <- environment(formula)
@@ -66,17 +70,26 @@ betamix <- function(formula, data, k, fixed, subset, na.action,
     k <- if (is(cluster, "matrix")) ncol(cluster)
          else max(cluster)
   }
-  rval <- if (missing(fixed)) {
+  rval <- if (!missing(extra_components)) {
+    flexmix::stepFlexmix(fullformula, data = mf, k = k, nrep = nstart, 
+                         model = FLXMRbeta_extra(precision = precision,
+                           link = link, link.phi = link.phi, control = control,
+                           extra_components = extra_components),
+                         concomitant = FLXconcomitant, control = FLXcontrol,
+                         verbose = verbose)
+  } else if (missing(fixed)) {
     flexmix::stepFlexmix(fullformula, data = mf, k = k, nrep = nstart, 
                           model = FLXMRbeta(precision = precision,
                             link = link, link.phi = link.phi, control = control),
-                         concomitant = FLXconcomitant, control = FLXcontrol)
+                         concomitant = FLXconcomitant, control = FLXcontrol,
+                         verbose = verbose)
   } else {
     flexmix::stepFlexmix(fullformula, data = mf, k = k, nrep = nstart,
                           model = FLXMRbetafix(precision = precision,
                             fixed = fixed, fixed_precision = fixed_precision,
                             link = link, link.phi = link.phi, control = control),
-                         concomitant = FLXconcomitant, control = FLXcontrol)
+                         concomitant = FLXconcomitant, control = FLXcontrol,
+                         verbose = verbose)
   }
   if (is(rval, "stepFlexmix")) rval <- getModel(rval, which = which)
   structure(list(flexmix = rval, call = cl), class = "betamix")
@@ -115,22 +128,26 @@ setMethod("fitted", "betamix", fitted.betamix)
 coef.betamix <- function(object, model = c("full", "mean", "precision"), ...) {
   model <- match.arg(model)
   if (model == "full") {
-    coefs <- parameters(object$flexmix, ...)
-    nam <- rownames(coefs)
-    nam <- gsub("mean.", "", nam, fixed = TRUE)
-    nam <- gsub("precision.(phi)", "(phi)", nam, fixed = TRUE)
-    nam <- gsub("precision.", "(phi)_", nam, fixed = TRUE)
-    rownames(coefs) <- nam
+    coefs <- parameters(object$flexmix, simplify = FALSE, drop = TRUE, ...)
+    if (is(coefs, "list")) {
+      if ((length(unique(lapply(coefs, names))) == 1)) {
+        coefs <- sapply(coefs, unlist)
+        if (is(coefs, "matrix")) {
+          nam <- rownames(coefs)
+          nam <- gsub("mean.", "", nam, fixed = TRUE)
+          nam <- gsub("precision.(phi)", "(phi)", nam, fixed = TRUE)
+          nam <- gsub("precision.", "(phi)_", nam, fixed = TRUE)
+        rownames(coefs) <- nam
+        }
+      }
+    }
   }
   else {
-    coefs <- lapply(parameters(object$flexmix, simplify = FALSE, drop = FALSE, ...),
-                    function(x) {
-                      z <- sapply(x, "[[", model)
-                      if (!is(z, "matrix")) z <- matrix(z, ncol = object$flexmix@k,
-                                                        dimnames = list(model, names(x)))
-                      z})[[1]]
+    coefs <- parameters(object$flexmix, simplify = FALSE, drop = TRUE, ...)
+    if (is(coefs, "list")) coefs <- sapply(coefs, "[[", model)
   }
-  t(coefs)
+  if (is(coefs, "matrix")) coefs <- t(coefs)
+  coefs
 }
 
 setClass("FLXMRbeta",

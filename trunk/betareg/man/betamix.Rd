@@ -1,5 +1,6 @@
 \name{betamix}
 \alias{betamix}
+\alias{extraComponent}
 \alias{fitted,FLXMRbeta-method}
 \alias{fitted,betamix-method}
 \alias{posterior,betamix,ANY-method}
@@ -16,10 +17,13 @@
 }
 \usage{
 betamix(formula, data, k, fixed, subset, na.action, 
-        link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
-        link.phi = "log", control = betareg.control(...),
-        FLXconcomitant = NULL, ID, nstart = 1,
-        FLXcontrol = list(), cluster = NULL, which = "BIC",...)
+   link = c("logit", "probit", "cloglog", "cauchit", "log",
+   "loglog"), link.phi = "log", control = betareg.control(...),
+   FLXconcomitant = NULL, extra_components, verbose = FALSE, ID,
+   nstart = 1, FLXcontrol = list(), cluster = NULL,
+   which = "BIC", ...)
+extraComponent(type = c("uniform", "betareg"), coef, delta,
+   link = "logit", link.phi = "log")
 }
 \arguments{
   \item{formula}{symbolic description of the model (of type \code{y ~ x}
@@ -46,6 +50,10 @@ betamix(formula, data, k, fixed, subset, na.action,
   \item{FLXconcomitant}{concomitant variable model; object of class
     \code{FLXP}. Default is the object returned by calling
     \code{\link{FLXPconstant}}.}
+  \item{extra_components}{a list containing objects returned by
+    \code{extraComponent()}.}
+  \item{verbose}{a logical; if \code{TRUE} progress information is shown
+    for different starts of the EM algorithm.}
   \item{ID}{grouping variable indicating if observations are from the same
     individual, i.e. the component membership is restricted to be the
     same for these observations.}
@@ -61,16 +69,27 @@ betamix(formula, data, k, fixed, subset, na.action,
     assignments of observations at the start of the EM
     algorithm. Default is random assignment into \code{k}
     clusters.}
-  \item{which}{Number of model to get if \code{k} is a vector of
+  \item{which}{number of model to get if \code{k} is a vector of
     integers longer than one. If character, interpreted as
     number of components or name of an information criterion.}
   \item{\dots}{arguments passed to \code{\link{betareg.control}}.}
+
+  \item{type}{specifies if the component follows a uniform distribution
+    or a beta regression model.}
+  \item{coef}{a vector with the coefficients to determine the midpoint
+    of the uniform distribution or names list with the coefficients for
+    the mean and precision of the beta regression model.}
+  \item{delta}{numeric; half-length of the interval of the uniform
+    distribution.}
 }
 \details{
   The arguments and the model specification are similar to
   \code{\link{betareg}}. Internally \code{\link[flexmix]{stepFlexmix}}
   is called with suitable arguments to fit the finite mixture model with
-  the EM algorithm. 
+  the EM algorithm.
+
+  \code{extra_components} is a list where each element corresponds to a
+  component where the parameters are fixed a-priori.
 }
 \value{
   An object of class \code{"flexmix"} containing the best model with

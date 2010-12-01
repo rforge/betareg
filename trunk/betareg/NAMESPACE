@@ -14,6 +14,7 @@ importFrom("flexmix", "FLXgetModelmatrix")
 importFrom("flexmix", "FLXgetDesign")
 importFrom("flexmix", "FLXgradlogLikfun")
 importFrom("flexmix", "FLXmstep")
+importFrom("flexmix", "FLXremoveComponent")
 importFrom("flexmix", "FLXreplaceParameters")
 importFrom("flexmix", "FLXgetParameters")
 importFrom("flexmix", "refit_optim")
@@ -39,7 +40,8 @@ export(
   "sctest.betatree",
 
   ## beta mixture models
-  "betamix"
+  "betamix",
+  "extraComponent"
 )
 
 ## methods for class betareg
