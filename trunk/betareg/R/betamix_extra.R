@@ -70,11 +70,16 @@ setMethod("FLXmstep", signature(model = "FLXMRbeta_extra"),
     }),
          betareg = FLXMRbeta()@defineComponent)
   extra_components <- lapply(model@extra_components,
-                       function(x) 
-                         with(x,
-                              with(list(coef = coef, df = 0, offset = NULL,
-                                        if (attr(x, "type") == "uniform") delta = delta, 
-                                        if (attr(x, "type") == "betareg") linkobjs = link), eval(defineComponent[[attr(x, "type")]]))))
+                       function(x)
+                             if (attr(x, "type") == "uniform")
+                             with(x, with(list(coef = c(coef, rep(0, length.out = ncol(model@x) - length(coef))),
+                                               df = 0, offset = NULL, delta = delta),
+                                          eval(defineComponent[["uniform"]])))
+                             else
+                             with(x, with(list(coef = list(mean = c(coef$mean, rep(0, length.out = ncol(model@x) - length(coef$mean))),
+                                                 precision = c(coef$precision, rep(0, length.out = ncol(model@z) - length(coef$precision)))),
+                                               df = 0, offset = NULL, linkobjs = link),
+                                          eval(defineComponent[["betareg"]]))))
   c(extra_components,
     FLXmstep(as(model, "FLXMRbeta"), weights[, -seq_along(model@extra_components), drop=FALSE]))
 })

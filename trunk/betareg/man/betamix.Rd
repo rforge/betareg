@@ -49,7 +49,7 @@ extraComponent(type = c("uniform", "betareg"), coef, delta,
     \code{\link{betareg.control}}.}
   \item{FLXconcomitant}{concomitant variable model; object of class
     \code{FLXP}. Default is the object returned by calling
-    \code{\link{FLXPconstant}}.}
+    \code{\link[flexmix]{FLXPconstant}}.}
   \item{extra_components}{a list containing objects returned by
     \code{extraComponent()}.}
   \item{verbose}{a logical; if \code{TRUE} progress information is shown
@@ -60,7 +60,7 @@ extraComponent(type = c("uniform", "betareg"), coef, delta,
   \item{nstart}{for each value of \code{k} run
     \code{\link[flexmix]{stepFlexmix}} \code{nstart} times and keep only
     the solution with maximum likelihood.}
-  \item{FLXcontrol}{object of class \code{FLXcontrol} or a named list;
+  \item{FLXcontrol}{object of class \code{"FLXcontrol"} or a named list;
     controls the EM algorithm and passed in turn to the \code{control}
     argument of \code{\link[flexmix]{flexmix}}.}
   \item{cluster}{Either a matrix with \code{k} columns of initial
