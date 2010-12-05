@@ -53,8 +53,7 @@ betamix <- function(formula, data, k, fixed, subset, na.action,
     ofixed <- as.formula(fixed)
     fixed <- Formula(fixed)
     stopifnot(length(fixed)[1] == 0L & length(fixed)[2] >= 1L)
-    fixed_precision <- if(length(fixed)[2] == 1L) ~ 0 else
-      fixed_precision <- formula(fixed, lhs = 0, rhs = 2)
+    fixed_precision <- if(length(fixed)[2] == 1L) ~ 0 else formula(fixed, lhs = 0, rhs = 2)
     fixed <- formula(fixed, lhs = 1, rhs = 1)
   }
   
