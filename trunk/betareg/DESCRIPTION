@@ -10,7 +10,9 @@ Author@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), 
 Author: Achim Zeileis [aut, cre], Francisco Cribari-Neto [aut], Bettina Gruen [aut], Alexandre B. Simas [ctb] (earlier version by), Andrea V. Rocha [ctb] (earlier version by)
 Maintainer: Achim Zeileis <Achim.Zeileis@R-project.org>
 Description: Beta regression for modeling beta-distributed dependent variables, e.g., rates and proportions.
+             In addition to maximum likelihood regression (for both mean and precision of a beta-distributed
+	     response), finite mixture models and recursive partitioning for beta regressions are provided.
 Depends: R (>= 2.6.0), stats, Formula
-Imports: graphics, sandwich, lmtest, methods, modeltools, flexmix
+Imports: graphics, flexmix, lmtest, methods, modeltools, sandwich
 Suggests: car, flexmix, lattice, lmtest, modeltools, party, sandwich, strucchange
 License: GPL-2
