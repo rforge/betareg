@@ -160,13 +160,19 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     sigma2 <- sum(weights * res^2)/((sum(weights) - k) * (dlink)^2)
     phi_y <- weights * yhat * (1 - yhat)/(sum(weights) * sigma2) - 1/n
     phi <- rep(0, ncol(z))
-    phi[1] <- phi_linkfun(sum(phi_y))
+    phi[1] <- suppressWarnings(phi_linkfun(sum(phi_y)))
     ## i.e., start out from the fixed dispersion model as described
     ## in Ferrari & Cribari-Neto (2004) (and differing from Simas et al. 2009)
     ## An alternative would be
     ##   phi <- lm.wfit(z, phi_linkfun(phi_y), weights)$coefficients
     ## but that only works in general if all(phi_y > 0) which is not necessarily
     ## the case.
+    ##
+    ## Additionally, sum(phi_y) might not even be > 0 which should be caught.
+    if(!isTRUE(phi_linkinv(phi[1]) > 0)) {
+      warning("No valid starting value for precision parameter found, using 1 instead.")
+      phi[1] <- 1
+    }
     start <- list(mean = beta, precision = phi)
   }
   if(is.list(start)) start <- do.call("c", start)

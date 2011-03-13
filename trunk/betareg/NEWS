@@ -1,3 +1,11 @@
+Changes in Version 2.3-1
+
+  o Added warning and ad-hoc workaround in the starting value selection
+    of betareg.fit(). If no valid starting value can be obtained,
+    a warning is issued and c(1, 0, ..., 0) is employed in the precision
+    regression.
+
+
 Changes in Version 2.3-0
 
   o New betatree() function for beta regression trees based
@@ -11,7 +19,7 @@ Changes in Version 2.3-0
     flexmix() function from the "flexmix" package. For enabling this
     plug-in, the driver FLXMRbeta() is provided.
 
-  o Added some tests/vignette-betareg.R based on the models fitted
+  o Added tests/vignette-betareg.R based on the models fitted
     in vignette("betareg", package = "betareg").
 
 
