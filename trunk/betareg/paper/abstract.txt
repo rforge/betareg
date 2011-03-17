@@ -1,0 +1,21 @@
+Beta Regression: Shaken, Stirred, Mixed, and Partitioned
+Achim Zeileis, Francisco Cribari-Neto, Bettina Grün
+
+The class of beta regression models is commonly used by practitioners
+to model variables that assume values in the open standard unit
+interval (0, 1). It is based on the assumption that the dependent
+variable is beta-distributed with its mean and precision parameters
+depending on some regressors. We explore various flavors of
+parametrizations for the dependence of the response on the regressors.
+To shake and stirr, either a single or double index model is employed
+for mean and/or precision, i.e., the parameters are related to
+potentially different sets of regressors through a linear predictor
+plus link function(s). This approach naturally incorporates features
+such as heteroskedasticity or skewness which are commonly observed in
+data taking values in the standard unit interval, such as rates or
+proportions. Furthermore, additional heterogeneity in the data can be
+captured by mixing or partitioning: If covariates are available that
+explain the heterogeneity, a model-based recursive partitioning
+approach can be employed. If not, latent class regression is an
+alternative. All flavors of models are implemented in the R package
+betareg, leveraging the flexmix and party packages.

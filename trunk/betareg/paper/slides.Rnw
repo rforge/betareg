@@ -1,0 +1,578 @@
+\documentclass[11pt,compress,t]{beamer}
+\usetheme{Z}
+\usepackage{amsfonts,amstext,amsmath}
+%% need no \usepackage{Sweave}
+\definecolor{InputColor}{rgb}{0,0,0.3}
+\definecolor{OutputColor}{rgb}{0.2,0.2,0.2}
+
+%% commands
+\newcommand{\ui}{\underline{i}}
+\newcommand{\oi}{\overline{\imath}}
+\newcommand{\darrow}{\stackrel{\mbox{\tiny \textnormal{d}}}{\longrightarrow}}
+\newcommand{\parrow}{\stackrel{\mbox{\tiny \textnormal{p}}}{\longrightarrow}}
+\newcommand{\dotequals}{\stackrel{\cdot}{=}}
+\newcommand{\efp}{\mathrm{\it efp}}
+\newcommand{\given}{\, | \,}
+\newcommand{\ltime}{\lambda_\mathrm{time}}
+\newcommand{\lcomp}{\lambda_\mathrm{comp}}
+\newcommand{\argmin}{\operatorname{argmin}\displaylimits}
+
+\SweaveOpts{engine=R, eps=FALSE, echo=FALSE, results=hide, keep.source=TRUE}
+
+<<preliminaries>>=
+library("betareg")
+library("lmtest")
+library("flexmix")
+library("party")
+set.seed(1071)
+@
+
+\begin{document}
+
+\title{Beta Regression:\newline Shaken, Stirred, Mixed, and Partitioned}
+\author{Achim Zeileis, Francisco Cribari-Neto, Bettina Gr\"un}
+\URL{http://eeecon.uibk.ac.at/~zeileis/}
+\lecture{Beta Regression in R}
+
+\subsection{Overview}
+
+\begin{frame}
+\frametitle{Overview}
+
+\begin{itemize}
+  \item Motivation
+  \item Shaken or stirred: Single or double index
+  	beta regression for mean and/or precision in \pkg{betareg}
+  \item Mixed: Latent class beta regression via \pkg{flexmix}
+  \item Partitioned: Beta regression trees via \pkg{party}
+  \item Summary
+\end{itemize}
+
+\end{frame}
+
+\subsection{Motivation}
+
+\begin{frame}
+\frametitle{Motivation}
+
+\textbf{Goal:} Model dependent variable $y \in (0, 1)$, e.g., rates, proportions, concentrations etc.
+
+\medskip
+
+\textbf{Common approach:} Model transformed variable $\tilde y$ by a linear model, e.g., $\tilde y = \mathsf{logit}(y)$ or 
+$\tilde y = \mathsf{probit}(y)$ etc.
+
+\bigskip
+
+\textbf{Disadvantages:}
+\begin{itemize}
+  \item Model for mean of $\tilde y$, not mean of $y$ (Jensen's inequality).
+  \item Data typically heteroskedastic.
+\end{itemize}
+
+\medskip
+
+\textbf{Idea:} Model $y$ directly using suitable parametric family of distributions plus link function.
+
+\medskip
+
+\textbf{Specifically:} Maximum likelihood regression model using alternative parametrization of
+beta distribution (Ferrari \& Cribari-Neto 2004).
+
+
+\end{frame}
+
+\subsection{Beta regression}
+
+\begin{frame}
+\frametitle{Beta regression}
+
+\textbf{Beta distribution:} Continuous distribution for $0 < y < 1$, typically specified by
+two shape parameters $p,q >0$.
+
+\medskip
+
+\textbf{Alternatively:} Use mean $\mu = p/(p+q)$ and precision $\phi = p+q$.
+
+\medskip
+
+\textbf{Probability density function:}
+\begin{eqnarray*}
+  f(y) & = & \frac{\Gamma(p+q)}{\Gamma(p) ~ \Gamma(q)} ~ y^{p-1} ~ (1-y)^{q-1} \\
+       & = & \frac{\Gamma(\phi)}{\Gamma(\mu\phi) ~ \Gamma((1-\mu)\phi)} ~ y^{\mu\phi-1} ~ (1-y)^{(1-\mu)\phi-1}
+\end{eqnarray*}
+where $\Gamma(\cdot)$ is the gamma function.
+
+\medskip
+
+\textbf{Properties:} Flexible shape. Mean $\E(y) = \mu$ and
+\begin{equation*}
+  \Var(y) = \frac{\mu ~ (1-\mu)}{1+\phi}.
+\end{equation*}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Beta regression}
+
+\setkeys{Gin}{width=1.07\textwidth}
+\hspace*{-0.6cm}%
+<<dbeta, fig=TRUE, height=5, width=10>>=
+par(mfrow = c(1, 2), mar = c(4.1, 4.1, 4.1, 0.1))
+dbeta2 <- function(x, mu, phi = 1) dbeta(x, mu * phi, (1 - mu) * phi)
+x <- seq(from = 0.01, to = 0.99, length = 200)
+xx <- cbind(x, x, x, x, x)
+
+yy <- cbind(
+  dbeta2(x, 0.10, 5),
+  dbeta2(x, 0.25, 5),
+  dbeta2(x, 0.50, 5),
+  dbeta2(x, 0.75, 5),
+  dbeta2(x, 0.90, 5)
+)
+matplot(xx, yy, type = "l", xlab = "y", ylab = "Density", main = expression(phi == 5),
+  lty = 1, col = "black", ylim = c(0, 15))
+text(0.05, 12  , "0.10")
+text(0.95, 12  , "0.90")
+text(0.22,  2.8, "0.25")
+text(0.78,  2.8, "0.75")
+text(0.50,  2.3, "0.50")
+
+yy <- cbind(
+  dbeta2(x, 0.10, 100),
+  dbeta2(x, 0.25, 100),
+  dbeta2(x, 0.50, 100),
+  dbeta2(x, 0.75, 100),
+  dbeta2(x, 0.90, 100)
+)
+matplot(xx, yy, type = "l", xlab = "y", ylab = "", main = expression(phi == 100),
+  lty = 1, col = "black", ylim = c(0, 15))
+text(0.10, 14.5, "0.10")
+text(0.90, 14.5, "0.90")
+text(0.25,  9.8, "0.25")
+text(0.75,  9.8, "0.75")
+text(0.50,  8.6, "0.50")
+@
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Beta regression}
+
+\textbf{Regression model:}
+\begin{itemize}
+  \item Observations $i = 1, \dots, n$ of dependent variable $y_i$.
+  \item Link parameters $\mu_i$ and $\phi_i$ to sets of regressor $x_i$ and $z_i$.
+  \item Use link functions $g_1$ (logit, probit, \dots) and $g_2$ (log, identity, \dots).
+\end{itemize}
+\begin{eqnarray*}
+  g_1(\mu_i) & = & x_i^\top \beta, \\
+  g_2(\phi_i) & = & z_i^\top \gamma.
+\end{eqnarray*}
+
+\medskip
+
+\textbf{Inference:} 
+\begin{itemize}
+  \item Coefficients $\beta$ and $\gamma$ are estimated by maximum likelihood.
+  \item The usual central limit theorem holds with associated asymptotic tests (likelihood ratio, Wald, score/LM).
+\end{itemize}
+
+\end{frame}
+
+
+\subsection{Implementation in R}
+
+\begin{frame}[fragile]
+\frametitle{Implementation in R}
+
+\textbf{Model fitting:}
+\begin{itemize}
+  \item Package \pkg{betareg} with main model fitting function \fct{betareg}.
+  \item Interface and fitted models are designed to be similar to \fct{glm}.
+  \item Model specification via \code{formula} plus \code{data}.
+  \item Two part formula, e.g., \code{y ~ x1 + x2 + x3 | z1 + z2}.
+  \item Log-likelihood is maximized numerically via \fct{optim}.
+  \item Extractors: \fct{coef}, \fct{vcov},
+        \fct{residuals}, \fct{logLik}, \dots
+\end{itemize}
+
+\medskip
+
+\textbf{Inference:}
+\begin{itemize}
+  \item Base methods: \fct{summary}, \fct{AIC}, \fct{confint}.
+  \item Methods from \pkg{lmtest} and \pkg{car}: \fct{lrtest}, \fct{waldtest},
+        \fct{coeftest}, \fct{linearHypothesis}.
+  \item Moreover: Multiple testing via \pkg{multcomp} and structural change tests
+        via \pkg{strucchange}.
+\end{itemize}
+
+\end{frame}
+
+\subsection{Illustration: Reading accuracy}
+
+\begin{frame}[fragile]
+\frametitle{Illustration: Reading accuracy}
+
+\textbf{Data:} From Smithson \& Verkuilen (2006).
+\begin{itemize}
+  \item 44 Australian primary school children.
+  \item Dependent variable: Score of test for reading \code{accuracy}.
+  \item Regressors: Indicator \code{dyslexia} (yes/no), nonverbal \code{iq} score.
+\end{itemize}
+
+\medskip
+
+\textbf{Analysis:}
+\begin{itemize}
+  \item OLS for transformed data leads to non-significant effects.
+  \item OLS residuals are heteroskedastic.
+  \item Beta regression captures heteroskedasticity and shows significant effects.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Illustration: Reading accuracy}
+
+<<ReadingSkills-ols, echo=TRUE, results=verbatim>>=
+data("ReadingSkills", package = "betareg")
+rs_ols <- lm(qlogis(accuracy) ~ dyslexia * iq,
+  data = ReadingSkills)
+coeftest(rs_ols)
+bptest(rs_ols)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Illustration: Reading accuracy}
+
+<<ReadingSkills-beta, echo=TRUE, results=verbatim>>=
+rs_beta <- betareg(accuracy ~ dyslexia * iq | dyslexia + iq,
+  data = ReadingSkills)
+coeftest(rs_beta)
+@
+
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Illustration: Reading accuracy}
+
+\vspace*{-1.2cm}
+
+\setkeys{Gin}{width=\textwidth}
+\begin{center}
+<<ReadingSkills-visualization, echo=FALSE, fig=TRUE, height=5.5, width=6.6>>=
+cl1 <- hcl(c(260, 0), 90, 40)
+cl2 <- hcl(c(260, 0), 10, 95)
+plot(accuracy ~ iq, data = ReadingSkills, col = cl2[as.numeric(dyslexia)],
+  xlab = "iq", ylab = "accuracy", xlim = c(-2, 2),
+  pch = c(19, 17)[as.numeric(dyslexia)], cex = 1.5)
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5,
+  pch = (1:2)[as.numeric(dyslexia)], col = cl1[as.numeric(dyslexia)])
+nd <- data.frame(dyslexia = "no", iq = -30:30/10)
+lines(nd$iq, predict(rs_beta, nd), col = cl1[1], lwd = 2)
+lines(nd$iq, plogis(predict(rs_ols, nd)), col = cl1[1], lty = 2, lwd = 2)
+nd <- data.frame(dyslexia = "yes", iq = -30:30/10)
+lines(nd$iq, predict(rs_beta, nd), col = cl1[2], lwd = 2)
+lines(nd$iq, plogis(predict(rs_ols, nd)), col = cl1[2], lty = 2, lwd = 2)
+legend("topleft", c("control", "dyslexic", "betareg", "lm"),
+  lty = c(NA, NA, 1:2), pch = c(19, 17, NA, NA), lwd = 2,
+  col = c(cl2, 1, 1), bty = "n")
+legend("topleft", c("control", "dyslexic", "betareg", "lm"),
+  lty = c(NA, NA, 1:2), pch = c(1, 2, NA, NA),
+  col = c(cl1, NA, NA), bty = "n")
+@
+\end{center}
+
+\end{frame}
+
+
+
+\subsection{Extensions}
+
+\begin{frame}
+\frametitle{Extensions: Partitions and mixtures}
+
+\textbf{So far:} Reuse standard inference methods for fitted model objects.
+
+\medskip
+
+\textbf{Now:} Reuse fitting functions in more complex models.
+
+\medskip
+
+\textbf{Model-based recursive partitioning:} Package \pkg{party}.
+    \begin{itemize}
+      \item Idea: Recursively split sample with respect to available variables.
+      \item Aim: Maximize partitioned likelihood.
+      \item Fit: One model per node of the resulting tree.
+    \end{itemize}
+
+\medskip
+  
+\textbf{Latent class regression, mixture models:} Package \pkg{flexmix}.
+    \begin{itemize}
+      \item Idea: Capture unobserved heterogeneity by finite mixtures of regressions.
+      \item Aim: Maximize weighted likelihood with $k$ components.
+      \item Fit: Weighted combination of $k$ models.
+    \end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Beta regression trees}
+
+\textbf{Partitioning variables:} \code{dyslexia} and further random noise variables.
+
+<<ReadingSkills-noise, echo=TRUE>>=
+set.seed(1071)
+ReadingSkills$x1 <- rnorm(nrow(ReadingSkills))
+ReadingSkills$x2 <- runif(nrow(ReadingSkills))
+ReadingSkills$x3 <- factor(rnorm(nrow(ReadingSkills)) > 0)
+@
+
+\medskip
+
+\textbf{Fit beta regression tree:} In each node
+\code{accuracy}'s mean and precision depends on \code{iq},
+partitioning is done by \code{dyslexia} and the noise variables \code{x1}, \code{x2}, \code{x3}.
+
+<<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
+rs_tree <- betatree(accuracy ~ iq | iq,
+  ~ dyslexia + x1 + x2 + x3,
+  data = ReadingSkills, minsplit = 10)
+plot(rs_tree)
+@
+
+\medskip
+
+\textbf{Result:} Only relevant regressor \code{dyslexia} is chosen for splitting.
+
+<<ReadingSkills-tree2, echo=FALSE>>=
+if(file.exists("slides-betatree.rda")) load("slides-betatree.rda") else {
+rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
+  data = ReadingSkills, minsplit = 10)
+save(rs_tree, file = "slides-betatree.rda")
+}
+@
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Beta regression trees}
+
+\vspace*{-0.8cm}
+
+\setkeys{Gin}{width=1.07\textwidth}
+\hspace*{-0.2cm}%
+<<ReadingSkills-tree-plot, fig=TRUE, height=7, width=10>>=
+plot(rs_tree)
+@
+
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Latent class beta regression}
+
+\textbf{Setup:}
+\begin{itemize}
+  \item No \code{dyslexia} information available.
+  \item Look for $k = 3$ clusters: Two different relationships of type \code{accuracy ~ iq},
+        plus component for ideal score of 0.99.
+\end{itemize}
+
+\medskip
+
+\textbf{Fit beta mixture regression:}
+<<ReadingSkills-mix, echo=TRUE, eval=FALSE>>=
+rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
+  nstart = 10, extra_components = extraComponent(
+  type = "uniform", coef = 0.99, delta = 0.01))
+@
+
+\textbf{Result:}
+\begin{itemize}
+  \item Dyslexic children separated fairly well.
+  \item Other children are captured by mixture of two components: ideal
+        reading scores, and strong dependence on \code{iq} score.
+\end{itemize}
+
+<<ReadingSkills-mix2, echo=FALSE>>=
+if(file.exists("slides-betamix.rda")) load("slides-betamix.rda") else {
+rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
+  nstart = 10, extra_components = extraComponent(
+  type = "uniform", coef = 0.99, delta = 0.01))
+save(rs_mix, file = "slides-betamix.rda")
+}
+@
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Latent class beta regression}
+
+\vspace*{-1.2cm}
+
+\setkeys{Gin}{width=\textwidth}
+\begin{center}
+<<ReadingSkills-betamix-plot1, echo=FALSE, fig=TRUE, height=5.5, width=6.6>>=
+ix <- as.numeric(ReadingSkills$dyslexia)
+col1 <- hcl(c(260, 0), 90, 40)[ix]
+col2 <- hcl(c(260, 0), 10, 95)[ix]
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
+@
+\end{center}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Latent class beta regression}
+
+\vspace*{-1.2cm}
+
+\setkeys{Gin}{width=\textwidth}
+\begin{center}
+<<ReadingSkills-betamix-plot2, echo=FALSE, fig=TRUE, height=5.5, width=6.6>>=
+col1 <- "black"
+col2 <- "lightgray"
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
+@
+\end{center}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{Latent class beta regression}
+
+\vspace*{-1.2cm}
+
+\setkeys{Gin}{width=\textwidth}
+\begin{center}
+<<ReadingSkills-betamix-plot3, echo=FALSE, fig=TRUE, height=5.5, width=6.6>>=
+prob <- 2 * (posterior(rs_mix)[cbind(seq_along(ix), clusters(rs_mix))] - 0.5)
+col3 <- hcl(c(130, 260, 0), 65, 45, fixup = FALSE)
+col1 <- col3[clusters(rs_mix)]
+col2 <- hcl(c(130, 260, 0)[clusters(rs_mix)], 65 * abs(prob)^1.5, 95 - 50 * abs(prob)^1.5, fixup = FALSE)
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
+iq <- -30:30/10
+cf <- rbind(c(qlogis(0.99), 0), coef(rs_mix, model = "mean", component = 2:3))
+for(i in 1:3) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]) 
+@
+\end{center}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Latent class beta regression}
+
+\vspace*{-1.2cm}
+
+\setkeys{Gin}{width=\textwidth}
+\begin{center}
+<<ReadingSkills-betamix-plot4, echo=FALSE, fig=TRUE, height=5.5, width=6.6>>=
+<<ReadingSkills-betamix-plot1>>
+cf <- coef(rs_tree, model = "mean")
+col3 <- hcl(c(260, 0), 90, 40)
+for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]) 
+@
+\end{center}
+
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Computational infrastructure}
+
+\textbf{Model-based recursive partitioning:}
+    \begin{itemize}
+      \item \pkg{party} provides the recursive partitioning.
+      \item \pkg{betareg} provides the models in each node.
+      \begin{itemize}
+        \item Model-fitting function: \fct{betareg.fit} (conveniently without formula processing).
+        \item Extractor for empirical estimating functions (aka scores
+            or case-wise gradient contributions): \fct{estfun} method.
+        \item Some additional (and somewhat technical) S4 glue\dots
+      \end{itemize}
+    \end{itemize}
+
+\medskip
+  
+\textbf{Latent class regression, mixture models:}
+    \begin{itemize}
+      \item \pkg{flexmix} provides the E-step for the EM algorithm.
+      \item \pkg{betareg} provides the M-step.
+      \begin{itemize}
+        \item Model-fitting function: \fct{betareg.fit}.
+        \item Extractor for case-wise log-likelihood contributions: \fct{dbeta}.
+        \item Some additional (and somewhat more technical) S4 glue\dots
+      \end{itemize}
+    \end{itemize}
+
+\end{frame}
+
+
+\subsection{Summary}
+
+\begin{frame}[fragile]
+\frametitle{Summary}
+
+\textbf{Beta regression and extensions:}
+\begin{itemize}
+  \item Flexible regression model for proportions, rates, concentrations.
+  \item Can capture skewness and heteroskedasticity.
+  \item R implementation \pkg{betareg}, similar to \fct{glm}.
+  \item Due to design, standard inference methods can be reused easily.
+  \item Fitting functions can be plugged into more complex fitters.
+  \item Convenience interfaces available for:
+        Model-based partitioning, finite mixture models.
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}
+\frametitle{References}
+
+\footnotesize
+
+Francisco Cribari-Neto, Achim Zeileis (2010).
+  \dquote{Beta Regression in R.}
+  \textit{Journal of Statistical Software},
+  \textbf{34}(2), 1--24.
+  \url{http://www.jstatsoft.org/v34/i02/}
+
+\bigskip
+
+Bettina Gr\"un and Friedrich Leisch (2008).
+  \dquote{FlexMix Version~2: Finite Mixtures with Concomitant Variables and Varying and Constant Parameters.}
+  \textit{Journal of Statistical Software},
+  \textbf{28}(4), 1--35.
+  \url{http://www.jstatsoft.org/v28/i04/}
+
+\bigskip
+
+Friedrich Leisch (2004).
+  \dquote{FlexMix: A General Framework for Finite Mixture Models and Latent Class Regression in R.}
+  \textit{Journal of Statistical Software},
+  \textbf{11}(8), 1--18.
+  \url{http://www.jstatsoft.org/v11/i08/}
+  
+\bigskip
+
+Zeileis A, Hothorn T, Hornik K (2008).
+ \dquote{Model-Based Recursive Partitioning.}
+  \textit{Journal of Computational and Graphical Statistics},
+  \textbf{17}(2), 492--514.
+  \doi{10.1198/106186008X319331}
+
+\end{frame}
+
+
+\end{document}
