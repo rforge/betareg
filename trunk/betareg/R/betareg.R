@@ -15,11 +15,11 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   ## formula
   oformula <- as.formula(formula)
   formula <- as.Formula(formula)
-  if(length(formula)[2] < 2L) {
+  if(length(formula)[2L] < 2L) {
     formula <- as.Formula(formula(formula), ~ 1)
     simple_formula <- TRUE
   } else {
-    if(length(formula)[2] > 2L) {
+    if(length(formula)[2L] > 2L) {
       formula <- Formula(formula(formula, rhs = 1:2))
       warning("formula must not have more than two RHS parts")
     }
@@ -33,8 +33,8 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
   ## extract terms, model matrix, response
   mt <- terms(formula, data = data)
-  mtX <- terms(formula, data = data, rhs = 1)
-  mtZ <- delete.response(terms(formula, data = data, rhs = 2))
+  mtX <- terms(formula, data = data, rhs = 1L)
+  mtZ <- delete.response(terms(formula, data = data, rhs = 2L))
   Y <- model.response(mf, "numeric")
   X <- model.matrix(mtX, mf)
   Z <- model.matrix(mtZ, mf)
@@ -54,15 +54,24 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   ## weights
   weights <- model.weights(mf)
   if(is.null(weights)) weights <- 1
-  if(length(weights) == 1) weights <- rep(weights, n)
+  if(length(weights) == 1) weights <- rep.int(weights, n)
   weights <- as.vector(weights)
   names(weights) <- rownames(mf)
   
-  ## offset
-  offset <- model.offset(mf)
-  if(is.null(offset)) offset <- 0
-  if(length(offset) == 1) offset <- rep(offset, n)
-  offset <- as.vector(offset)
+  ## offsets
+  expand_offset <- function(offset) {
+    if(is.null(offset)) offset <- 0
+    if(length(offset) == 1) offset <- rep.int(offset, n)
+    as.vector(offset)
+  }
+  ## in mean part of formula
+  offsetX <- expand_offset(model.offset(model.part(formula, data = mf, rhs = 1L, terms = TRUE)))
+  ## in precision part of formula
+  offsetZ <- expand_offset(model.offset(model.part(formula, data = mf, rhs = 2L, terms = TRUE)))
+  ## in offset argument (used for mean)
+  if(!is.null(cl$offset)) offsetX <- offsetX + expand_offset(mf[, "(offset)"])
+  ## collect
+  offset <- list(mean = offsetX, precision = offsetZ)
 
   ## call the actual workhorse: betareg.fit()
   rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, control)
@@ -98,17 +107,19 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## response and regressor matrix
   n <- NROW(x)
   k <- NCOL(x)
-  if(is.null(weights)) weights <- rep(1, n)
-  if(is.null(offset)) offset <- rep(0, n)
+  if(is.null(weights)) weights <- rep.int(1, n)
+  nobs <- sum(weights > 0)
+  if(is.null(offset)) offset <- rep.int(0, n)
+  if(!is.list(offset)) offset <- list(mean = offset, precision = rep.int(0, n))
   if(is.null(z)) {
-    m <- 1
+    m <- 1L
     z <- matrix(1, ncol = m, nrow = n)
     colnames(z) <- "(Intercept)"
     rownames(z) <- rownames(x)
     phi_const <- TRUE
   } else {
     m <- NCOL(z)
-    phi_const <- (m == 1L) && isTRUE(all.equal(z[,1], rep(1, n)))
+    phi_const <- (m == 1L) && isTRUE(all.equal(z[, 1L], rep.int(1, n)))
   }
 
   ## link processing
@@ -152,15 +163,15 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
   ## starting values
   if(is.null(start)) {
-    auxreg <- lm.wfit(x, linkfun(y), weights, offset = offset)
+    auxreg <- lm.wfit(x, linkfun(y), weights, offset = offset[[1L]])
     beta <- auxreg$coefficients
     yhat <- linkinv(auxreg$fitted.values)
     dlink <- 1/mu.eta(linkfun(yhat))
     res <- auxreg$residuals
     sigma2 <- sum(weights * res^2)/((sum(weights) - k) * (dlink)^2)
     phi_y <- weights * yhat * (1 - yhat)/(sum(weights) * sigma2) - 1/n
-    phi <- rep(0, ncol(z))
-    phi[1] <- suppressWarnings(phi_linkfun(sum(phi_y)))
+    phi <- rep.int(0, ncol(z))
+    phi[1L] <- suppressWarnings(phi_linkfun(sum(phi_y)))
     ## i.e., start out from the fixed dispersion model as described
     ## in Ferrari & Cribari-Neto (2004) (and differing from Simas et al. 2009)
     ## An alternative would be
@@ -169,9 +180,9 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     ## the case.
     ##
     ## Additionally, sum(phi_y) might not even be > 0 which should be caught.
-    if(!isTRUE(phi_linkinv(phi[1]) > 0)) {
+    if(!isTRUE(phi_linkinv(phi[1L]) > 0)) {
       warning("No valid starting value for precision parameter found, using 1 instead.")
-      phi[1] <- 1
+      phi[1L] <- 1
     }
     start <- list(mean = beta, precision = phi)
   }
@@ -179,10 +190,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
   ## objective function and gradient
   loglikfun <- function(par) {
-    beta <- par[1:k]
-    gamma <- par[-(1:k)]
-    mu <- linkinv(x %*% beta + offset)
-    phi <- phi_linkinv(z %*% gamma)
+    beta <- par[seq.int(length.out = k)]
+    gamma <- par[seq.int(length.out = m) + k]
+    mu <- linkinv(x %*% beta + offset[[1L]])
+    phi <- phi_linkinv(z %*% gamma + offset[[2L]])
     if(any(!is.finite(phi))) NaN else { ## catch extreme cases without warning
       ## Use dbeta() instead of 'textbook' formula:
       ## ll <- lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) +
@@ -192,10 +203,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     }
   }
   gradfun <- function(par) {
-    beta <- par[1:k]
-    gamma <- par[-(1:k)]
-    eta <- as.vector(x %*% beta + offset)
-    phi_eta <- as.vector(z %*% gamma)
+    beta <- par[seq.int(length.out = k)]
+    gamma <- par[seq.int(length.out = m) + k]
+    eta <- as.vector(x %*% beta + offset[[1L]])
+    phi_eta <- as.vector(z %*% gamma + offset[[2L]])
     mu <- linkinv(eta)
     phi <- phi_linkinv(phi_eta)
     mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
@@ -213,10 +224,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   if(opt$convergence > 0) warning("optimization failed to converge")
 
   ## extract fitted values/parameters
-  beta <- as.vector(opt$par[1:k])
-  gamma <- as.vector(opt$par[-(1:k)])
-  eta <- as.vector(x %*% beta + offset)
-  phi_eta <- as.vector(z %*% gamma)
+  beta <- as.vector(opt$par[seq.int(length.out = k)])
+  gamma <- as.vector(opt$par[seq.int(length.out = m) + k])
+  eta <- as.vector(x %*% beta + offset[[1L]])
+  phi_eta <- as.vector(z %*% gamma + offset[[2L]])
   mu <- linkinv(eta)
   phi <- phi_linkinv(phi_eta)
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
@@ -260,15 +271,15 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   wpp <- b * phi_mu.eta(phi_eta)^2
   wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
   ## compute elements of K
-  kbb <- crossprod(sqrt(weights) * sqrt(wbb) * x)
-  kpp <- crossprod(sqrt(weights) * sqrt(wpp) * z)
-  kbp <- crossprod(weights * wbp * x, z)
+  kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
+  kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
+  kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
   if(!hessian) {
     ## put together K
     hess <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
     ## compute K^(-1)
-    kbb1 <- chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x)))
-    kpp1 <- solve(kpp - t(kbp) %*% kbb1 %*% kbp)
+    kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
+    kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
     vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
       -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
     ## vcov <- solve(hess)
@@ -293,11 +304,13 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     method = method,
     control = control,
     start = start,
-    weights = if(identical(as.vector(weights), rep(1, n))) NULL else weights,
-    offset = if(identical(offset, rep(0, n))) NULL else offset,
+    weights = if(identical(as.vector(weights), rep.int(1, n))) NULL else weights,
+    offset = list(mean = if(identical(offset[[1L]], rep.int(0, n))) NULL else offset[[1L]],
+      precision = if(identical(offset[[2L]], rep.int(0, n))) NULL else offset[[2L]]),
     n = n,
-    df.null = n - 2,
-    df.residual = n - k - m,
+    nobs = nobs,
+    df.null = nobs - 2,
+    df.residual = nobs - k - m,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
@@ -317,17 +330,18 @@ print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
   if(!x$converged) {
     cat("model did not converge\n")
   } else {
-    if(length(coef(x))) {
+    if(length(x$coefficients$mean)) {
       cat(paste("Coefficients (mean model with ", x$link$mean$name, " link):\n", sep = ""))
       print.default(format(x$coefficients$mean, digits = digits), print.gap = 2, quote = FALSE)
       cat("\n")
-      if(x$phi) {
+    } else cat("No coefficients (in mean model)\n\n")
+    if(x$phi) {
+      if(length(x$coefficients$precision)) {
         cat(paste("Phi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
         print.default(format(x$coefficients$precision, digits = digits), print.gap = 2, quote = FALSE)
         cat("\n")
-      }
+      } else cat("No coefficients (in precision model)\n\n")
     }
-    else cat("No coefficients\n\n")
   }
   
   invisible(x)
@@ -345,11 +359,12 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
   
   ## extend coefficient table
   k <- length(object$coefficients$mean)
+  m <- length(object$coefficients$precision)
   cf <- as.vector(do.call("c", object$coefficients))
   se <- sqrt(diag(object$vcov))
   cf <- cbind(cf, se, cf/se, 2 * pnorm(-abs(cf/se)))
   colnames(cf) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
-  cf <- list(mean = cf[1:k, , drop = FALSE], precision = cf[-(1:k), , drop = FALSE])
+  cf <- list(mean = cf[seq.int(length.out = k), , drop = FALSE], precision = cf[seq.int(length.out = m) + k, , drop = FALSE])
   rownames(cf$mean) <- names(object$coefficients$mean)
   rownames(cf$precision) <- names(object$coefficients$precision)
   object$coefficients <- cf
@@ -380,15 +395,19 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
     print(structure(round(as.vector(quantile(x$residuals)), digits = digits),
       .Names = c("Min", "1Q", "Median", "3Q", "Max")))
   
-    cat(paste("\nCoefficients (mean model with ", x$link$mean$name, " link):\n", sep = ""))
-    printCoefmat(x$coefficients$mean, digits = digits, signif.legend = FALSE)
+    if(NROW(x$coefficients$mean)) {
+      cat(paste("\nCoefficients (mean model with ", x$link$mean$name, " link):\n", sep = ""))
+      printCoefmat(x$coefficients$mean, digits = digits, signif.legend = FALSE)
+    } else cat("\nNo coefficients (in mean model)\n")
   
     if(x$phi) {
-      cat(paste("\nPhi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
-      printCoefmat(x$coefficients$precision, digits = digits, signif.legend = FALSE)
+      if(NROW(x$coefficients$precision)) {
+        cat(paste("\nPhi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
+        printCoefmat(x$coefficients$precision, digits = digits, signif.legend = FALSE)
+      } else cat("\nNo coefficients (in precision model)\n")
     }
     
-    if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[,4] < 0.1))
+    if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[, 4L] < 0.1))
       cat("---\nSignif. codes: ", "0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", "\n")
   
     cat("\nLog-likelihood:", formatC(x$loglik, digits = digits),
@@ -417,12 +436,14 @@ predict.betareg <- function(object, newdata = NULL,
       "precision" = {
         gamma <- object$coefficients$precision
         z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-	object$link$precision$linkinv(drop(z %*% gamma))
+	offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
+	object$link$precision$linkinv(drop(z %*% gamma + offset))
       },
       "variance" = {
         gamma <- object$coefficients$precision
         z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-	phi <- object$link$precision$linkinv(drop(z %*% gamma))
+	offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
+	phi <- object$link$precision$linkinv(drop(z %*% gamma + offset))
 	object$fitted.values * (1 - object$fitted.values) / (1 + phi)
       }
     )
@@ -437,30 +458,36 @@ predict.betareg <- function(object, newdata = NULL,
       "variance" = "full")
       
     mf <- model.frame(delete.response(object$terms[[tnam]]), newdata, na.action = na.action, xlev = object$levels[[tnam]])
+    newdata <- newdata[rownames(mf), , drop = FALSE]
+    offset <- list(mean = rep.int(0, nrow(mf)), precision = rep.int(0, nrow(mf)))
+    
     if(type %in% c("response", "link", "variance")) {
       X <- model.matrix(delete.response(object$terms$mean), mf, contrasts = object$contrasts$mean)
-      offset <- if(!is.null(off.num <- attr(object$terms$full, "offset")))
-    	eval(attr(object$terms$full, "variables")[[off.num + 1]], newdata)
-        else if(!is.null(object$offset)) eval(object$call$offset, newdata)
-      if(is.null(offset)) offset <- rep(0, NROW(X))
+      if(!is.null(object$call$offset)) offset[[1L]] <- offset[[1L]] + eval(object$call$offset, newdata)
+      if(!is.null(off.num <- attr(object$terms$mean, "offset"))) {
+        for(j in off.num) offset[[1L]] <- offset[[1L]] + eval(attr(object$terms$mean, "variables")[[j + 1L]], newdata)
+      }
     }
     if(type %in% c("precision", "variance")) {
       Z <- model.matrix(object$terms$precision, mf, contrasts = object$contrasts$precision)
+      if(!is.null(off.num <- attr(object$terms$precision, "offset"))) {
+        for(j in off.num) offset[[2L]] <- offset[[2L]] + eval(attr(object$terms$precision, "variables")[[j + 1L]], newdata)
+      }
     }
 
     rval <- switch(type,    
       "response" = {
-        object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset))
+        object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
       },      
       "link" = {
-        drop(X %*% object$coefficients$mean + offset)
+        drop(X %*% object$coefficients$mean + offset[[1L]])
       },      
       "precision" = {
-        object$link$precision$linkinv(drop(Z %*% object$coefficients$precision))
+        object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
       },
       "variance" = {
-        mu <- object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset))
-        phi <- object$link$precision$linkinv(drop(Z %*% object$coefficients$precision))
+        mu <- object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
+        phi <- object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
 	mu * (1 - mu) / (1 + phi)
       }
     )
@@ -499,6 +526,7 @@ coef.betareg <- function(object, model = c("full", "mean", "precision"), phi = N
 vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...) {
   vc <- object$vcov
   k <- length(object$coefficients$mean)
+  m <- length(object$coefficients$precision)
 
   model <- if(is.null(phi)) {
     if(missing(model)) ifelse(object$phi, "full", "mean") else match.arg(model)
@@ -509,10 +537,10 @@ vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = N
   
   switch(model,
     "mean" = {
-      vc[1:k, 1:k, drop = FALSE]
+      vc[seq.int(length.out = k), seq.int(length.out = k), drop = FALSE]
     },
     "precision" = {
-      vc <- vc[-(1:k), -(1:k), drop = FALSE]
+      vc <- vc[seq.int(length.out = m) + k, seq.int(length.out = m) + k, drop = FALSE]
       colnames(vc) <- rownames(vc) <- names(object$coefficients$precision)
       vc
     },
@@ -523,7 +551,7 @@ vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = N
 }
 
 bread.betareg <- function(x, phi = NULL, ...) {
-  vcov(x, phi = phi) * x$n
+  vcov(x, phi = phi) * x$nobs
 }
 
 estfun.betareg <- function(x, phi = NULL, ...)
@@ -532,7 +560,9 @@ estfun.betareg <- function(x, phi = NULL, ...)
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
   xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean
   zmat <- if(is.null(x$x)) model.matrix(x, model = "precision") else x$x$precision
-  offset <- if(is.null(x$offset)) rep(0, NROW(xmat)) else x$offset
+  offset <- x$offset
+  if(is.null(offset[[1L]])) offset[[1L]] <- rep.int(0, NROW(xmat))
+  if(is.null(offset[[2L]])) offset[[2L]] <- rep.int(0, NROW(zmat))
   wts <- weights(x)
   if(is.null(wts)) wts <- 1
   phi_full <- if(is.null(phi)) x$phi else phi
@@ -545,8 +575,8 @@ estfun.betareg <- function(x, phi = NULL, ...)
   ystar <- qlogis(y)
   
   ## compute mu*
-  eta <- as.vector(xmat %*% beta + offset)
-  phi_eta <- as.vector(zmat %*% gamma)
+  eta <- as.vector(xmat %*% beta + offset[[1L]])
+  phi_eta <- as.vector(zmat %*% gamma + offset[[2L]])
   mu <- x$link$mean$linkinv(eta)
   phi <- x$link$precision$linkinv(phi_eta)
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)

@@ -1,9 +1,21 @@
-Changes in Version 2.3-1
+Changes in Version 2.4-0
+
+  o Enabled fitting of beta regression models without coefficients in the
+    mean equation.
+
+  o Enabled usage of offsets in both parts of the model, i.e., one can use
+    betareg(y ~ x + offset(o1) | z + offset(o2)) which is also equivalent to
+    betareg(y ~ x | z + offset(o2), offset = o1), i.e., the "offset"
+    argument of betareg is employed for the mean equation only. Consequently,
+    betareg_object$offset is now a list with two elements (mean/precision).
 
   o Added warning and ad-hoc workaround in the starting value selection
-    of betareg.fit(). If no valid starting value can be obtained,
-    a warning is issued and c(1, 0, ..., 0) is employed in the precision
-    regression.
+    of betareg.fit() for the precision model. If no valid starting value can be
+    obtained, a warning is issued and c(1, 0, ..., 0) is employed.
+
+  o Added betareg_object$nobs in the return object containing the number
+    of observations with non-zero weights. Then nobs() can be used to extract
+    this and consequently BIC() can be used to compute the BIC.
 
 
 Changes in Version 2.3-0

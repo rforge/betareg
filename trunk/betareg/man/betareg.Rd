@@ -27,7 +27,9 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
     via \code{\link[stats]{model.frame}}.}
   \item{weights}{optional numeric vector of case weights.}
   \item{offset}{optional numeric vector with an a priori known component to be
-    included in the linear predictor.}
+    included in the linear predictor for the mean. In \code{betareg.fit},
+    \code{offset} may also be a list of two offsets for the mean and precision
+    equation, respectively.}
   \item{link}{character specification of the link function in
     the mean model (mu). Currently, \code{"logit"}, \code{"probit"},
     \code{"cloglog"}, \code{"cauchit"}, \code{"log"}, \code{"loglog"} are supported.
@@ -114,8 +116,9 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{control}{the control arguments passed to the \code{optim} call,}
   \item{start}{the starting values for the parameters passed to the \code{optim} call,}
   \item{weights}{the weights used (if any),}
-  \item{offset}{the offset vector used (if any),}
+  \item{offset}{a list of offset vectors used (if any),}
   \item{n}{number of observations,}
+  \item{nobs}{number of observations with non-zero weights,}
   \item{df.null}{residual degrees of freedom in the null model (constant mean and dispersion),
     i.e., \code{n - 2},}
   \item{df.residual}{residual degrees of freedom in the fitted model,}
