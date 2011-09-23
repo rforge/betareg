@@ -119,6 +119,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi_const <- TRUE
   } else {
     m <- NCOL(z)
+    if(m < 1L) stop("dispersion regression needs to have at least one parameter")
     phi_const <- (m == 1L) && isTRUE(all.equal(z[, 1L], rep.int(1, n)))
   }
 
@@ -188,7 +189,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   }
   if(is.list(start)) start <- do.call("c", start)
 
-  ## objective function and gradient
+  ## objective function
   loglikfun <- function(par) {
     beta <- par[seq.int(length.out = k)]
     gamma <- par[seq.int(length.out = m) + k]
@@ -202,7 +203,9 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       if(any(!is.finite(ll))) NaN else sum(weights * ll) ## again: catch extreme cases without warning
     }
   }
-  gradfun <- function(par) {
+  
+  ## gradient (by default) or gradient contributions (sum = FALSE)
+  gradfun <- function(par, sum = TRUE) {
     beta <- par[seq.int(length.out = k)]
     gamma <- par[seq.int(length.out = m) + k]
     eta <- as.vector(x %*% beta + offset[[1L]])
@@ -215,7 +218,44 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
         phi_mu.eta(phi_eta) * weights * z      
     )
-    colSums(rval)
+    if(sum) colSums(rval) else rval
+  }
+  
+  ## analytical Hessian or covariance matrix (inverse of Hessian)
+  hessfun <- function(par, inverse = FALSE) {
+    ## extract fitted values/parameters
+    beta <- as.vector(opt$par[seq.int(length.out = k)])
+    gamma <- as.vector(opt$par[seq.int(length.out = m) + k])
+    eta <- as.vector(x %*% beta + offset[[1L]])
+    phi_eta <- as.vector(z %*% gamma + offset[[2L]])
+    mu <- linkinv(eta)
+    phi <- phi_linkinv(phi_eta)
+    mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
+    psi1 <- trigamma(mu * phi)
+    psi2 <- trigamma((1 - mu) * phi)
+
+    ## auxiliary transformations
+    a <- psi1 + psi2
+    b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
+    ## compute elements of W
+    wbb <- phi^2 * a * mu.eta(eta)^2
+    wpp <- b * phi_mu.eta(phi_eta)^2
+    wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
+    ## compute elements of K
+    kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
+    kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
+    kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
+
+    if(!inverse) {
+    ## put together K
+      cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
+    } else {
+    ## compute K^(-1)
+      kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
+      kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
+      vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
+        -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+    }  
   }
 
   ## optimize likelihood  
@@ -234,65 +274,12 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   psi1 <- trigamma(mu * phi)
   psi2 <- trigamma((1 - mu) * phi)
   pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
-
-  ## compute analytical covariance matrix
-  ## <FIXME> 
-  ## ## old code based on Ferrari & Cribari-Neto (2004)
-  ## ## compute diagonal of T
-  ## Tdiag <- mu.eta(eta)
-  ## ## compute w
-  ## w <- weights * phi * (psi1 + psi2) * Tdiag^2
-  ## ## compute vector c
-  ## vc <- phi * (psi1 * mu - psi2 * (1 - mu))
-  ## ## compute d
-  ## d <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
-  ## ## compute (X'W X)^(-1)
-  ## xwx1 <- chol2inv(qr.R(qr(sqrt(w) * x)))
-  ## ## compute X'Tc
-  ## xtc <- as.vector(t(x) %*% (Tdiag * vc))  
-  ## ## compute gamma
-  ## xwtc <- as.vector(xwx1 %*% xtc)
-  ## gamma <- sum(d) - sum(xtc * xwtc)/phi  
-  ## ## compute components of K^(-1)
-  ## Kbb <- (xwx1/phi) %*% (diag(k) + outer(xtc, xwtc)/(gamma*phi))
-  ## Kpp <- (1/gamma)
-  ## Kbp <- -as.vector(xwx1 %*% xtc)/(gamma * phi)
-  ## ## put together covariance matrix
-  ## vcov <- rbind(cbind(Kbb, Kbp), c(Kbp, Kpp))
-  ##
-  ## instead: new code based on Simas et al. (2009): more general, possibly less exact
-  ## due to solve(), maybe use inverse for partitioned matrices?
-  ## </FIXME>
-  ## auxiliary transformations
-  a <- psi1 + psi2
-  b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
-  ## compute elements of W
-  wbb <- phi^2 * a * mu.eta(eta)^2
-  wpp <- b * phi_mu.eta(phi_eta)^2
-  wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
-  ## compute elements of K
-  kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
-  kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
-  kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
-  if(!hessian) {
-    ## put together K
-    hess <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
-    ## compute K^(-1)
-    kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
-    kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
-    vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
-      -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
-    ## vcov <- solve(hess)
-  } else {
-    ## if specified, use numerical Hessian instead of analytical solution
-    hess <- -as.matrix(opt$hessian)
-    vcov <- solve(hess)
-  }
+  vcov <- if(hessian) solve(-as.matrix(opt$hessian)) else hessfun(opt$par, inverse = TRUE)
 
   ## names
   names(beta) <- colnames(x)
   names(gamma) <- if(phi_const & phi_linkstr == "identity") "(phi)" else colnames(z)
-  rownames(vcov) <- colnames(vcov) <- rownames(hess) <- colnames(hess) <- c(colnames(x), 
+  rownames(vcov) <- colnames(vcov) <- c(colnames(x), 
     if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"))
 
   ## set up return value
@@ -314,7 +301,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
-    hessian = hess,
+#    hessian = hess,
     pseudo.r.squared = pseudor2,
     link = list(mean = linkobj, precision = phi_linkobj),
     converged = opt$convergence < 1    
