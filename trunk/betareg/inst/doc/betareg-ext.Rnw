@@ -10,20 +10,40 @@
 \newcommand{\fixme}[1]{\emph{\marginpar{FIXME} (#1)}}
 \newcommand{\readme}[1]{\emph{\marginpar{README} (#1)}}
 
-\author{Achim Zeileis\\Universit\"at Innsbruck \And
-        Bettina Gr\"un\\Johannes Kepler Universit\"at Linz}
-\Plainauthor{Achim Zeileis, Bettina Gr\"un}
+\author{Bettina Gr\"un\\Johannes Kepler\\Universit\"at Linz
+   \And Ioannis Kosmidis\\University College London
+   \And Achim Zeileis\\Universit\"at Innsbruck}
+\Plainauthor{Bettina Gr\"un, Ioannis Kosmidis, Achim Zeileis}
 
-\title{Extending Beta Regression in \proglang{R}: Mixed and Partitioned}
-\Plaintitle{Extending Beta Regression in R: Mixed and Partitioned}
+\title{Extended Beta Regression in \proglang{R}: Shaken, Stirred, Mixed, and Partitioned}
+\Plaintitle{Extended Beta Regression in R: Shaken, Stirred, Mixed, and Partitioned}
 
-\Keywords{beta regression, rates, proportions, recursive partitioning, finite mixture, \proglang{R}}
-\Plainkeywords{beta regression, rates, proportions, recursive partitioning, finite mixture, R}
+\Keywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, \proglang{R}}
+\Plainkeywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
 
 \Abstract{
+shaken and stirred (beta correction and reduction),
+mixed (finite mixture model),
+and partitioned (tree model)
 }
 
 \Address{
+  Bettina Gr\"un\\
+  Institut f\"ur Angewandte Statistik / IFAS\\
+  Johannes Kepler Universit{\"at} Linz\\
+  Altenbergerstra{\ss }e 69\\
+  4040 Linz, Austria\\
+  E-mail: \email{Bettina.Gruen@jku.at}\\
+  URL: \url{http://ifas.jku.at/gruen/}\\
+
+  Ioannis Kosmidis\\
+  Department of Statistical Science\\
+  University College London\\
+  Gower Street\\
+  London WC1E 6BT, United Kingdom\\
+  E-mail: \email{ioannis@stats.ucl.ac.uk}\\
+  URL: \url{http://www.ucl.ac.uk/~ucakiko/}\\
+
   Achim Zeileis\\
   Department of Statistics\\
   Universit\"at Innsbruck\\
@@ -32,26 +52,20 @@
   E-mail: \email{Achim.Zeileis@R-project.org}\\
   URL: \url{http://eeecon.uibk.ac.at/~zeileis/}
 
-  Bettina Gr\"un\\
-  Institut f\"ur Angewandte Statistik / IFAS\\
-  Johannes Kepler Universit{\"at} Linz\\
-  Altenbergerstra{\ss }e 69\\
-  4040 Linz, Austria\\
-  E-mail: \email{Bettina.Gruen@jku.at}\\
-  URL: \url{http://ifas.jku.at/gruen/}
 }
 
 %% Sweave/vignette information and metadata
 %% need no \usepackage{Sweave}
 \SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
-%\VignetteIndexEntry{Beta Regression in R}
+%\VignetteIndexEntry{Extended Beta Regression in R: Shaken, Stirred, Mixed, and Partitioned}
 %\VignetteDepends{stats,betareg,car,lmtest,sandwich,strucchange}
-%\VignetteKeywords{beta regression, rates, proportions, R}
+%\VignetteKeywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
 %\VignettePackage{betareg}
 
 <<preliminaries, echo=FALSE, results=hide>>=
 options(width = 70, prompt = "R> ", continue = "+  ")
 library("betareg")
+cache <- TRUE
 @
 
 
@@ -123,8 +137,17 @@ regression models by building on funtionality provided by packages
 \pkg{party} \citep{betareg:Hothorn+Hornik+Strobl:2011} and
 \pkg{flexmix} \citep{betareg:Leisch+Gruen:2011}.
 
-\section{Model-based recursive partitioning of beta
-  regressions}\label{sec:model-based-recurs}
+\section{Bias correction and reduction in beta regressions}\label{sec:bias}
+
+Reduction of bias using the generic algorithm of \cite{betareg:Kosmidis+Firth:2010}
+building on earlier work \citep{betareg:Firth:1993,betareg:Kosmidis+Firth:2009}.
+While \cite{betareg:Kosmidis+Firth:2010} only consider only regressions
+with a fixed precision parameter $\phi$, we extend their results to 
+models with a regression part for $\phi$.
+
+
+
+\section{Beta regression trees}\label{sec:trees}
 
 Model-based recursive partitioning builds on the more widely known
 method of classification and regression trees \citep[CART,
@@ -136,6 +159,7 @@ response variable within a group and the dissimilarity between the two
 groups. \cite{betareg:Hothorn+Hornik+Zeileis:2006} 
  
 \cite{betareg:Zeileis+Hothorn+Hornik:2008}
+
 
 \section{Finite mixtures of beta regressions}\label{sec:finite-mixtures-beta}
 
@@ -216,21 +240,26 @@ for the recursive partitioning method used in \fct{mob\_control} can
 be specified via the \code{\dots} argument. In this case the minimum
 number of observations in a node in order to allow a split is given by
 \code{minsplit = 10}.
-
-<<ReadingSkills-tree0, echo=FALSE>>=
-if(file.exists("paper-betatree.rda")) load("paper-betatree.rda") else {
-rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
-save(rs_tree, file = "paper-betatree.rda")
-}
-@
-
+%
 <<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
 rs_tree <- betatree(accuracy ~ iq | iq,
   ~ dyslexia + x1 + x2 + x3,
   data = ReadingSkills, minsplit = 10)
 @
-
+%
+<<ReadingSkills-tree0, echo=FALSE>>=
+if(cache & file.exists("betareg-ext-betatree.rda")) {
+  load("betareg-ext-betatree.rda")
+} else {
+<<ReadingSkills-tree>>
+if(cache) {
+  save(rs_tree, file = "betareg-ext-betatree.rda")
+} else {
+  if(file.exists("betareg-ext-betatree.rda")) file.remove("betareg-ext-betatree.rda")
+}
+}
+@
+%
 Alternatively the model could be specified using a three-part formula
 where the third part is the symbolic description of the partitioning
 variables.
@@ -281,19 +310,23 @@ one component is used to capture those children who have a perfect
 reading accuracy test score. This additional component is assumed to
 follow a uniform distribution on the interval \code{coef} $\pm$
 \code{delta}.
-
+%
 <<ReadingSkills-mix, echo=TRUE, eval=FALSE>>=
 rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
   nstart = 10, extra_components = extraComponent(
   type = "uniform", coef = 0.99, delta = 0.01))
 @
-
+%
 <<ReadingSkills-mix2, echo=FALSE>>=
-if(file.exists("paper-betamix.rda")) load("paper-betamix.rda") else {
-rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
-  nstart = 10, extra_components = extraComponent(
-  type = "uniform", coef = 0.99, delta = 0.01))
-save(rs_mix, file = "paper-betamix.rda")
+if(cache & file.exists("betareg-ext-betamix.rda")) {
+ load("betareg-ext-betamix.rda")
+} else {
+<<ReadingSkills-mix>>
+if(cache) {
+  save(rs_mix, file = "betareg-ext-betamix.rda")
+} else {
+  if(file.exists("betareg-ext-betamix.rda")) file.remove("betareg-ext-betamix.rda")
+}
 }
 @
 
