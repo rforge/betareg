@@ -1,0 +1,345 @@
+\documentclass[nojss]{jss}
+\usepackage{amsmath,amssymb,amsfonts,thumbpdf}
+
+%% additional commands
+\newcommand{\squote}[1]{`{#1}'}
+\newcommand{\dquote}[1]{``{#1}''}
+\newcommand{\fct}[1]{{\texttt{#1()}\index{#1@\texttt{#1()}}}}
+\newcommand{\class}[1]{\dquote{\texttt{#1}}}
+%% for internal use
+\newcommand{\fixme}[1]{\emph{\marginpar{FIXME} (#1)}}
+\newcommand{\readme}[1]{\emph{\marginpar{README} (#1)}}
+
+\author{Achim Zeileis\\Universit\"at Innsbruck \And
+        Bettina Gr\"un\\Johannes Kepler Universit\"at Linz}
+\Plainauthor{Achim Zeileis, Bettina Gr\"un}
+
+\title{Extending Beta Regression in \proglang{R}: Mixed and Partitioned}
+\Plaintitle{Extending Beta Regression in R: Mixed and Partitioned}
+
+\Keywords{beta regression, rates, proportions, recursive partitioning, finite mixture, \proglang{R}}
+\Plainkeywords{beta regression, rates, proportions, recursive partitioning, finite mixture, R}
+
+\Abstract{
+}
+
+\Address{
+  Achim Zeileis\\
+  Department of Statistics\\
+  Universit\"at Innsbruck\\
+  Universit\"atsstr.~15\\
+  6020 Innsbruck, Austria\\
+  E-mail: \email{Achim.Zeileis@R-project.org}\\
+  URL: \url{http://eeecon.uibk.ac.at/~zeileis/}
+
+  Bettina Gr\"un\\
+  Institut f\"ur Angewandte Statistik / IFAS\\
+  Johannes Kepler Universit{\"at} Linz\\
+  Altenbergerstra{\ss }e 69\\
+  4040 Linz, Austria\\
+  E-mail: \email{Bettina.Gruen@jku.at}\\
+  URL: \url{http://ifas.jku.at/gruen/}
+}
+
+%% Sweave/vignette information and metadata
+%% need no \usepackage{Sweave}
+\SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
+%\VignetteIndexEntry{Beta Regression in R}
+%\VignetteDepends{stats,betareg,car,lmtest,sandwich,strucchange}
+%\VignetteKeywords{beta regression, rates, proportions, R}
+%\VignettePackage{betareg}
+
+<<preliminaries, echo=FALSE, results=hide>>=
+options(width = 70, prompt = "R> ", continue = "+  ")
+library("betareg")
+@
+
+
+\begin{document}
+\section{Introduction}\label{sec:intro}
+
+The class of beta regression models allows to suitably model a
+continuous response variable $y$ which assumes values in the open
+standard unit interval $(0, 1)$. Such response variables are for
+example given by rates, proportions, concentrations, etc. A double
+index model which allows to model the mean as well as the precision
+through covariates was introduced by
+\cite{betareg:Ferrari+Cribari-Neto:2004}. They used an alternative
+parametrization of the beta distribution such that the mean and
+variance of a random variable $y$ following a beta distribution with
+parameters $\mu$ and $\phi$ (i.e., $y \,\sim\, \mathcal{B}(\mu,
+\phi)$) are given by $\E(y) = \mu$ and $\VAR(y) =
+\mu(1-\mu)/(1+\phi)$.
+
+The double index beta regression model is specified.
+
+Assume we have observations $i = 1, \dots, n$ of dependent variable
+$y_i$.  The parameters $\mu_i$ and $\phi_i$ are linked to linear
+predictors from the sets of regressors $x_i$ and $z_i$. Different link
+functions can be used for the two parameters. Suitable link functions
+are for example logit or probit for $g_1$ which links to $\mu_i$ and
+log or identity for $g_2$ which links to $\phi_i$.
+\begin{eqnarray*}
+  g_1(\mu_i) & = & x_i^\top \beta, \\
+  g_2(\phi_i) & = & z_i^\top \gamma.
+\end{eqnarray*}
+
+The coefficients $\beta$ and $\gamma$ can be estimated by maximum
+likelihood. The usual central limit theorem holds with associated
+asymptotic tests, e.g., likelihood ratio, Wald, score/Lagrange
+Multiplier (LM).
+
+The \proglang{R} package \pkg{betareg} which implements maximum
+likelihood estimation was introduced by
+\cite{betareg:Cribari-Neto+Zeileis:2010}. The main model fitting
+function is \fct{betareg}. The interface as well as the fitted models
+are designed to be similar to those for \fct{glm}. The model
+specification is via a \code{formula} plus \code{data}. Because two
+types of covariates need to be distinguished a two part formula is
+allowed, e.g., \code{y ~ x1 + x2 + x3 | z1 + z2}. The covariates
+\code{x1}, \code{x2} and \code{x3} are the covariates for the mean and
+\code{z1} and \code{z1} are the covariates for the precision
+parameter. The formula is processed using package \pkg{Formula}
+\citep{betareg:Zeileis+Croissant:2010}. Function \fct{betareg}
+internally uses function \fct{optim} as a general purpose optimizer to
+maximize the log-likelihood. The fitted model has methods for the
+following extractor functions: \fct{coef}, \fct{vcov},
+\fct{residuals}, \fct{logLik}, \dots. Base methods for the returned
+fitted model are \fct{summary}, \fct{AIC}, \fct{confint}. Further
+methods are available for functions from \pkg{lmtest} and \pkg{car},
+e.g., \fct{lrtest}, \fct{waldtest}, \fct{coeftest} and
+\fct{linearHypothesis}. Multiple testing is possible via package
+\pkg{multcomp} and structural change tests can be performed using
+package \pkg{strucchange}.
+
+The package \pkg{betareg} as documented in
+\cite{betareg:Cribari-Neto+Zeileis:2010} provides functionality for
+maximum likelihood estimation and the re-use of standard inference
+tools for fitted models for the beta regression models. In this paper
+we introduce extensions of the \pkg{betareg} package where the fitting
+function is re-used in more complex models. We focus on model-based
+recursive partitioning of beta regressions and finite mixtures of beta
+regression models by building on funtionality provided by packages
+\pkg{party} \citep{betareg:Hothorn+Hornik+Strobl:2011} and
+\pkg{flexmix} \citep{betareg:Leisch+Gruen:2011}.
+
+\section{Model-based recursive partitioning of beta
+  regressions}\label{sec:model-based-recurs}
+
+Model-based recursive partitioning builds on the more widely known
+method of classification and regression trees \citep[CART,
+][]{betareg:Breiman+Friedman+Olshen:1984}. For CART the sample is
+recursively split with respect to available variables. Starting with
+the entire sample the data in a group is in each step recursively
+partitioned into two groups in order to maximize the similarity in the
+response variable within a group and the dissimilarity between the two
+groups. \cite{betareg:Hothorn+Hornik+Zeileis:2006} 
+ 
+\cite{betareg:Zeileis+Hothorn+Hornik:2008}
+
+\section{Finite mixtures of beta regressions}\label{sec:finite-mixtures-beta}
+
+Finite mixtures are suitable models if 
+
+\citep{betareg:Leisch:2004, betareg:Gruen+Leisch:2008}
+
+
+\citep{betareg:Smithson+Merkle+Verkuilen:2011}
+
+\citep{betareg:Smithson+Segale:2009}
+
+\section{Illustrative application}\label{sec:illustr-appl}
+
+<<echo=FALSE, results=hide>>=
+data("ReadingSkills", package = "betareg")
+mean_accuracy <- 
+  round(with(ReadingSkills, tapply(accuracy, dyslexia, mean)), digits = 3)
+mean_iq <- 
+  round(with(ReadingSkills, tapply(iq, dyslexia, mean)), digits = 3)
+@ 
+
+In the following we re-consider an analysis of reading accuracy data
+for nondyslexic and dyslexic Australian children
+\citep{betareg:Smithson+Verkuilen:2006}. The data consists of
+\Sexpr{nrow(ReadingSkills)} observations of children aged between
+eight years five months and twelve years three months. For each child
+the scores on a test of reading accuracy (variable \code{accuracy}) as
+well as on a nonverbal intelligent quotient (variable \code{iq},
+converted to $z$~scores) as well as if the child is dyslexic or not
+(variable \code{dyslexic}) are reported. The
+\Sexpr{table(ReadingSkills$dyslexia)["yes"]} dyslexic children have a
+mean reading accuracy of \Sexpr{mean_accuracy["yes"]} and a mean iq
+score of \Sexpr{mean_iq["yes"]}, the
+\Sexpr{table(ReadingSkills$dyslexia)["no"]} nondyslexic children a
+mean reading accuracy of \Sexpr{mean_accuracy["no"]} and a mean iq
+score of \Sexpr{mean_iq["no"]}.
+
+\cite{betareg:Smithson+Verkuilen:2006} investigated whether dyslexic
+children have a different score on the reading accuracy test even when
+corrected for IQ score. They fit a beta regression with main and
+interaction effects for \code{iq} and \code{dyslexic} for modelling
+the mean and only main effects for both variables for the
+dispersion. Their model as well as the comparison to the results of an
+OLS regression using the logit-transformed \code{accuracy} as response
+are given in \cite{betareg:Cribari-Neto+Zeileis:2010}. 
+
+For illustrating the use of model-based recursive partitioning methods
+we assume a beta regression model with \code{accuracy} as response and
+\code{iq} as explanatory variable for the nodes. The score on the
+reading accuracy test is therefore assumed to vary with the nonverbal
+iq score. In order to assess if also being dyslexic has an influence
+on the relationship between these two variables the variable
+\code{dyslexic} is used as a partitioning variable. Further random
+noise variables are added as partitioning variables to indicate the
+ability of the method to select suitable variables for
+partitioning. One noise variable is drawn from a standard normal
+distribution, one from a uniform distribution and the third is a
+categorical variable which takes two different values with equal
+probability.
+
+<<ReadingSkills-noise, echo=TRUE>>=
+data("ReadingSkills", package = "betareg")
+set.seed(1071)
+n <- nrow(ReadingSkills)
+ReadingSkills$x1 <- rnorm(n)
+ReadingSkills$x2 <- runif(n)
+ReadingSkills$x3 <- factor(sample(0:1, n, replace = TRUE))
+@ 
+
+The model-based tree is fitted using \fct{betatree}. The first
+argument is a formula which specifies the model for the node: We have
+a beta regression where the mean as well as the dispersion depend on
+\code{iq} to model \code{accuracy}. The second argument is a formula
+for the symbolic description of the partitioning variables. The
+formulas are evaluated using \code{data}. Additional control arguments
+for the recursive partitioning method used in \fct{mob\_control} can
+be specified via the \code{\dots} argument. In this case the minimum
+number of observations in a node in order to allow a split is given by
+\code{minsplit = 10}.
+
+<<ReadingSkills-tree0, echo=FALSE>>=
+if(file.exists("paper-betatree.rda")) load("paper-betatree.rda") else {
+rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
+  data = ReadingSkills, minsplit = 10)
+save(rs_tree, file = "paper-betatree.rda")
+}
+@
+
+<<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
+rs_tree <- betatree(accuracy ~ iq | iq,
+  ~ dyslexia + x1 + x2 + x3,
+  data = ReadingSkills, minsplit = 10)
+@
+
+Alternatively the model could be specified using a three-part formula
+where the third part is the symbolic description of the partitioning
+variables.
+
+<<ReadingSkills-tree2, echo=TRUE, eval=FALSE>>=
+rs_tree <- betatree(accuracy ~ iq | iq | dyslexia + x1 + x2 + x3,
+  data = ReadingSkills, minsplit = 10)
+@
+
+The returned object is of class \code{"\Sexpr{class(rs_tree)}"} which
+contains an object of class
+\code{"\Sexpr{class(rs_tree[["mob"]])}"}. All methods for
+\code{"\Sexpr{class(rs_tree[["mob"]])}"} can be re-used, e.g., the
+\fct{plot}-method (see Figure~\ref{fig:betatree}).
+
+<<ReadingSkills-tree3, echo=TRUE>>=
+plot(rs_tree)
+@ 
+
+Figure~\ref{fig:betatree} indicates that the data was only split into
+two sub-samples. None of the three noise variables was selected in
+order to perform a split, but only variable \code{dyslexia}. This
+indicates that the relationship between the iq score and the reading
+accuracy doesn not depend on the noise variables which we would
+expect. By contrast, the relationship between these two variables
+differ for dyslexic and nondyslexic children. The beta regressions
+fitted two each of the two groups of children are illustrated in the
+two leaf nodes. Note that the fitted models use the iq score as
+predictor for the mean as well as the dispersion.
+
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=\textwidth}
+<<ReadingSkills-tree-plot, fig=TRUE, height=7, width=10, echo=FALSE>>=
+plot(rs_tree)
+@
+\caption{\label{fig:betatree}Partitioned beta regression model for the
+  \code{ReadingSkills} data.}
+\end{center}
+\end{figure}
+
+In the following we assume that the information if the children are
+dyslexic or not is not available. Modelling the relationship between
+reading accuracy and iq score is now complicated by the fact that
+latent groups exist in the data where this relationship is
+different. We fit a finite mixture model with three components where
+one component is used to capture those children who have a perfect
+reading accuracy test score. This additional component is assumed to
+follow a uniform distribution on the interval \code{coef} $\pm$
+\code{delta}.
+
+<<ReadingSkills-mix, echo=TRUE, eval=FALSE>>=
+rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
+  nstart = 10, extra_components = extraComponent(
+  type = "uniform", coef = 0.99, delta = 0.01))
+@
+
+<<ReadingSkills-mix2, echo=FALSE>>=
+if(file.exists("paper-betamix.rda")) load("paper-betamix.rda") else {
+rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
+  nstart = 10, extra_components = extraComponent(
+  type = "uniform", coef = 0.99, delta = 0.01))
+save(rs_mix, file = "paper-betamix.rda")
+}
+@
+
+<<ReadingSkills-betamix-plot1, eval = FALSE, echo=FALSE, fig=TRUE>>=
+ix <- as.numeric(ReadingSkills$dyslexia)
+col1 <- hcl(c(0, 260), 90, 40)[ix]
+col2 <- hcl(c(0, 260), 10, 95)[ix]
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
+@
+
+\begin{figure}[t!]
+\begin{center}
+\setkeys{Gin}{width=\textwidth}
+<<ReadingSkills-betamix-plot3, echo=FALSE, fig=TRUE, height=5.5, width=10>>=
+par(mfrow = c(1, 2))
+ix <- as.numeric(ReadingSkills$dyslexia)
+prob <- 2 * (posterior(rs_mix)[cbind(seq_along(ix), clusters(rs_mix))] - 0.5)
+col3 <- hcl(c(260, 0, 130), 65, 45, fixup = FALSE)
+col1 <- col3[clusters(rs_mix)]
+col2 <- hcl(c(260, 0, 130)[clusters(rs_mix)], 65 * abs(prob)^1.5, 95 - 50 * abs(prob)^1.5, fixup = FALSE)
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
+iq <- -30:30/10
+cf <- rbind(coef(rs_mix, model = "mean", component = 1:2), c(qlogis(0.99), 0))
+for(i in 1:3) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]) 
+<<ReadingSkills-betamix-plot1>>
+cf <- coef(rs_tree, model = "mean")
+col3 <- hcl(c(0, 260), 90, 40)
+for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]) 
+@
+\caption{\label{fig:betamix}Fitted regression lines for the mixture
+  model with three components and the observations shaded according to
+  their a-posteriori probabilities (left) and fitted regression lines
+  for the partitioned beta regression model (right).}
+\end{center}
+\end{figure}
+
+
+\section{Conclusions}\label{sec:conclusions}
+
+
+\section*{Acknowledgments}
+
+This research was funded by the Austrian Science Fund (FWF): V170-N18.
+
+\bibliography{betareg}
+
+\end{document}
