@@ -190,13 +190,16 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   if(is.list(start)) start <- do.call("c", start)
 
   ## various fitted quantities (parameters, linear predictors, etc.)
-  fitfun <- function(par) {
+  fitfun <- function(par, deriv = 0L) {
     beta <- par[seq.int(length.out = k)]
     gamma <- par[seq.int(length.out = m) + k]
     eta <- as.vector(x %*% beta + offset[[1L]])
     phi_eta <- as.vector(z %*% gamma + offset[[2L]])
     mu <- linkinv(eta)
     phi <- phi_linkinv(phi_eta)
+    mustar <- if(deriv >= 1L) digamma(mu * phi) - digamma((1 - mu) * phi) else NULL
+    psi1 <- if(deriv >= 2L) trigamma(mu * phi) else NULL
+    psi2 <- if(deriv >= 2L) trigamma((1 - mu) * phi) else NULL
 
     list(
       beta = beta,
@@ -204,7 +207,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       eta = eta,
       phi_eta = phi_eta,
       mu = mu,
-      phi = phi
+      phi = phi,
+      mustar = mustar,
+      psi1 = psi1,
+      psi2 = psi2
     )
   }
 
@@ -228,14 +234,14 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## gradient (by default) or gradient contributions (sum = FALSE)
   gradfun <- function(par, sum = TRUE, fit = NULL) {
     ## extract fitted means/precisions
-    if(is.null(fit)) fit <- fitfun(par)
+    if(is.null(fit)) fit <- fitfun(par, deriv = 1L)
     mu <- fit$mu
     phi <- fit$phi
     eta <- fit$eta
     phi_eta <- fit$phi_eta
+    mustar <- fit$mustar
 
-    ## compute gradient contributions
-    mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
+    ## compute gradient contributions    
     rval <- cbind(
       phi * (ystar - mustar) * mu.eta(eta) * weights * x,
       (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
@@ -247,16 +253,14 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## analytical Hessian or covariance matrix (inverse of Hessian)
   hessfun <- function(par, inverse = FALSE, fit = NULL) {
     ## extract fitted means/precisions
-    if(is.null(fit)) fit <- fitfun(par)
+    if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
     mu <- fit$mu
     phi <- fit$phi
     eta <- fit$eta
     phi_eta <- fit$phi_eta
-
-    ## further auxiliary quantities    
-    mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
-    psi1 <- trigamma(mu * phi)
-    psi2 <- trigamma((1 - mu) * phi)
+    mustar <- fit$mustar
+    psi1 <- fit$psi1
+    psi2 <- fit$psi2
 
     ## auxiliary transformations
     a <- psi1 + psi2
@@ -288,7 +292,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   if(opt$convergence > 0) warning("optimization failed to converge")
 
   ## extract fitted values/parameters
-  fit <- fitfun(opt$par)
+  fit <- fitfun(opt$par, deriv = 2L)
   beta <- fit$beta
   gamma <- fit$gamma
   eta <- fit$eta
