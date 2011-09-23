@@ -65,11 +65,19 @@ and partitioned (tree model)
 <<preliminaries, echo=FALSE, results=hide>>=
 options(width = 70, prompt = "R> ", continue = "+  ")
 library("betareg")
+combine <- function(x, sep, width) {
+  cs <- cumsum(nchar(x))
+  remaining <- if (any(cs[-1] > width)) combine(x[c(FALSE, cs[-1] > width)], sep, width)
+  c(paste(x[c(TRUE, cs[-1] <= width)], collapse= sep), remaining)
+}
+prettyPrint <- function(x, sep = " ", linebreak = "\n\t", width = getOption("width")) {
+  x <- strsplit(x, sep)[[1]]
+  paste(combine(x, sep, width), collapse = paste(sep, linebreak, collapse = ""))
+}
 cache <- TRUE
 @
-
-
 \begin{document}
+
 \section{Introduction}\label{sec:intro}
 
 The class of beta regression models allows to suitably model a
@@ -85,31 +93,30 @@ parameters $\mu$ and $\phi$ (i.e., $y \,\sim\, \mathcal{B}(\mu,
 \phi)$) are given by $\E(y) = \mu$ and $\VAR(y) =
 \mu(1-\mu)/(1+\phi)$.
 
-The double index beta regression model is specified.
-
-Assume we have observations $i = 1, \dots, n$ of dependent variable
-$y_i$.  The parameters $\mu_i$ and $\phi_i$ are linked to linear
-predictors from the sets of regressors $x_i$ and $z_i$. Different link
-functions can be used for the two parameters. Suitable link functions
-are for example logit or probit for $g_1$ which links to $\mu_i$ and
-log or identity for $g_2$ which links to $\phi_i$.
+The double index beta regression model is specified in the following
+way. Assume we have observations $i = 1, \dots, n$ of dependent
+variable $y_i$.  The parameters $\mu_i$ and $\phi_i$ are linked to
+linear predictors from the sets of regressors $x_i$ and
+$z_i$. Different link functions can be used for the two
+parameters. Suitable link functions are for example logit or probit
+for $g_1$ which links to $\mu_i$ and log or identity for $g_2$ which
+links to $\phi_i$.
 \begin{eqnarray*}
   g_1(\mu_i) & = & x_i^\top \beta, \\
   g_2(\phi_i) & = & z_i^\top \gamma.
 \end{eqnarray*}
 
 The coefficients $\beta$ and $\gamma$ can be estimated by maximum
-likelihood. The usual central limit theorem holds with associated
-asymptotic tests, e.g., likelihood ratio, Wald, score/Lagrange
+likelihood (ML). The usual central limit theorem holds with associated
+asymptotic tests, e.g., likelihood ratio, Wald, score / Lagrange
 Multiplier (LM).
 
-The \proglang{R} package \pkg{betareg} which implements maximum
-likelihood estimation was introduced by
-\cite{betareg:Cribari-Neto+Zeileis:2010}. The main model fitting
-function is \fct{betareg}. The interface as well as the fitted models
-are designed to be similar to those for \fct{glm}. The model
-specification is via a \code{formula} plus \code{data}. Because two
-types of covariates need to be distinguished a two part formula is
+The \proglang{R} package \pkg{betareg} which implements MLestimation
+was introduced by \cite{betareg:Cribari-Neto+Zeileis:2010}. The main
+model fitting function is \fct{betareg}. The interface as well as the
+fitted models are designed to be similar to those for \fct{glm}. The
+model specification is via a \code{formula} plus \code{data}. Because
+two types of covariates need to be distinguished a two part formula is
 allowed, e.g., \code{y ~ x1 + x2 + x3 | z1 + z2}. The covariates
 \code{x1}, \code{x2} and \code{x3} are the covariates for the mean and
 \code{z1} and \code{z1} are the covariates for the precision
@@ -126,22 +133,19 @@ e.g., \fct{lrtest}, \fct{waldtest}, \fct{coeftest} and
 \pkg{multcomp} and structural change tests can be performed using
 package \pkg{strucchange}.
 
-The package \pkg{betareg} as documented in
-\cite{betareg:Cribari-Neto+Zeileis:2010} provides functionality for
-maximum likelihood estimation and the re-use of standard inference
-tools for fitted models for the beta regression models. In this paper
-we introduce extensions of the \pkg{betareg} package where the fitting
-function is re-used in more complex models. We focus on model-based
-recursive partitioning of beta regressions and finite mixtures of beta
-regression models by building on funtionality provided by packages
-\pkg{party} \citep{betareg:Hothorn+Hornik+Strobl:2011} and
-\pkg{flexmix} \citep{betareg:Leisch+Gruen:2011}.
+In this paper we introduce extensions of the \pkg{betareg} package
+where the fitting function is re-used in more complex models. We focus
+on model-based recursive partitioning of beta regressions and finite
+mixtures of beta regression models by building on funtionality
+provided by packages \pkg{party}
+\citep{betareg:Hothorn+Hornik+Strobl:2011} and \pkg{flexmix}
+\citep{betareg:Leisch+Gruen:2011}.
 
 \section{Bias correction and reduction in beta regressions}\label{sec:bias}
 
 Reduction of bias using the generic algorithm of \cite{betareg:Kosmidis+Firth:2010}
 building on earlier work \citep{betareg:Firth:1993,betareg:Kosmidis+Firth:2009}.
-While \cite{betareg:Kosmidis+Firth:2010} only consider only regressions
+While \cite{betareg:Kosmidis+Firth:2010} consider only regressions
 with a fixed precision parameter $\phi$, we extend their results to 
 models with a regression part for $\phi$.
 
@@ -163,14 +167,105 @@ groups. \cite{betareg:Hothorn+Hornik+Zeileis:2006}
 
 \section{Finite mixtures of beta regressions}\label{sec:finite-mixtures-beta}
 
-Finite mixtures are suitable models if 
+Finite mixtures are suitable models if the data is assumed to be from
+different groups, but the group memberships are not observed. If
+mixture models are fitted one aims at determining the parameters of
+each group as well as the group sizes. Furthermore, the model can be
+used to estimate from which group each observation is. In the case of
+finite mixtures of beta regression models the latent groups can be
+assumed to differ in their mean and/or in their
+precision. Furthermore, the group sizes can depend on further
+covariates.
 
-\citep{betareg:Leisch:2004, betareg:Gruen+Leisch:2008}
+The mixture model with $K$ components which corresponds to $K$
+groups is given by
+\begin{align*}
+  h(y | x, z, w, \theta) & = \sum_{k = 1}^K \pi_k(w, \alpha) f(y |
+  g_1^{-1}(x^{\top}\beta_k), g_2^{-1}(z^{\top}\gamma_k)),
+\end{align*}
+where $h(\cdot | \cdot)$ is the mixture density and $f(y | \mu, \phi)$
+is the density of the beta distribution using the mean-precision
+parameterization. Further the component weights $\pi_k(\cdot)$ are
+nonnegative and sum to one for all $k$. In the following they are
+assumed to be determined by
+\begin{align*}
+  \pi_k(w, \alpha) &= \frac{e^{w^{\top}\alpha_k}}{\sum_{u=1}^Ke^{w^{\top}\alpha_u}}
+\end{align*}
+with $\alpha_1 \equiv 0$ to ensure identifiability. 
 
+\cite{betareg:Smithson+Segale:2009} and
+\cite{betareg:Smithson+Merkle+Verkuilen:2011} consider finite mixtures
+of beta regression models to analyze priming effects in judgements of
+imprecise probabilities. \cite{betareg:Smithson+Segale:2009} fit
+mixture models where they investigate if priming has an effect on the
+size of the latent groups, i.e., they include the information on
+priming as a predictor variable $w$.
+\cite{betareg:Smithson+Merkle+Verkuilen:2011} assume that for at least
+one component distribution the location parameter is a-priori known
+due to so-called ``anchors''. E.g. for partition priming, an anchor
+would be assumed at position $1/K$ if the respondents are primed to
+believe that there are $K$ possible events. The component distribution
+for this anchor can be either assumed to follow a beta distribution
+with known parameters for the mean and the precision or a uniform
+distribution with known support.
 
-\citep{betareg:Smithson+Merkle+Verkuilen:2011}
+Package \pkg{flexmix} \citep{betareg:Leisch:2004,
+  betareg:Gruen+Leisch:2008} implements a general framework for
+estimating finite mixture models using the EM algorithm. The EM
+algorithm is an iterative method for ML estimation in a missing data
+setting. The missing data for mixture models is the information to
+which component an observation belongs. The EM algorithm exploits the
+fact that the complete likelihood for the data as well as the missing
+information is easier to maximize.  In general for mixture models the
+a-posteriori probabilities of an observation to be from each component
+given the current parameter estimates are determined in the
+E-steop. The M-step then consists of maximising the complete
+likelihood where the missing component memberships are replaced by the
+a-posteriori probabilities. This implies that different mixture models
+only require the implementation of a suitable M-step driver. Function
+\fct{betareg.fit} provides functionality for weighted ML estimation of
+beta regression models and allows to easily implement the M-step. 
 
-\citep{betareg:Smithson+Segale:2009}
+The function \fct{betamix} allows to fit finite mixtures of beta
+regression models using the package \pkg{betareg}. It has the
+following arguments:
+\begin{verbatim}
+<<results=tex, echo=false>>=
+cat(prettyPrint(prompt(betamix, filename = NA)$usage[[2]], sep = ", ", 
+  linebreak = paste("\n", paste(rep(" ", nchar("betamix") + 1), collapse = ""), sep= ""),
+  width = 60))
+@ 
+\end{verbatim}
+
+\begin{itemize}
+\item Arguments \code{formula}, \code{data}, \code{subset},
+  \code{na.action}, \code{link}, \code{link.phi} and \code{control}
+  are the same as for \fct{betareg}.
+\item Arguments \code{cluster}, \code{FLXconcomitant} and
+  \code{FLXcontrol} are the same as for function \fct{flexmix}
+  (in the latter two cases without prefix \code{FLX}).
+\item Arguments
+  \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
+  specify the repeated runs of the EM algorithm using function
+  \fct{stepFlexmix} and which model should be returned.
+\item Because the formula for specifying the beta regression model is
+  already a two-part formula a grouping variable can be specified via
+  argument \code{ID}.
+\item Further arguments for the component specific model are
+  \code{fixed} and \code{extra_components}. \code{fixed} can be used
+  to specify via a formula interface the covariates for which
+  parameters are the same over components. \code{extra_components} is
+  a list of \code{"extraComponent"} objects where the distribution of
+  the component needs to be completely specified via \code{type} and
+  setting the parameters through \code{coef} and \code{delta}.
+\begin{verbatim}
+<<results=tex, echo=false>>=
+cat(prettyPrint(prompt(extraComponent, filename = NA)$usage[[2]], sep = ", ", 
+  linebreak = paste("\n", paste(rep(" ", nchar("extraComponent") + 1), collapse = ""), sep= ""),
+  width = 60))
+@ 
+\end{verbatim}
+\end{itemize}
 
 \section{Illustrative application}\label{sec:illustr-appl}
 
