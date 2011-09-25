@@ -522,8 +522,14 @@ used for splitting anymore and all other variables are still nonsignificant.
 With only 19~observations, node~3 is considered too small to warrant
 further splitting and hence no tests are carried out.}
 
-<<ReadingSkills-sctest>>=
+<<ReadingSkills-tree-sctest>>=
 sctest(rs_tree)
+@
+
+\fixme{maybe also show something else of the fitted model, e.g.}
+
+<<ReadingSkills-tree-coef>>=
+coef(rs_tree)
 @
 
 In the following we assume that the information if the children are
