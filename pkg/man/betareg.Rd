@@ -127,7 +127,6 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
     \code{print}, \code{summary}, \code{coef} etc.,}
   \item{loglik}{log-likelihood of the fitted model,}
   \item{vcov}{covariance matrix of all parameters in the model,}
-  \item{hessian}{Hessian matrix, i.e., inverse of the covariance matrix,}
   \item{pseudo.r.squared}{pseudo R-squared value (squared correlation of linear predictor
     and link-transformed response),}
   \item{link}{a list with elements \code{"mean"} and \code{"precision"}
