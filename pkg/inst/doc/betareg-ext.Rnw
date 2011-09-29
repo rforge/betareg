@@ -92,7 +92,7 @@ They employed an alternative parametrization of the beta distribution
 such that the mean and variance of a random variable $y$ following a
 beta distribution with parameters $\mu$ and $\phi$ (i.e.,
 $y \,\sim\, \mathcal{B}(\mu, \phi)$) are given by $\E(y) = \mu$ and
-$\VAR(y) = \mu(1-\mu)/(1+\phi)$. It has density
+$\VAR(y) = \mu(1-\mu)/(1+\phi)$. The beta distribution has the density
 %
 \begin{equation} \label{eq:density}
 f(y;\mu,\phi) = \frac{\Gamma(\phi)}{\Gamma(\mu\phi)\Gamma((1-\mu)\phi)}y^{\mu\phi-1}(1-y)^{(1-\mu)\phi-1}, \quad 0<y<1,
@@ -166,16 +166,17 @@ models with a regression part for $\phi$.
 
 \section{Beta regression trees}\label{sec:trees}
 
-Model-based recursive partitioning builds on the more widely known
-method of classification and regression trees \citep[CART,
-][]{betareg:Breiman+Friedman+Olshen:1984}. As for CART, the idea
-is to split the sample recursively with respect to available variables
-(called \dquote{partitioning} variables in the following) in order to capture
-differences in the response variable. While CART tries to capture differences
-in the distribution of the response variable (in particular with respect to
-location) directly, the aim of model-based recursive partitioning
-\citep[MOB,][]{betareg:Zeileis+Hothorn+Hornik:2008} is more broadly to 
-capture differences in a parameters describing the distribution of the response.
+Model-based recursive partitioning
+\citep[MOB,][]{betareg:Zeileis+Hothorn+Hornik:2008} builds on the more
+widely known method of classification and regression trees
+\citep[CART, ][]{betareg:Breiman+Friedman+Olshen:1984}. As for CART,
+the idea is to split the sample recursively with respect to available
+variables (called \dquote{partitioning} variables in the following) in
+order to capture differences in the response variable. While CART
+tries to capture differences in the distribution of the response
+variable (in particular with respect to location) directly, the aim of
+model-based recursive partitioning is more broadly to capture
+differences in parameters describing the distribution of the response.
 In particular, this allows to incorporate regressor variables in a
 parametric model for the response variable.
 
@@ -187,10 +188,10 @@ Basically, the approach proceeds by (1)~fitting a beta regression model,
 (2)~assessing whether its parameters are stable across all partitioning
 variables, (3)~splitting the sample along the partitioning variable associated
 with the highest parameter instability, (4)~repeating these steps until some
-stopping criterion is met. Thus, the interactions and nonlinearities can
+stopping criterion is met. Thus, interactions and nonlinearities can
 be incorporated by locally maximizing the likelihood of a partitioned
 model. More precisely, the steps of the MOB algorithm adapted to beta
-regression are the following, where $c_ij$ is the $j$-the partitioning
+regression are the following, where $c_{ij}$ is the $j$-th partitioning
 variable ($j = 1, \dots, p$) for observation~$i$.
 %
 \begin{enumerate}
@@ -198,14 +199,14 @@ variable ($j = 1, \dots, p$) for observation~$i$.
         by maximizing the log-likelihood for all observations $y_i$ in the
 	current sample.
   \item Assess whether the parameters $\beta$ and $\gamma$ are stable across
-        each partitioning variable $c_{ij}$ .
+        each partitioning variable $c_{ij}$.
   \item If there is significant parameter instability with respect to
         at least one of the partitioning variables $c_{ij}$, split the
-        sample along the $c_{ij^*}$ with the strongest association:
+        sample along the variable $j*$ with the strongest association:
         Choose the breakpoint with highest improvement in the fitted
 	log-likelihood.
   \item Repeat steps 1--3 recursively in the resulting subsamples
-        until there is no more significant instability or the
+        until there is no significant instability any more or the
 	sample size is too small.
 \end{enumerate}
 
@@ -279,7 +280,7 @@ and the score function~(\ref{eq:score}) at the estimated parameters. For model f
 \fct{betareg.fit} is employed (through a suitable convenience interface call \fct{betaReg})
 and for extractions the \fct{logLik} and \fct{estfun} methods \citep[see also][]{betareg:Zeileis:2006a}
 are leveraged. To control details of the MOB algorithm -- such as the significance level
-and the minimal subsample size in step~4 -- the \code{...} to passed to \fct{mob}. (Note
+and the minimal subsample size in step~4 -- the \code{...} argument is passed to \fct{mob}. (Note
 that this is somewhat different from \fct{betareg} where \code{...} is passed to \fct{betareg.control}.)
 
 
@@ -298,16 +299,17 @@ covariates.
 The mixture model with $K$ components which corresponds to $K$
 groups is given by
 \begin{align*}
-  h(y | x, z, w, \theta) & = \sum_{k = 1}^K \pi_k(w, \alpha) f(y |
+  h(y ; x, z, c, \theta) & = \sum_{k = 1}^K \pi(k ; c, \alpha) f(y ;
   g_1^{-1}(x^{\top}\beta_k), g_2^{-1}(z^{\top}\gamma_k)),
 \end{align*}
-where $h(\cdot | \cdot)$ is the mixture density and $f(y | \mu, \phi)$
+where $h(\cdot ; \cdot)$ is the mixture density and $f(y | \mu, \phi)$
 is the density of the beta distribution using the mean-precision
-parameterization. Further the component weights $\pi_k(\cdot)$ are
+parameterization. Further the component weights $\pi(k ; \cdot)$ are
 nonnegative and sum to one for all $k$. In the following they are
 assumed to be determined by
 \begin{align*}
-  \pi_k(w, \alpha) &= \frac{e^{w^{\top}\alpha_k}}{\sum_{u=1}^Ke^{w^{\top}\alpha_u}}
+  \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{w^{\top}\alpha_k\}}
+  {\sum_{u=1}^K\textrm{exp}\{w^{\top}\alpha_u\}}
 \end{align*}
 with $\alpha_1 \equiv 0$ to ensure identifiability. 
 
@@ -391,9 +393,11 @@ cat(prettyPrint(prompt(extraComponent, filename = NA)$usage[[2]], sep = ", ",
 <<echo=FALSE, results=hide>>=
 data("ReadingSkills", package = "betareg")
 mean_accuracy <- 
-  round(with(ReadingSkills, tapply(accuracy, dyslexia, mean)), digits = 3)
+  format(round(with(ReadingSkills, tapply(accuracy, dyslexia, mean)), digits = 3),
+         nsmall = 3)
 mean_iq <- 
-  round(with(ReadingSkills, tapply(iq, dyslexia, mean)), digits = 3)
+  format(round(with(ReadingSkills, tapply(iq, dyslexia, mean)), digits = 3),
+         nsmall = 3)
 @ 
 
 In the following we re-consider an analysis of reading accuracy data
@@ -406,11 +410,11 @@ well as on a nonverbal intelligent quotient (variable \code{iq},
 converted to $z$~scores) as well as if the child is dyslexic or not
 (variable \code{dyslexic}) are reported. The
 \Sexpr{table(ReadingSkills$dyslexia)["yes"]} dyslexic children have a
-mean reading accuracy of \Sexpr{mean_accuracy["yes"]} and a mean iq
-score of \Sexpr{mean_iq["yes"]}, the
+mean reading accuracy of \Sexpr{mean_accuracy["yes"]} and a mean IQ
+score of $\Sexpr{mean_iq["yes"]}$, the
 \Sexpr{table(ReadingSkills$dyslexia)["no"]} nondyslexic children a
-mean reading accuracy of \Sexpr{mean_accuracy["no"]} and a mean iq
-score of \Sexpr{mean_iq["no"]}.
+mean reading accuracy of \Sexpr{mean_accuracy["no"]} and a mean IQ
+score of $\Sexpr{mean_iq["no"]}$.
 
 \cite{betareg:Smithson+Verkuilen:2006} investigated whether dyslexic
 children have a different score on the reading accuracy test even when
@@ -425,7 +429,7 @@ For illustrating the use of model-based recursive partitioning methods
 we assume a beta regression model with \code{accuracy} as response and
 \code{iq} as explanatory variable for the nodes. The score on the
 reading accuracy test is therefore assumed to vary with the nonverbal
-iq score. In order to assess if also being dyslexic has an influence
+IQ score. In order to assess if also being dyslexic has an influence
 on the relationship between these two variables the variable
 \code{dyslexic} is used as a partitioning variable. Further random
 noise variables are added as partitioning variables to indicate the
@@ -496,12 +500,12 @@ plot(rs_tree)
 Figure~\ref{fig:betatree} indicates that the data was only split into
 two sub-samples. None of the three noise variables was selected in
 order to perform a split, but only variable \code{dyslexia}. This
-indicates that the relationship between the iq score and the reading
+indicates that the relationship between the IQ score and the reading
 accuracy doesn not depend on the noise variables which we would
 expect. By contrast, the relationship between these two variables
 differ for dyslexic and nondyslexic children. The beta regressions
 fitted two each of the two groups of children are illustrated in the
-two leaf nodes. Note that the fitted models use the iq score as
+two leaf nodes. Note that the fitted models use the IQ score as
 predictor for the mean as well as the dispersion.
 
 \begin{figure}[t!]
@@ -534,7 +538,7 @@ coef(rs_tree)
 
 In the following we assume that the information if the children are
 dyslexic or not is not available. Modelling the relationship between
-reading accuracy and iq score is now complicated by the fact that
+reading accuracy and IQ score is now complicated by the fact that
 latent groups exist in the data where this relationship is
 different. We fit a finite mixture model with three components where
 one component is used to capture those children who have a perfect
