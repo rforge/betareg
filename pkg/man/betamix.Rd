@@ -21,12 +21,13 @@
 }
 
 \usage{
-betamix(formula, data, k, fixed, subset, na.action, 
-  link = c("logit", "probit", "cloglog", "cauchit", "log",
-  "loglog"), link.phi = "log", control = betareg.control(...),
-  FLXconcomitant = NULL, extra_components, verbose = FALSE, ID,
-  nstart = 1, FLXcontrol = list(), cluster = NULL,
-  which = "BIC", ...)
+betamix(formula, data, k, subset, na.action, 
+        link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
+        link.phi = "log", 
+        control = betareg.control(...),
+        cluster = NULL, FLXconcomitant = NULL, FLXcontrol = list(), 
+        verbose = FALSE, nstart = 3, which = "BIC", 
+        ID, fixed, extra_components, ...)
 
 extraComponent(type = c("uniform", "betareg"), coef, delta,
   link = "logit", link.phi = "log")
@@ -40,8 +41,6 @@ extraComponent(type = c("uniform", "betareg"), coef, delta,
   \item{k}{a vector of integers indicating the number of components of
     the finite mixture; passed in turn to the \code{k} argument
     of \code{\link[flexmix]{stepFlexmix}}.}
-  \item{fixed}{symbolic description of the model for the parameters
-    fixed over components (of type \code{~ x | z})}.
   \item{link}{character specification of the link function in
     the mean model (mu). Currently, \code{"logit"}, \code{"probit"},
     \code{"cloglog"}, \code{"cauchit"}, \code{"log"}, \code{"loglog"} are supported.
@@ -54,31 +53,33 @@ extraComponent(type = c("uniform", "betareg"), coef, delta,
     Alternatively, an object of class \code{"link-glm"} can be supplied.}
   \item{control}{a list of control arguments specified via
     \code{\link{betareg.control}}.}
-  \item{FLXconcomitant}{concomitant variable model; object of class
-    \code{FLXP}. Default is the object returned by calling
-    \code{\link[flexmix]{FLXPconstant}}.}
-  \item{extra_components}{a list containing objects returned by
-    \code{extraComponent()}.}
-  \item{verbose}{a logical; if \code{TRUE} progress information is shown
-    for different starts of the EM algorithm.}
-  \item{ID}{grouping variable indicating if observations are from the same
-    individual, i.e. the component membership is restricted to be the
-    same for these observations.}
-  \item{nstart}{for each value of \code{k} run
-    \code{\link[flexmix]{stepFlexmix}} \code{nstart} times and keep only
-    the solution with maximum likelihood.}
-  \item{FLXcontrol}{object of class \code{"FLXcontrol"} or a named list;
-    controls the EM algorithm and passed in turn to the \code{control}
-    argument of \code{\link[flexmix]{flexmix}}.}
   \item{cluster}{Either a matrix with \code{k} columns of initial
     cluster membership probabilities for each observation; or a factor
     or integer vector with the initial cluster
     assignments of observations at the start of the EM
     algorithm. Default is random assignment into \code{k}
     clusters.}
+  \item{FLXconcomitant}{concomitant variable model; object of class
+    \code{FLXP}. Default is the object returned by calling
+    \code{\link[flexmix]{FLXPconstant}}.}
+  \item{FLXcontrol}{object of class \code{"FLXcontrol"} or a named list;
+    controls the EM algorithm and passed in turn to the \code{control}
+    argument of \code{\link[flexmix]{flexmix}}.}
+  \item{verbose}{a logical; if \code{TRUE} progress information is shown
+    for different starts of the EM algorithm.}
+  \item{nstart}{for each value of \code{k} run
+    \code{\link[flexmix]{stepFlexmix}} \code{nstart} times and keep only
+    the solution with maximum likelihood.}
   \item{which}{number of model to get if \code{k} is a vector of
     integers longer than one. If character, interpreted as
     number of components or name of an information criterion.}
+  \item{ID}{grouping variable indicating if observations are from the same
+    individual, i.e. the component membership is restricted to be the
+    same for these observations.}
+  \item{fixed}{symbolic description of the model for the parameters
+    fixed over components (of type \code{~ x | z}).}
+  \item{extra_components}{a list containing objects returned by
+    \code{extraComponent()}.}
   \item{\dots}{arguments passed to \code{\link{betareg.control}}.}
 
   \item{type}{specifies if the component follows a uniform distribution

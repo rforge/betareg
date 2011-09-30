@@ -29,7 +29,7 @@ and partitioned (tree model)
 
 \Address{
   Bettina Gr\"un\\
-  Institut f\"ur Angewandte Statistik / IFAS\\
+  Institut f\"ur Angewandte Statistik\\
   Johannes Kepler Universit{\"at} Linz\\
   Altenbergerstra{\ss }e 69\\
   4040 Linz, Austria\\
@@ -63,7 +63,7 @@ and partitioned (tree model)
 %\VignettePackage{betareg}
 
 <<preliminaries, echo=FALSE, results=hide>>=
-options(width = 70, prompt = "R> ", continue = "+  ")
+options(width = 70, prompt = "R> ", continue = "+  ", useFancyQuotes = FALSE)
 library("betareg")
 combine <- function(x, sep, width) {
   cs <- cumsum(nchar(x))
@@ -75,37 +75,44 @@ prettyPrint <- function(x, sep = " ", linebreak = "\n\t", width = getOption("wid
   paste(combine(x, sep, width), collapse = paste(sep, linebreak, collapse = ""))
 }
 cache <- TRUE
+enumerate <- function(x) paste(paste(x[-length(x)], collapse = ", "), x[length(x)], sep = " and ")
+betamix_methods <- 
+  enumerate(paste("\\fct{", gsub("\\.betamix", "", as.character(methods(class = "betamix"))), "}", sep = ""))
 @
 \begin{document}
 
 \section{Introduction}\label{sec:intro}
 
-Beta regression is a model for
-continuous response variables $y$ which assume values in the open
-standard unit interval $(0, 1)$. Such response variables may stem from
-rates, proportions, concentrations, etc. A double index regression allowing
-to model the mean as well as the precision through covariates was introduced
-by \cite{betareg:Ferrari+Cribari-Neto:2004}
-and extensions by \cite{betareg:Smithson+Verkuilen:2006} and
+Beta regression is a model for continuous response variables $y$ which
+assume values in the open standard unit interval $(0, 1)$. Such
+response variables may stem from rates, proportions, concentrations,
+etc. A double index regression allowing to model the mean as well as
+the precision through covariates was introduced by
+\cite{betareg:Ferrari+Cribari-Neto:2004} and extensions were proposed
+by \cite{betareg:Smithson+Verkuilen:2006} and
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}.
-They employed an alternative parametrization of the beta distribution
-such that the mean and variance of a random variable $y$ following a
-beta distribution with parameters $\mu$ and $\phi$ (i.e.,
-$y \,\sim\, \mathcal{B}(\mu, \phi)$) are given by $\E(y) = \mu$ and
-$\VAR(y) = \mu(1-\mu)/(1+\phi)$. The beta distribution has the density
+\cite{betareg:Ferrari+Cribari-Neto:2004} employed an alternative
+parametrization of the beta distribution such that the mean and
+variance of a beta-distributed variable are easily characterized by
+the parameterization.  In this parameterization the beta distribution
+has the density
 %
 \begin{equation} \label{eq:density}
 f(y;\mu,\phi) = \frac{\Gamma(\phi)}{\Gamma(\mu\phi)\Gamma((1-\mu)\phi)}y^{\mu\phi-1}(1-y)^{(1-\mu)\phi-1}, \quad 0<y<1,
 \end{equation}
 %
-where $\Gamma(\cdot)$ is the gamma function. The double index beta
-regression model is specified in the following way. Assume we have observations $i = 1, \dots, n$ of dependent
+where $\Gamma(\cdot)$ is the gamma function.  The mean of a
+beta-distributed variable is then given by $\E(y) = \mu$ and the
+variance by $\VAR(y) = \mu(1-\mu)/(1+\phi)$.
+
+The double index beta regression model is specified in the following
+way. Assume we have observations $i = 1, \dots, n$ of dependent
 variable $y_i$.  The parameters $\mu_i$ and $\phi_i$ are linked to
 linear predictors from the sets of regressors $x_i$ and
 $z_i$. Different link functions can be used for the two
-parameters. Suitable link functions include the logit or probit
-for $g_1$ which links to $\mu_i$ and log or identity for $g_2$ which
-links to $\phi_i$:
+parameters. Suitable link functions include the logit or probit for
+$g_1(\cdot)$ which links to $\mu_i$ and log or identity for
+$g_2(\cdot)$ which links to $\phi_i$:
 \begin{eqnarray}
   g_1(\mu_i) & = & x_i^\top \beta, \label{eq:link1} \\
   g_2(\phi_i) & = & z_i^\top \gamma. \label{eq:link2}
@@ -128,31 +135,45 @@ allowed, e.g., \code{y ~ x1 + x2 + x3 | z1 + z2}. The covariates
 parameter. The formula is processed using package \pkg{Formula}
 \citep{betareg:Zeileis+Croissant:2010}. Function \fct{betareg}
 internally uses function \fct{optim} as a general purpose optimizer to
-maximize the log-likelihood. The fitted model has methods for the
-following extractor functions: \fct{coef}, \fct{vcov},
-\fct{residuals}, \fct{logLik}, \dots. Base methods for the returned
-fitted model are \fct{summary}, \fct{AIC}, \fct{confint}. Further
-methods are available for functions from \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}
-and \pkg{car} \citep{betareg:Fox+Weisberg:2011},
-e.g., \fct{lrtest}, \fct{waldtest}, \fct{coeftest} and
-\fct{linearHypothesis}. Multiple testing is possible via package
-\pkg{multcomp} \citep{betareg:Hothorn+Bretz+Westfall:2008} and structural
-change tests can be performed using package \pkg{strucchange}
+maximize the log-likelihood. The fitted model has methods for several
+extractor functions, e.g., \fct{coef}, \fct{vcov}, \fct{residuals},
+\fct{logLik}. Base methods for the returned fitted model are
+\fct{summary}, \fct{AIC}, \fct{confint}. Further methods are available
+for functions from \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}
+and \pkg{car} \citep{betareg:Fox+Weisberg:2011}, e.g., \fct{lrtest},
+\fct{waldtest}, \fct{coeftest} and \fct{linearHypothesis}. Multiple
+testing is possible via package \pkg{multcomp}
+\citep{betareg:Hothorn+Bretz+Westfall:2008} and structural change
+tests can be performed using package \pkg{strucchange}
 \citep{betareg:Zeileis+Leisch+Hornik:2002}.
 
-\fixme{probably need somewhere to say something about model heterogeneity
-that is not captured by the mean/dispersion regressors, and that it
-may stem from observed or unobserved variables etc. Possibly, 
-this can be done in an intro/motivation section or in the intro of
-a section that encompasses both trees and mixture}
+The specified beta regression model intends to capture the
+relationship between certain predictor variables and the dependent
+$(0,1)$ variable. However, these relationships vary for groups in the
+population if heterogeneity is present. If variables can be identified
+which are directly related to these groups, these variables can be
+included in the regression. Disadvantages of this approach are that
+(1) the resulting regression model is very complex and hard to
+understand and interpret and (2) unnecessary complexity is introduced
+if the differences are only present in a subset of the combined groups
+induced by several categorical variables. Model-based recursive
+partitioning is an alternative approach which avoids these
+drawbacks. If these groups cannot be directly related to observed
+variables, the heterogeneity can be accounted for using finite mixture
+models \citep[for an introduction to finite mixture models see for
+example][]{betareg:McLachlan+Peel:2000,
+  betareg:Fruehwirth-Schnatter:2006}.  
 
 In this paper, we introduce extensions of the \pkg{betareg} package
-where the fitting function is re-used in more complex models. We focus
-on model-based recursive partitioning of beta regressions and finite
-mixtures of beta regression models by building on funtionality
-provided by packages \pkg{party}
-\citep{betareg:Hothorn+Hornik+Strobl:2011} and \pkg{flexmix}
-\citep{betareg:Leisch+Gruen:2011}.
+where model heterogeneity is taken into account in the case where
+covariates to characterize the groups are available as well as when
+the heterogeneity is due to latent variables. We present model-based
+recursive partitioning of beta regressions and finite mixtures of beta
+regression models by building on funtionality provided by packages
+\pkg{party} \citep{betareg:Hothorn+Hornik+Strobl:2011} and
+\pkg{flexmix} \citep{betareg:Leisch+Gruen:2011}. Both extensions are
+derived by re-using the fitting function in more complex models which
+provide a general framework for extending regression models.
 
 \section{Bias correction and reduction in beta regressions}\label{sec:bias}
 
@@ -249,6 +270,8 @@ For beta regression models, the required building blocks mentioned above are giv
 		 \cdot (g_2^{-1})^\prime (z^\top \gamma) \cdot z^\top
     \nonumber,
 \end{eqnarray}
+\fixme{Should each of the elements of the score vector also be
+  transposed inside the curly brackets?}
 %
 where $(g_j^{-1})^\prime (\cdot)$ ($j = 1, 2$) denotes the derivative of the inverse link function
 with respect to the linear predictor, $y^* = \log\{ y / (1-y)\}$ and  $\mu^* = \psi(\mu \phi)- \psi((1- \mu)\phi)$,
@@ -354,7 +377,7 @@ following arguments:
 betamix(formula, data, k, fixed, subset, na.action,
   link = "logit", link.phi = "log", control = betareg.control(...),
   FLXconcomitant = NULL, extra_components,
-  verbose = FALSE, ID, nstart = 1, FLXcontrol = list(), cluster = NULL,
+  verbose = FALSE, ID, nstart = 3, FLXcontrol = list(), cluster = NULL,
   which = "BIC", ...)
 \end{Code}
 %
@@ -542,15 +565,17 @@ reading accuracy and IQ score is now complicated by the fact that
 latent groups exist in the data where this relationship is
 different. We fit a finite mixture model with three components where
 one component is used to capture those children who have a perfect
-reading accuracy test score. This additional component is assumed to
-follow a uniform distribution on the interval \code{coef} $\pm$
-\code{delta}.
+reading accuracy test score. Following
+\cite{betareg:Smithson+Merkle+Verkuilen:2011} this additional
+component is assumed to follow a uniform distribution on the interval
+\code{coef} $\pm$ \code{delta}.
 %
 <<ReadingSkills-mix, echo=TRUE, eval=FALSE>>=
 rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
-  nstart = 10, extra_components = extraComponent(
-  type = "uniform", coef = 0.99, delta = 0.01))
+  extra_components = extraComponent(type = "uniform", 
+    coef = 0.99, delta = 0.01), nstart = 10)
 @
+
 %
 <<ReadingSkills-mix2, echo=FALSE>>=
 if(cache & file.exists("betareg-ext-betamix.rda")) {
@@ -564,6 +589,70 @@ if(cache) {
 }
 }
 @
+
+The argument \code{nstart} is set to
+\Sexpr{rs_mix$flexmix@control@nrep}. This implies that the EM
+algorithm is run \Sexpr{rs_mix$flexmix@control@nrep} times with
+different random initializations and that only the best solution
+according to the log-likelihood is returned in order to increase the
+chance that the global optimum is detected. The EM algorithm does at
+best only converge to a local optimum and the initialization
+already determines the result. 
+
+The returned fitted model is of class \code{"\Sexpr{class(rs_mix)}"}
+and has methods for \Sexpr{betamix_methods}. These methods re-use
+functionality already available for finite mixture models directly
+fitted using \fct{flexmix()} from package \pkg{flexmix}. The
+\fct{print}-method shows the function call as well as provides
+information on how many observations are assigned to each of the
+components according to the maximum a-posteriori
+probability. Furthermore it is indicated if the EM algorith converged
+or not and in the case of convergence how many iterations were
+performed.
+
+<<ReadingSkills-mix3>>=
+rs_mix
+@ 
+
+The \fct{summary}-method provides more information on the estimated
+coefficients as well as their standard errors. Internally function
+\fct{optim} is used to determine the Hessian matrix needed for the
+standard errors.
+
+<<ReadingSkills-mix4>>=
+summary(rs_mix)
+@ 
+
+Because only two components are freely estimated and the parameters
+for the third component were fixed a-priori, the detailed information
+on the estimated parameters is only provided for components 1 and
+2. The regression part for the mean indicates that in the first
+component the IQ score does not significantly affect the achieved
+accuracy, while there is a positive significant effect of the
+IQ score on accuracy in the second component. 
+
+A cross-tabulation of the cluster assignments of the mixture model
+with the variable \code{dyslexia} indicates that no dyslexic children
+are assigned to the third component. Furthermore, children assigned to
+the first component have a high probability
+(\Sexpr{round(prop.table(table(clusters(rs_mix),ReadingSkills$dyslexia),1)[1,2]*100)}\%)
+of being dyslexic.
+
+<<ReadingSkills-mix5>>=
+table(clusters(rs_mix), ReadingSkills$dyslexia)
+@ 
+
+The fitted mean regression lines for each of the three components are
+provided in Figure~\ref{fig:betamix} (left). The observations are
+shaded according to their a-posteriori probabilities. The stronger the
+shading is in blue the higher is the a-posteriori probability for this
+observation to be from component 1. Red shading corresponds to the
+second component and green to the third. For comparison on the right
+the mean regression lines for the dyslexic and non-dyslexic children
+of the model where an interaction with the variable \code{dyslexic} is
+specified in the regressions for mean and precision are
+provided. These mean regression lines are equivalent to those obtained
+using model-based recursive partitioning. 
 
 <<ReadingSkills-betamix-plot1, eval = FALSE, echo=FALSE, fig=TRUE>>=
 ix <- as.numeric(ReadingSkills$dyslexia)
@@ -596,10 +685,11 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
 \caption{\label{fig:betamix}Fitted regression lines for the mixture
   model with three components and the observations shaded according to
   their a-posteriori probabilities (left) and fitted regression lines
-  for the partitioned beta regression model (right).}
+  for the partitioned beta regression model with shading according to
+  the variable \code{dyslexic} where the dyslexic children are in blue
+  (right).}
 \end{center}
 \end{figure}
-
 
 \section{Conclusions}\label{sec:conclusions}
 
