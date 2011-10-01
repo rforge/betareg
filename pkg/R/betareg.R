@@ -57,7 +57,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   if(length(weights) == 1) weights <- rep.int(weights, n)
   weights <- as.vector(weights)
   names(weights) <- rownames(mf)
-  
+
   ## offsets
   expand_offset <- function(offset) {
     if(is.null(offset)) offset <- 0
@@ -86,14 +86,27 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   if(y) rval$y <- Y
   if(x) rval$x <- list(mean = X, precision = Z)
 
-  class(rval) <- "betareg"  
+  class(rval) <- "betareg"
   return(rval)
 }
 
 betareg.control <- function(phi = TRUE,
-  method = "BFGS", maxit = 5000, hessian = FALSE, trace = FALSE, start = NULL, ...)
+  method = "BFGS", maxit = 5000, hessian = FALSE, trace = FALSE, start = NULL,
+                            ## IK: maxIter and tolerance are specific
+                            ## to the (quasi) Fisher scoring iteration
+                            ## maxIter controls the maximum allowed
+                            ## number of (quasi) Fisher scoring
+                            ## iterations and tolerance is the
+                            ## tolerance to the crossprod of the
+                            ## stepsize (an indication how much the
+                            ## estimates change between iterations)
+                            maxIter = 200, tolerance = 1e-08,
+                            ## Added fittingMethod argument to control list
+                            fittingMethod = c("ML", "BC", "BR"),
+                            ...)
 {
-  rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start)
+  rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start, maxIter = maxIter, tolerance = tolerance,
+               fittingMethod = match.arg(fittingMethod))
   rval <- c(rval, list(...))
   if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
   rval$fnscale <- -1
@@ -134,6 +147,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
           eta <- pmin(eta, 700)
           pmax(exp(-eta - exp(-eta)), .Machine$double.eps)
         },
+        ## IK: dmu.deta: 2nd derivative of mu wrt eta
+        dmu.deta = pmax(exp(-exp(-eta) - eta)*(exp(-eta) - 1), .Machine$double.eps),
         valideta = function(eta) TRUE,
         name = "loglog"
       ), class = "link-glm")
@@ -145,11 +160,16 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   linkfun <- linkobj$linkfun
   linkinv <- linkobj$linkinv
   mu.eta <- linkobj$mu.eta
+  ## IK: dmu.deta is now extracted. See family.R
+  dmu.deta <- linkobj$dmu.deta
   phi_linkstr <- link.phi
   phi_linkobj <- make.link(phi_linkstr)
   phi_linkfun <- phi_linkobj$linkfun
   phi_linkinv <- phi_linkobj$linkinv
-  phi_mu.eta <- phi_linkobj$mu.eta  
+  phi_mu.eta <- phi_linkobj$mu.eta
+  ## IK: dmu.deta is now extracted. See family.R
+  phi_dmu.deta <- phi_linkobj$dmu.deta
+
 
   ## y* transformation
   ystar <- qlogis(y)
@@ -159,8 +179,14 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   method <- control$method
   hessian <- control$hessian
   start <- control$start
+  ## IK: extract maxIter and tolerance
+  maxIter <- control$maxIter
+  tolerance <- control$tolerance
   ocontrol <- control
-  control$phi <- control$method <- control$hessian <- control$start <- NULL
+  ## ## IK: extract fittingMethod
+  fittingMethod <- control$fittingMethod
+  control$phi <- control$method <- control$hessian <- control$start <-
+      control$maxIter <- control$tolerance <- control$fittingMethod <- NULL
 
   ## starting values
   if(is.null(start)) {
@@ -190,6 +216,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   if(is.list(start)) start <- do.call("c", start)
 
   ## various fitted quantities (parameters, linear predictors, etc.)
+  ## IK: With some more work I think fitfun can be incorporated to
+  ## lDersBias, possibly allowing the calculation of some redundant
+  ## quantities here and there (partcularly thinking of dropping the
+  ## deriv argument
   fitfun <- function(par, deriv = 0L) {
     beta <- par[seq.int(length.out = k)]
     gamma <- par[seq.int(length.out = m) + k]
@@ -220,17 +250,17 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     if(is.null(fit)) fit <- fitfun(par)
     mu <- fit$mu
     phi <- fit$phi
-    
+
     ## compute log-likelihood
     if(any(!is.finite(phi))) NaN else { ## catch extreme cases without warning
       ## Use dbeta() instead of 'textbook' formula:
       ## ll <- lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) +
       ##   (mu * phi - 1) * log(y) + ((1 - mu) * phi - 1) * log(1 - y)
-      ll <- suppressWarnings(dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE))      
+      ll <- suppressWarnings(dbeta(y, mu * phi, (1 - mu) * phi, log = TRUE))
       if(any(!is.finite(ll))) NaN else sum(weights * ll) ## again: catch extreme cases without warning
     }
   }
-  
+
   ## gradient (by default) or gradient contributions (sum = FALSE)
   gradfun <- function(par, sum = TRUE, fit = NULL) {
     ## extract fitted means/precisions
@@ -241,55 +271,214 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi_eta <- fit$phi_eta
     mustar <- fit$mustar
 
-    ## compute gradient contributions    
+    ## compute gradient contributions
     rval <- cbind(
       phi * (ystar - mustar) * mu.eta(eta) * weights * x,
       (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
-        phi_mu.eta(phi_eta) * weights * z      
+        phi_mu.eta(phi_eta) * weights * z
     )
     if(sum) colSums(rval) else rval
   }
-  
-  ## analytical Hessian or covariance matrix (inverse of Hessian)
-  hessfun <- function(par, inverse = FALSE, fit = NULL) {
-    ## extract fitted means/precisions
-    if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
-    mu <- fit$mu
-    phi <- fit$phi
-    eta <- fit$eta
-    phi_eta <- fit$phi_eta
-    mustar <- fit$mustar
-    psi1 <- fit$psi1
-    psi2 <- fit$psi2
 
-    ## auxiliary transformations
-    a <- psi1 + psi2
-    b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
-    ## compute elements of W
-    wbb <- phi^2 * a * mu.eta(eta)^2
-    wpp <- b * phi_mu.eta(phi_eta)^2
-    wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
-    ## compute elements of K
-    kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
-    kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
-    kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
-
-    if(!inverse) {
-    ## put together K
-      cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
-    } else {
-    ## compute K^(-1)
-      kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
-      kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
-      vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
-        -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
-    }  
+  ## IK: lDersBias: calculates scores, expected and observed
+  ## information and first order biases. Might worth adding arguments
+  ## to control what is being calculated to replace fitfun, too.
+  lDersBias <- function(par, calcBiases = TRUE) {
+    beta <- par[seq.int(length.out = k)]
+    gamma <- par[seq.int(length.out = m) + k]
+    eta <- as.vector(x %*% beta + offset[[1L]])
+    phi_eta <- as.vector(z %*% gamma + offset[[2L]])
+    mu <- linkinv(eta)
+    phi <- phi_linkinv(phi_eta)
+    D1 <- mu.eta(eta)
+    D2 <- phi_mu.eta(phi_eta)
+    lambda <- psigamma(phi*mu, 0) - psigamma(phi, 0)
+    ksi <- psigamma(phi*(1 - mu), 0) - psigamma(phi, 0)
+    suff1 <- log(y) - lambda
+    suff2 <- log(1 - y) - ksi
+    suffDiff <- suff1 - suff2
+    delta <- -psigamma(phi, 1)
+    nu <- psigamma(phi * mu, 1) + delta
+    tau <- psigamma(phi * (1 - mu), 1) + delta
+    kappa2 <- nu + tau - 2 * delta
+    D1dash <- dmu.deta(eta)
+    D2dash <- phi_dmu.deta(phi_eta)
+    if (k > 0L) {
+      Fbetabeta <- crossprod(phi * D1 * sqrt(weights * kappa2) * x)
+      Ebetabeta <-  crossprod(x, weights * phi * suffDiff  * D1dash * x)
+    }
+    else {
+      Fbetabeta <- Ebetabeta <- crossprod(x)
+    }
+    if (m > 0L) {
+      Fgammagamma <- crossprod(z, weights * (mu^2 * nu + (1 - mu)^2 * tau + 2 * mu * (1 - mu) * delta) * D2^2 * z)
+      Egammagamma <- crossprod(z, weights * D2dash * (mu * suffDiff + suff2) * z)
+    }
+    else {
+      Fgammagamma <- Egammagamma <- crossprod(z)
+    }
+    if (k > 0L & m > 0L) {
+      Fbetagamma <- crossprod(x, (weights * (phi * (mu * nu - (1 - mu) * tau - (2*mu - 1) * delta) * D1 * D2) * z))
+      Ebetagamma <- crossprod(x, weights * D1 * D2 * suffDiff * z)
+    }
+    else {
+      Fbetagamma <- Ebetagamma <- crossprod(x, z)
+    }
+    ExpInfo <- rbind(cbind(Fbetabeta, Fbetagamma),
+                     cbind(t(Fbetagamma), Fgammagamma))
+    ## ObsInfo is minus the second derivatives. It might as well be
+    ## used in the place of the expected one for the estimation of
+    ## asymptotic standard errors (Efron & Hinkley, 1978, B'ka)
+    ObsInfo <- ExpInfo - rbind(cbind(Ebetabeta,  Ebetagamma),
+                               cbind(t(Ebetagamma), Egammagamma))
+    scores <-  weights * cbind(phi * suffDiff * D1 * x,
+                               (mu * suffDiff + suff2) * D2 * z)
+    scores <- colSums(scores)
+    kappa3 <- psigamma(phi * mu, 2) - psigamma(phi * (1 - mu), 2)
+    Psi1 <-  psigamma(phi * (1 - mu), 1)
+    Psi2 <-  psigamma(phi * (1 - mu), 2)
+    Psi3 <- psigamma(phi, 1)
+    Psi4 <- psigamma(phi, 2)
+    ExpInfoInv <- try(chol2inv(chol(ExpInfo)), silent = TRUE)
+    PQ <- function(t) {
+      if (t <= k)  {
+        Xt <- x[,t]
+        betabeta <-
+          if (k > 0L)
+            crossprod(x, weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x)
+          else
+            crossprod(x)
+        betagamma <-
+          if ((k > 0L) & (m > 0L))
+            crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * Psi2 + kappa2) * Xt * z)
+          else
+            crossprod(x, z)
+        gammagamma <-
+          if (m > 0L)
+            crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - Psi2 + 2 * mu * Psi2) * Xt * z) + crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - Psi1) * Xt * z)
+              else
+                crossprod(z)
+      }
+      else {
+        Zt <- z[, t - k]
+        betabeta <-
+          if (k > 0L) {
+            crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * Psi2 + D1dash * mu * kappa2 - D1dash * Psi1) * Zt * x)
+          }
+          else
+            crossprod(x)
+        betagamma <-
+          if ((k > 0L) & (m > 0L))
+            crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * Psi2 + mu * kappa2 - Psi1) * Zt * z)
+          else
+            crossprod(x, z)
+        gammagamma <-
+          if (m > 0L)
+            crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * Psi2 - Psi4) * Zt * z) + crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi1 - Psi3) * Zt * z)
+          else
+            crossprod(z)
+      }
+      pq <- rbind(cbind(betabeta, betagamma), cbind(t(betagamma), gammagamma))
+      res <- sum(diag(ExpInfoInv %*% pq))/2
+      res
+    }
+    if (calcBiases) {
+        if (inherits(ExpInfoInv, "try-error")) {
+            biases <-  ADJ <- rep(NA, k+m)
+        }
+        else {
+            biases <-  - ExpInfoInv %*% (ADJ <- sapply(1:(k + m), PQ))
+        }
+    }
+    else {
+        biases <- ADJ <- NULL
+    }
+    list(scores = scores, ObsInfo = ObsInfo, ExpInfo = ExpInfo,
+         fitted = mu, ExpInfoInv = ExpInfoInv,
+         biases = biases, adjustment = ADJ)
   }
 
-  ## optimize likelihood  
+  ## IK: depreciated hessfun. lDersBias does this now.
+  ## ## analytical Hessian or covariance matrix (inverse of Hessian)
+  ## ## hessfun is the expected info
+  ## hessfun <- function(par, inverse = FALSE, fit = NULL) {
+  ##   ## extract fitted means/precisions
+  ##   if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
+  ##   mu <- fit$mu
+  ##   phi <- fit$phi
+  ##   eta <- fit$eta
+  ##   phi_eta <- fit$phi_eta
+  ##   mustar <- fit$mustar
+  ##   psi1 <- fit$psi1
+  ##   psi2 <- fit$psi2
+
+  ##   ## auxiliary transformations
+  ##   a <- psi1 + psi2
+  ##   b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
+  ##   ## compute elements of W
+  ##   wbb <- phi^2 * a * mu.eta(eta)^2
+  ##   wpp <- b * phi_mu.eta(phi_eta)^2
+  ##   wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
+  ##   ## compute elements of K
+  ##   kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
+  ##   kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
+  ##   kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
+
+  ##   if(!inverse) {
+  ##   ## put together K
+  ##     cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
+  ##   } else {
+  ##   ## compute K^(-1)
+  ##     kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
+  ##     kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
+  ##     vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
+  ##       -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+  ##   }
+  ## }
+
+  ## optimize likelihood
+  ##
+  ## IK: **provisionally** removed the calculation of the hessian using
+  ## finite differences from optim. The expected information is now
+  ## evaluated either way
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
-    method = method, hessian = hessian, control = control)
-  if(opt$convergence > 0) warning("optimization failed to converge")
+    method = method, hessian = FALSE, control = control)
+  ## IK :Then either bias-reduction or move the ML derivatives a bit closer to zero
+  BR <- FALSE
+  if (fittingMethod == "BR") {
+      BR <- TRUE
+  }
+  step <- .Machine$integer.max/2
+  for (iter in 1:maxIter) {
+      stepPrev <- step
+      stepFactor <- 0
+      testhalf <- TRUE
+      while (testhalf & stepFactor < 11) {
+          Ders <- lDersBias(opt$par, calcBiases = BR)
+          if (failedInv <- inherits(Ders$ExpInfoInv, "try-error")) {
+              warning("Failed to invert the expected information matrix. Iteration stopped prematurely.")
+              break
+          }
+          opt$par <- opt$par + 2^(-stepFactor) *
+              (step <- with(Ders, ExpInfoInv %*% scores - if (BR) biases else 0))
+          stepFactor <- stepFactor + 1
+          testhalf <- drop(crossprod(stepPrev) < crossprod(step))
+      }
+      if (failedInv | (all(abs(step) < tolerance))) {
+          break
+      }
+  }
+  ## IK: Slightly more accurate BC estimates if requested: first we get
+  ## more accurate ML estimates than optim returns and then we
+  ## subtract the estimated first order biases
+  if (fittingMethod == "BC") {
+      Ders <- lDersBias(opt$par, calcBiases = TRUE)
+      opt$par <- opt$par - Ders$biases
+  }
+  opt$convergence <- as.numeric(iter >= maxIter)
+  if (opt$convergence > 0) {
+      warning("optimization failed to converge")
+  }
 
   ## extract fitted values/parameters
   fit <- fitfun(opt$par, deriv = 2L)
@@ -300,25 +489,29 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   phi <- fit$phi
 
   ## covariance matrix
-  vcov <- if(hessian) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
+  ## IK: vcov is now extracted from Ders
+  ## vcov <- if(hessian) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
+  vcov <- Ders$ExpInfoInv
 
-  ## R-squared  
+  ## R-squared
   pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
 
   ## names
   names(beta) <- colnames(x)
   names(gamma) <- if(phi_const & phi_linkstr == "identity") "(phi)" else colnames(z)
-  rownames(vcov) <- colnames(vcov) <- c(colnames(x), 
+  rownames(vcov) <- colnames(vcov) <- c(colnames(x),
     if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"))
 
   ## set up return value
-  rval <- list(  
+  rval <- list(
     coefficients = list(mean = beta, precision = gamma),
     residuals = y - mu,
     fitted.values = structure(mu, .Names = names(y)),
     optim = opt,
     method = method,
-    control = control,
+    ## IK: control in the result now contains whatever was supplied in
+    ## control (used to be control = control)
+    control = ocontrol,
     start = start,
     weights = if(identical(as.vector(weights), rep.int(1, n))) NULL else weights,
     offset = list(mean = if(identical(offset[[1L]], rep.int(0, n))) NULL else offset[[1L]],
@@ -330,16 +523,22 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi = phi_full,
     loglik = opt$value,
     vcov = vcov,
+    adjustedScores = if (BR) with(Ders, scores + adjustment) else NULL,
+    firstOrderBiases = if (fittingMethod == "BC")
+          structure(as.vector(Ders$biases), names = c(names(beta), names(gamma)))
+    else NULL,
+    ## number of iterations
+    niter = iter,
 #    hessian = hess,
     pseudo.r.squared = pseudor2,
     link = list(mean = linkobj, precision = phi_linkobj),
-    converged = opt$convergence < 1    
+    converged = opt$convergence < 1
   )
 
   return(rval)
 }
 
-print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...) 
+print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
 {
   cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.85)), "", sep = "\n")
 
@@ -359,7 +558,7 @@ print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
       } else cat("No coefficients (in precision model)\n\n")
     }
   }
-  
+
   invisible(x)
 }
 
@@ -367,12 +566,12 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
 {
   ## treat phi as full model parameter?
   if(!is.null(phi)) object$phi <- phi
-  
+
   ## residuals
   type <- match.arg(type, c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2"))
   object$residuals <- residuals(object, type = type)
   object$residuals.type <- type
-  
+
   ## extend coefficient table
   k <- length(object$coefficients$mean)
   m <- length(object$coefficients$precision)
@@ -384,10 +583,10 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
   rownames(cf$mean) <- names(object$coefficients$mean)
   rownames(cf$precision) <- names(object$coefficients$precision)
   object$coefficients <- cf
-  
+
   ## number of iterations
-  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))  
-  
+  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))
+
   ## delete some slots
   object$fitted.values <- object$terms <- object$model <- object$y <-
     object$x <- object$levels <- object$contrasts <- object$start <- NULL
@@ -400,46 +599,46 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
 print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
 {
   cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.85)), "", sep = "\n")
-  
+
   if(!x$converged) {
     cat("model did not converge\n")
   } else {
     types <- c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2")
     Types <- c("Pearson residuals", "Deviance residuals", "Raw response residuals",
-      "Weighted residuals", "Standardized weighted residuals", "Standardized weighted residuals 2")  
+      "Weighted residuals", "Standardized weighted residuals", "Standardized weighted residuals 2")
     cat(sprintf("%s:\n", Types[types == match.arg(x$residuals.type, types)]))
     print(structure(round(as.vector(quantile(x$residuals)), digits = digits),
       .Names = c("Min", "1Q", "Median", "3Q", "Max")))
-  
+
     if(NROW(x$coefficients$mean)) {
       cat(paste("\nCoefficients (mean model with ", x$link$mean$name, " link):\n", sep = ""))
       printCoefmat(x$coefficients$mean, digits = digits, signif.legend = FALSE)
     } else cat("\nNo coefficients (in mean model)\n")
-  
+
     if(x$phi) {
       if(NROW(x$coefficients$precision)) {
         cat(paste("\nPhi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
         printCoefmat(x$coefficients$precision, digits = digits, signif.legend = FALSE)
       } else cat("\nNo coefficients (in precision model)\n")
     }
-    
+
     if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[, 4L] < 0.1))
       cat("---\nSignif. codes: ", "0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", "\n")
-  
+
     cat("\nLog-likelihood:", formatC(x$loglik, digits = digits),
       "on", sum(sapply(x$coefficients, NROW)), "Df")
     if(!is.na(x$pseudo.r.squared)) cat("\nPseudo R-squared:", formatC(x$pseudo.r.squared, digits = digits))
     cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations, "\n"))
   }
-  
+
   invisible(x)
 }
 
 predict.betareg <- function(object, newdata = NULL,
-  type = c("response", "link", "precision", "variance"), na.action = na.pass, ...) 
+  type = c("response", "link", "precision", "variance"), na.action = na.pass, ...)
 {
   type <- match.arg(type)
-  
+
   if(missing(newdata)) {
 
     rval <- switch(type,
@@ -448,7 +647,7 @@ predict.betareg <- function(object, newdata = NULL,
       },
       "link" = {
         object$link$mean$linkfun(object$fitted.values)
-      },      
+      },
       "precision" = {
         gamma <- object$coefficients$precision
         z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
@@ -467,16 +666,16 @@ predict.betareg <- function(object, newdata = NULL,
 
   } else {
 
-    tnam <- switch(type, 
+    tnam <- switch(type,
       "response" = "mean",
       "link" = "mean",
       "precision" = "precision",
       "variance" = "full")
-      
+
     mf <- model.frame(delete.response(object$terms[[tnam]]), newdata, na.action = na.action, xlev = object$levels[[tnam]])
     newdata <- newdata[rownames(mf), , drop = FALSE]
     offset <- list(mean = rep.int(0, nrow(mf)), precision = rep.int(0, nrow(mf)))
-    
+
     if(type %in% c("response", "link", "variance")) {
       X <- model.matrix(delete.response(object$terms$mean), mf, contrasts = object$contrasts$mean)
       if(!is.null(object$call$offset)) offset[[1L]] <- offset[[1L]] + eval(object$call$offset, newdata)
@@ -491,13 +690,13 @@ predict.betareg <- function(object, newdata = NULL,
       }
     }
 
-    rval <- switch(type,    
+    rval <- switch(type,
       "response" = {
         object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
-      },      
+      },
       "link" = {
         drop(X %*% object$coefficients$mean + offset[[1L]])
-      },      
+      },
       "precision" = {
         object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
       },
@@ -521,7 +720,7 @@ coef.betareg <- function(object, model = c("full", "mean", "precision"), phi = N
     if(!missing(model)) warning("only one of 'model' and 'phi' should be specified: 'model' ignored")
     ifelse(phi, "full", "mean")
   }
-  
+
   switch(model,
     "mean" = {
       cf$mean
@@ -550,7 +749,7 @@ vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = N
     if(!missing(model)) warning("only one of 'model' and 'phi' should be specified: 'model' ignored")
     ifelse(phi, "full", "mean")
   }
-  
+
   switch(model,
     "mean" = {
       vc[seq.int(length.out = k), seq.int(length.out = k), drop = FALSE]
@@ -582,14 +781,14 @@ estfun.betareg <- function(x, phi = NULL, ...)
   wts <- weights(x)
   if(is.null(wts)) wts <- 1
   phi_full <- if(is.null(phi)) x$phi else phi
-  
+
   ## extract coefficients
   beta <- x$coefficients$mean
   gamma <- x$coefficients$precision
 
   ## compute y*
   ystar <- qlogis(y)
-  
+
   ## compute mu*
   eta <- as.vector(xmat %*% beta + offset[[1L]])
   phi_eta <- as.vector(zmat %*% gamma + offset[[2L]])
@@ -613,7 +812,7 @@ estfun.betareg <- function(x, phi = NULL, ...)
 }
 
 coeftest.betareg <- function(x, vcov. = NULL, df = Inf, ...)
-  coeftest.default(x, vcov. = vcov., df = df, ...)  
+  coeftest.default(x, vcov. = vcov., df = df, ...)
 
 logLik.betareg <- function(object, ...) {
   structure(object$loglik, df = sum(sapply(object$coefficients, length)), class = "logLik")
@@ -652,34 +851,34 @@ residuals.betareg <- function(object,
   wts <- weights(object)
   if(is.null(wts)) wts <- 1
   phi <- predict(object, type = "precision")
-  
+
   res <- switch(type,
-  
+
     "pearson" = {
       sqrt(wts) * res / sqrt(mu * (1 - mu) / (1 + phi))
     },
-    
+
     "deviance" = {
       ll <- function(mu, phi)
-        (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) + 
+        (lgamma(phi) - lgamma(mu * phi) - lgamma((1 - mu) * phi) +
         (mu * phi - 1) * log(y) + ((1 - mu) * phi - 1) * log(1 - y))
       sqrt(wts) * sign(res) * sqrt(2 * abs(ll(y, phi) - ll(mu, phi)))
     },
-    
+
     "weighted" = {
       ystar <- qlogis(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
       v <- trigamma(mu * phi) + trigamma((1 - mu) * phi)
       sqrt(wts) * (ystar - mustar) / sqrt(phi * v)
     },
-    
+
     "sweighted" = {
       ystar <- qlogis(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
       v <- trigamma(mu * phi) + trigamma((1 - mu) * phi)
       sqrt(wts) * (ystar - mustar) / sqrt(v)
     },
-    
+
     "sweighted2" = {
       ystar <- qlogis(y)
       mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
@@ -690,7 +889,7 @@ residuals.betareg <- function(object,
   return(res)
 }
 
-cooks.distance.betareg <- function(model, ...) 
+cooks.distance.betareg <- function(model, ...)
 {
     h <- hatvalues(model)
     k <- length(model$coefficients$mean)
