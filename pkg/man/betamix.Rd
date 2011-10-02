@@ -26,7 +26,7 @@ betamix(formula, data, k, subset, na.action,
         link.phi = "log", 
         control = betareg.control(...),
         cluster = NULL, FLXconcomitant = NULL, FLXcontrol = list(), 
-        verbose = FALSE, nstart = 3, which = "BIC", 
+        verbose = FALSE, nstart = if (missing(cluster)) 3 else 1, which = "BIC", 
         ID, fixed, extra_components, ...)
 
 extraComponent(type = c("uniform", "betareg"), coef, delta,
