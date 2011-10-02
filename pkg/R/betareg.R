@@ -1,6 +1,6 @@
 betareg <- function(formula, data, subset, na.action, weights, offset,
                     link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
-                    link.phi = NULL,
+                    link.phi = NULL, type = c("ML", "BC", "BR"),
  		    control = betareg.control(...),
 		    model = TRUE, y = TRUE, x = FALSE, ...)
 {
@@ -45,6 +45,9 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
   ## convenience variables
   n <- length(Y)
+
+  ## type of estimator
+  type <- match.arg(type)
 
   ## links
   if(is.character(link)) link <- match.arg(link)
@@ -101,12 +104,10 @@ betareg.control <- function(phi = TRUE,
                             ## stepsize (an indication how much the
                             ## estimates change between iterations)
                             maxIter = 200, tolerance = 1e-08,
-                            ## Added fittingMethod argument to control list
-                            fittingMethod = c("ML", "BC", "BR"),
                             ...)
 {
-  rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start, maxIter = maxIter, tolerance = tolerance,
-               fittingMethod = match.arg(fittingMethod))
+  rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start,
+    maxIter = maxIter, tolerance = tolerance)
   rval <- c(rval, list(...))
   if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
   rval$fnscale <- -1
@@ -115,7 +116,7 @@ betareg.control <- function(phi = TRUE,
 }
 
 betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
-  link = "logit", link.phi = "log", control = betareg.control())
+  link = "logit", link.phi = "log", type = "ML", control = betareg.control())
 {
   ## response and regressor matrix
   n <- NROW(x)
@@ -139,15 +140,29 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## link processing
   if(is.character(link)) {
     linkstr <- link
-    linkobj <- if(linkstr != "loglog") make.link(linkstr) else {
-      structure(list(
+    if(linkstr != "loglog") {
+      linkobj <- make.link(linkstr)
+      ## add dmu.deta potentially needed for BR/BC
+      linkobj$dmu.deta <- switch(linkstr,
+        "logit" = function(eta) .Call("logit_mu_eta", eta, PACKAGE="stats") *
+          (1 - 2 * .Call("logit_linkinv", eta, PACKAGE="stats")),
+        "probit" = function(eta) -eta * pmax(dnorm(eta), .Machine$double.eps),
+        "cauchit" = dmu.deta <- function(eta) -2 * pi * eta * pmax(dcauchy(eta)^2, .Machine$double.eps),
+        "cloglog" = dmu.deta <- function(eta) pmax((1 - exp(eta)) * exp(eta) * exp(-exp(eta)), .Machine$double.eps),
+        "identity" = function(eta) rep.int(0, length(eta)),
+        "log" = dmu.deta <- function(eta) pmax(exp(eta), .Machine$double.eps),
+        "sqrt" = function(eta) rep.int(2, length(eta)),
+        "1/mu^2" = function(eta) 3/(4 * eta^2.5),
+        "inverse" = function(eta) 2/(eta^3)
+      )
+    } else {
+      linkobj <- structure(list(
         linkfun = function(mu) -log(-log(mu)),
         linkinv = function(eta) pmax(pmin(exp(-exp(-eta)), 1 - .Machine$double.eps), .Machine$double.eps),
         mu.eta = function(eta) {
           eta <- pmin(eta, 700)
           pmax(exp(-eta - exp(-eta)), .Machine$double.eps)
         },
-        ## IK: dmu.deta: 2nd derivative of mu wrt eta
         dmu.deta = pmax(exp(-exp(-eta) - eta)*(exp(-eta) - 1), .Machine$double.eps),
         valideta = function(eta) TRUE,
         name = "loglog"
@@ -156,20 +171,29 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   } else {
     linkobj <- link
     linkstr <- link$name
+    if(type != "ML" && is.null(linkobj$dmu.deta)) warning("link needs to provide dmu.deta component for BC/BR")
   }
   linkfun <- linkobj$linkfun
   linkinv <- linkobj$linkinv
   mu.eta <- linkobj$mu.eta
-  ## IK: dmu.deta is now extracted. See family.R
   dmu.deta <- linkobj$dmu.deta
-  phi_linkstr <- link.phi
-  phi_linkobj <- make.link(phi_linkstr)
+  if(is.character(link.phi)) {
+    phi_linkstr <- link.phi
+    phi_linkobj <- make.link(phi_linkstr)
+    phi_linkobj$dmu.deta <- switch(phi_linkstr,
+      "identity" = function(eta) rep.int(0, length(eta)),
+      "log" = dmu.deta <- function(eta) pmax(exp(eta), .Machine$double.eps),
+      "sqrt" = function(eta) rep.int(2, length(eta))
+    )
+  } else {
+    phi_linkobj <- link.phi
+    phi_linkstr <- link.phi$name
+    if(type != "ML" && is.null(phi_linkobj$dmu.deta)) warning("link.phi needs to provide dmu.deta component for BC/BR")  
+  }
   phi_linkfun <- phi_linkobj$linkfun
   phi_linkinv <- phi_linkobj$linkinv
   phi_mu.eta <- phi_linkobj$mu.eta
-  ## IK: dmu.deta is now extracted. See family.R
   phi_dmu.deta <- phi_linkobj$dmu.deta
-
 
   ## y* transformation
   ystar <- qlogis(y)
@@ -183,10 +207,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   maxIter <- control$maxIter
   tolerance <- control$tolerance
   ocontrol <- control
-  ## ## IK: extract fittingMethod
-  fittingMethod <- control$fittingMethod
   control$phi <- control$method <- control$hessian <- control$start <-
-      control$maxIter <- control$tolerance <- control$fittingMethod <- NULL
+      control$maxIter <- control$tolerance <- NULL
 
   ## starting values
   if(is.null(start)) {
@@ -443,11 +465,9 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## evaluated either way
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = FALSE, control = control)
+
   ## IK :Then either bias-reduction or move the ML derivatives a bit closer to zero
-  BR <- FALSE
-  if (fittingMethod == "BR") {
-      BR <- TRUE
-  }
+  BR <- type == "BR"
   step <- .Machine$integer.max/2
   for (iter in 1:maxIter) {
       stepPrev <- step
@@ -471,7 +491,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## IK: Slightly more accurate BC estimates if requested: first we get
   ## more accurate ML estimates than optim returns and then we
   ## subtract the estimated first order biases
-  if (fittingMethod == "BC") {
+  if (type == "BC") {
       Ders <- lDersBias(opt$par, calcBiases = TRUE)
       opt$par <- opt$par - Ders$biases
   }
@@ -524,7 +544,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     loglik = opt$value,
     vcov = vcov,
     adjustedScores = if (BR) with(Ders, scores + adjustment) else NULL,
-    firstOrderBiases = if (fittingMethod == "BC")
+    firstOrderBiases = if (type == "BC")
           structure(as.vector(Ders$biases), names = c(names(beta), names(gamma)))
     else NULL,
     ## number of iterations
