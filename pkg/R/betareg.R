@@ -77,7 +77,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   offset <- list(mean = offsetX, precision = offsetZ)
 
   ## call the actual workhorse: betareg.fit()
-  rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, control)
+  rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control)
 
   ## further model information
   rval$call <- cl
