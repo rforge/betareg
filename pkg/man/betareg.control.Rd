@@ -9,7 +9,8 @@
 
 \usage{
 betareg.control(phi = TRUE, method = "BFGS", maxit = 5000,
-  hessian = FALSE, trace = FALSE, start = NULL, \dots)
+  hessian = FALSE, trace = FALSE, start = NULL,
+  fsmaxit = 200, fstol = 1e-8, \dots)
 }
 
 \arguments{
@@ -26,14 +27,24 @@ betareg.control(phi = TRUE, method = "BFGS", maxit = 5000,
     be used for estimation of the covariance matrix? If \code{FALSE} (the default),
     the analytical solution is employed.}
   \item{start}{an optional vector with starting values for all parameters (including phi).}
+  \item{fsmaxit}{integer specifying maximal number of additional (quasi) Fisher scoring
+    iterations. For details see below.}
+  \item{fstol}{numeric tolerance for convergence in (quasi) Fisher scoring.
+    For details see below.}
   \item{\dots}{arguments passed to \code{\link[stats]{optim}}.}
 }
 
 \details{
   All parameters in \code{\link{betareg}} are estimated by maximum likelihood
   using \code{\link[stats]{optim}} with control options set in \code{\link{betareg.control}}.
-  Most arguments are passed on directly to \code{optim}, only \code{start} controls
+  Most arguments are passed on directly to \code{optim}, and \code{start} controls
   how \code{optim} is called.
+
+  After the \code{optim} maximization, an additional (quasi) Fisher scoring
+  can be perfomed to further enhance the result or to perform additional bias reduction.
+  If \code{fsmaxit} is greater than zero, this additional optimization is
+  performed and it converges if the threshold \code{fstol} is attained
+  for the cross-product of the step size.
 
   Starting values can be supplied via \code{start} or estimated by
   \code{\link[stats:lmfit]{lm.wfit}}, using the link-transformed response.

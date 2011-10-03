@@ -1,8 +1,8 @@
 betareg <- function(formula, data, subset, na.action, weights, offset,
                     link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                     link.phi = NULL, type = c("ML", "BC", "BR"),
- 		    control = betareg.control(...),
-		    model = TRUE, y = TRUE, x = FALSE, ...)
+                    control = betareg.control(...),
+                    model = TRUE, y = TRUE, x = FALSE, ...)
 {
   ## call
   cl <- match.call()
@@ -95,19 +95,10 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
 betareg.control <- function(phi = TRUE,
   method = "BFGS", maxit = 5000, hessian = FALSE, trace = FALSE, start = NULL,
-                            ## IK: maxIter and tolerance are specific
-                            ## to the (quasi) Fisher scoring iteration
-                            ## maxIter controls the maximum allowed
-                            ## number of (quasi) Fisher scoring
-                            ## iterations and tolerance is the
-                            ## tolerance to the crossprod of the
-                            ## stepsize (an indication how much the
-                            ## estimates change between iterations)
-                            maxIter = 200, tolerance = 1e-08,
-                            ...)
+  fsmaxit = 200, fstol = 1e-8, ...)
 {
   rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start,
-    maxIter = maxIter, tolerance = tolerance)
+    fsmaxit = fsmaxit, fstol = fstol)
   rval <- c(rval, list(...))
   if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
   rval$fnscale <- -1
@@ -142,19 +133,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     linkstr <- link
     if(linkstr != "loglog") {
       linkobj <- make.link(linkstr)
-      ## add dmu.deta potentially needed for BR/BC
-      linkobj$dmu.deta <- switch(linkstr,
-        "logit" = function(eta) .Call("logit_mu_eta", eta, PACKAGE="stats") *
-          (1 - 2 * .Call("logit_linkinv", eta, PACKAGE="stats")),
-        "probit" = function(eta) -eta * pmax(dnorm(eta), .Machine$double.eps),
-        "cauchit" = function(eta) -2 * pi * eta * pmax(dcauchy(eta)^2, .Machine$double.eps),
-        "cloglog" = function(eta) pmax((1 - exp(eta)) * exp(eta) * exp(-exp(eta)), .Machine$double.eps),
-        "identity" = function(eta) rep.int(0, length(eta)),
-        "log" = function(eta) pmax(exp(eta), .Machine$double.eps),
-        "sqrt" = function(eta) rep.int(2, length(eta)),
-        "1/mu^2" = function(eta) 3/(4 * eta^2.5),
-        "inverse" = function(eta) 2/(eta^3)
-      )
+      ## add dmu.deta potentially needed for BC/BR
+      linkobj$dmu.deta <- make.dmu.deta(linkstr)
     } else {
       linkobj <- structure(list(
         linkfun = function(mu) -log(-log(mu)),
@@ -163,7 +143,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
           eta <- pmin(eta, 700)
           pmax(exp(-eta - exp(-eta)), .Machine$double.eps)
         },
-        dmu.deta = pmax(exp(-exp(-eta) - eta)*(exp(-eta) - 1), .Machine$double.eps),
+        dmu.deta = function(eta) pmax(exp(-exp(-eta) - eta)*(exp(-eta) - 1), .Machine$double.eps),
         valideta = function(eta) TRUE,
         name = "loglog"
       ), class = "link-glm")
@@ -180,11 +160,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   if(is.character(link.phi)) {
     phi_linkstr <- link.phi
     phi_linkobj <- make.link(phi_linkstr)
-    phi_linkobj$dmu.deta <- switch(phi_linkstr,
-      "identity" = function(eta) rep.int(0, length(eta)),
-      "log" = function(eta) pmax(exp(eta), .Machine$double.eps),
-      "sqrt" = function(eta) rep.int(2, length(eta))
-    )
+    phi_linkobj$dmu.deta <- make.dmu.deta(phi_linkstr)
   } else {
     phi_linkobj <- link.phi
     phi_linkstr <- link.phi$name
@@ -198,16 +174,14 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ystar <- qlogis(y)
 
   ## control parameters
+  ocontrol <- control
   phi_full <- control$phi
   method <- control$method
   hessian <- control$hessian
   start <- control$start
-  ## IK: extract maxIter and tolerance
-  maxIter <- control$maxIter
-  tolerance <- control$tolerance
-  ocontrol <- control
-  control$phi <- control$method <- control$hessian <- control$start <-
-      control$maxIter <- control$tolerance <- NULL
+  fsmaxit <- control$fsmaxit
+  fstol <- control$fstol
+  control$phi <- control$method <- control$hessian <- control$start <- control$fsmaxit <- control$fstol <- NULL
 
   ## starting values
   if(is.null(start)) {
@@ -247,8 +221,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     mustar <- if(deriv >= 1L) digamma(mu * phi) - digamma((1 - mu) * phi) else NULL
     psi1 <- if(deriv >= 2L) trigamma(mu * phi) else NULL
     psi2 <- if(deriv >= 2L) trigamma((1 - mu) * phi) else NULL
-    dpsi1 <- if(deriv >= 3L) psigamma(mu * phi, 2) else NULL
-    dpsi2 <- if(deriv >= 3L) psigamma((1 - mu) * phi, 2) else NULL
     list(
       beta = beta,
       gamma = gamma,
@@ -258,77 +230,9 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       phi = phi,
       mustar = mustar,
       psi1 = psi1,
-      psi2 = psi2,
-      dpsi1 = dpsi1,
-      dpsi2 = dpsi2
+      psi2 = psi2
     )
   }
-
-  biasfun <- function(par, fit = NULL) {
-      if (is.null(fit))
-          fit <- fitfun(par, deriv = 3L)
-      mu <- fit$mu
-      phi <- fit$phi
-      eta <- fit$eta
-      phi_eta <- fit$phi_eta
-      D1 <- mu.eta(eta)
-      D2 <- phi_mu.eta(phi_eta)
-      D1dash <- dmu.deta(eta)
-      D2dash <- phi_dmu.deta(phi_eta)
-      Psi2 <- fit$psi2
-      dPsi2 <-  fit$dpsi2
-      kappa2 <- fit$psi1 + Psi2
-      kappa3 <- fit$dpsi1 - dPsi2
-      Psi3 <- psigamma(phi, 1)
-      dPsi3 <- psigamma(phi, 2)
-      ExpInfoInv <- try(hessfun(par, inverse = TRUE), silent = TRUE)
-      PQ <- function(t) {
-          if (t <= k)  {
-              Xt <- x[,t]
-              bb <- if (k > 0L)
-                  crossprod(x, weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x)
-              else
-                  crossprod(x)
-              bg <- if ((k > 0L) & (m > 0L))
-                  crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dPsi2 + kappa2) * Xt * z)
-              else
-                  crossprod(x, z)
-              gg <- if (m > 0L)
-                  crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dPsi2 + 2 * mu * dPsi2) * Xt * z) +
-                      crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - Psi2) * Xt * z)
-              else
-                  crossprod(z)
-          }
-          else {
-              Zt <- z[, t - k]
-              bb <- if (k > 0L)
-                  crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dPsi2 + D1dash * mu * kappa2 - D1dash * Psi2) * Zt * x)
-              else
-                  crossprod(x)
-              bg <- if ((k > 0L) & (m > 0L))
-                  crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dPsi2 + mu * kappa2 - Psi2) * Zt * z)
-              else
-                  crossprod(x, z)
-              gg <- if (m > 0L)
-                  crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dPsi2 - dPsi3) * Zt * z) +
-                      crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi2 - Psi3) * Zt * z)
-              else
-                  crossprod(z)
-          }
-          pq <- rbind(cbind(bb, bg), cbind(t(bg), gg))
-          sum(diag(ExpInfoInv %*% pq))/2
-      }
-      if (inherits(ExpInfoInv, "try-error")) {
-          biases <-  ADJ <- rep(NA, k+m)
-      }
-      else {
-          biases <-  - ExpInfoInv %*% (ADJ <- sapply(1:(k + m), PQ))
-      }
-      list(ExpInfoInv = ExpInfoInv,
-           biases = biases,
-           adjustment = ADJ)
-  }
-
 
   ## objective function
   loglikfun <- function(par, fit = NULL) {
@@ -366,9 +270,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     if(sum) colSums(rval) else rval
   }
 
-
-  ## analytical Hessian or covariance matrix (inverse of Hessian)
-  ## hessfun is the expected info
+  ## analytical Hessian (expected information) or covariance matrix (inverse of Hessian)
   hessfun <- function(par, inverse = FALSE, fit = NULL) {
     ## extract fitted means/precisions
     if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
@@ -392,87 +294,147 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
     kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
 
-    if(!inverse) {
-    ## put together K
-      cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
-    } else {
-    ## compute K^(-1)
-      kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
-      kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
-      vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
-        -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+    ## put together K (= expected information)
+    K <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
+    if(!inverse) K else chol2inv(chol(K))
+    ## previously computed K^(-1) via partitioned matrices, but this appears to be
+    ## slower - even for moderately sized problems
+    ##   kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
+    ##   kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
+    ##   vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
+    ##     -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+  }
+
+  ## compute biases and adjustment for bias correction/reduction
+  biasfun <- function(par, fit = NULL, vcov = NULL) {
+    if (is.null(fit)) fit <- fitfun(par, deriv = 3L)
+    InfoInv <- if(is.null(vcov)) try(hessfun(par, inverse = TRUE), silent = TRUE) else vcov
+    mu <- fit$mu
+    phi <- fit$phi
+    eta <- fit$eta
+    phi_eta <- fit$phi_eta
+    D1 <- mu.eta(eta)
+    D2 <- phi_mu.eta(phi_eta)
+    D1dash <- dmu.deta(eta)
+    D2dash <- phi_dmu.deta(phi_eta)
+    Psi2 <- fit$psi2
+    dPsi1 <-  psigamma(mu * phi, 2)
+    dPsi2 <-  psigamma((1 - mu) * phi, 2)
+    kappa2 <- fit$psi1 + Psi2
+    kappa3 <- dPsi1 - dPsi2
+    Psi3 <- psigamma(phi, 1)
+    dPsi3 <- psigamma(phi, 2)
+    PQ <- function(t) {
+      if (t <= k)  {
+        Xt <- x[,t]
+        bb <- if (k > 0L)
+          crossprod(x, weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x)
+        else
+          crossprod(x)
+        bg <- if ((k > 0L) & (m > 0L))
+          crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dPsi2 + kappa2) * Xt * z)
+        else
+          crossprod(x, z)
+        gg <- if (m > 0L)
+          crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dPsi2 + 2 * mu * dPsi2) * Xt * z) +
+            crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - Psi2) * Xt * z)
+        else
+          crossprod(z)
+      } else {
+        Zt <- z[, t - k]
+        bb <- if (k > 0L)
+          crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dPsi2 + D1dash * mu * kappa2 - D1dash * Psi2) * Zt * x)
+        else
+          crossprod(x)
+        bg <- if ((k > 0L) & (m > 0L))
+          crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dPsi2 + mu * kappa2 - Psi2) * Zt * z)
+        else
+          crossprod(x, z)
+        gg <- if (m > 0L)
+          crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dPsi2 - dPsi3) * Zt * z) +
+            crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi2 - Psi3) * Zt * z)
+        else
+          crossprod(z)
+      }
+      pq <- rbind(cbind(bb, bg), cbind(t(bg), gg))
+      sum(diag(InfoInv %*% pq))/2
     }
+    if (inherits(InfoInv, "try-error")) {
+      bias <- adjustment <- rep.int(NA_real_, k + m)
+    }
+    else {
+      adjustment <- sapply(1:(k + m), PQ)
+      bias <- - InfoInv %*% adjustment
+    }
+    list(bias = bias, adjustment = adjustment)
   }
 
   ## optimize likelihood
-  ##
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = hessian, control = control)
-  ## IK :Then either bias-reduction or move the ML derivatives a bit closer to zero
-  BR <- type == "BR"
+  par <- opt$par
+
+  ## conduct further (quasi) Fisher scoring to move ML derivatives
+  ## even further to zero or conduct bias reduction
+  ## (suppressed if fsmaxit = 0 or if only numerical optim result desired)
+  if(type == "BR" & fsmaxit <= 0) warning("BR cannot be performed with fsmaxit <= 0")
   step <- .Machine$integer.max
-  for (iter in 1:maxIter) {
+  iter <- 0
+  if(fsmaxit > 0 & !(hessian & type == "ML"))
+  {
+    for (iter in 1:fsmaxit) {
       stepPrev <- step
       stepFactor <- 0
       testhalf <- TRUE
       while (testhalf & stepFactor < 11) {
-          if (BR) {
-              Ders <- biasfun(opt$par, fit = NULL)
-              biases <- Ders$biases
-              ExpInfoInv <- Ders$ExpInfoInv
-          }
-          else
-              ExpInfoInv <- try(hessfun(opt$par, fit = NULL, inverse = TRUE))
-          ExpInfo <- hessfun(opt$par, fit = NULL, inverse = FALSE)
-          scores <- gradfun(opt$par, fit = NULL)
-          if (failedInv <- inherits(ExpInfoInv, "try-error")) {
-              warning("Failed to invert the expected information matrix. Iteration stopped prematurely.")
-              break
-          }
-          opt$par <- opt$par + 2^(-stepFactor) *
-              (step <- ExpInfoInv %*% scores - if (BR) biases else 0)
-          stepFactor <- stepFactor + 1
-          testhalf <- drop(crossprod(stepPrev) < crossprod(step))
-      }
-      if (failedInv | (all(abs(step) < tolerance))) {
+        fit <- fitfun(par, deriv = 2L)
+        scores <- gradfun(par, fit = fit)
+	InfoInv <- try(hessfun(par, fit = fit, inverse = TRUE))
+	if(failedInv <- inherits(InfoInv, "try-error")) {
+          warning("failed to invert the information matrix: iteration stopped prematurely")
           break
+        }
+        bias <- if(type == "BR") biasfun(par, fit = fit, vcov = InfoInv)$bias else 0
+        par <- par + 2^(-stepFactor) * (step <- InfoInv %*% scores - bias)
+        stepFactor <- stepFactor + 1
+        testhalf <- drop(crossprod(stepPrev) < crossprod(step))
       }
+      if (failedInv | (all(abs(step) < fstol))) {        
+        break
+      }
+    }
   }
 
-  ## Update Ders and scores with the current value of opt$par
-  scores <- gradfun(opt$par)
+  ## check whether both optim() and manual iteration converged 
+  if(opt$convergence > 0 | iter >= fsmaxit) {
+    converged <- FALSE
+    warning("optimization failed to converge")
+  } else {
+    converged <- TRUE
+  }
 
-  ## Slightly more accurate BC estimates if requested: first we get
-  ## more accurate ML estimates than optim returns and then we
-  ## subtract the estimated first order biases
-  if (type == "BC") {
-      Ders <- biasfun(opt$par, fit = NULL)
-      opt$par <- opt$par - Ders$biases
-  }
-  if (type == "BR") {
-      Ders <- biasfun(opt$par, fit = NULL)
-  }
-  opt$convergence <- as.numeric(iter >= maxIter)
-  if (opt$convergence > 0) {
-      warning("optimization failed to converge")
-  }
+  ## conduct single bias correction (if selected)
+  if(type == "BC") par <- par - biasfun(par)$bias
 
   ## extract fitted values/parameters
-  fit <- fitfun(opt$par, deriv = 2L)
+  fit <- fitfun(par, deriv = 2L)
   beta <- fit$beta
   gamma <- fit$gamma
   eta <- fit$eta
   mu <- fit$mu
   phi <- fit$phi
 
-  ## covariance matrix
-  vcov <- if (hessian & (type == "ML"))
-      solve(-as.matrix(opt$hessian))
-  else
-      if (type == "ML")
-          hessfun(fit = fit, inverse = TRUE)
-      else
-          Ders$ExpInfoInv
+  ## log-likelihood/gradients/covariance matrix at optimized parameters
+  ll <- loglikfun(par, fit = fit)
+  ef <- gradfun(par, fit = fit, sum = FALSE)
+  vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
+
+  ## bias and adjustments (FIXME@IK: please recheck)
+  if(type != "ML") {
+    bias <- biasfun(par, fit = fit, vcov = vcov)
+    if(type == "BR") ef <- t(t(ef) + bias$adjustment/NROW(ef)) ## FIXME@IK: and for type = "BC"?    
+  }
+  bias <- if(type == "BC") bias$bias else rep.int(NA_real_, k + m)
 
   ## R-squared
   pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
@@ -480,7 +442,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## names
   names(beta) <- colnames(x)
   names(gamma) <- if(phi_const & phi_linkstr == "identity") "(phi)" else colnames(z)
-  rownames(vcov) <- colnames(vcov) <- c(colnames(x),
+  rownames(vcov) <- colnames(vcov) <- colnames(ef) <- names(bias) <- c(colnames(x),
     if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"))
 
   ## set up return value
@@ -490,8 +452,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     fitted.values = structure(mu, .Names = names(y)),
     optim = opt,
     method = method,
-    ## IK: control in the result now contains whatever was supplied in
-    ## control (used to be control = control)
     control = ocontrol,
     start = start,
     weights = if(identical(as.vector(weights), rep.int(1, n))) NULL else weights,
@@ -502,18 +462,15 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     df.null = nobs - 2,
     df.residual = nobs - k - m,
     phi = phi_full,
-    loglik = opt$value,
+    loglik = ll,
     vcov = vcov,
-    estFunValue = if (BR)  scores + Ders$adjustment else scores,
-    firstOrderBiases = if (type == "BC")
-          structure(as.vector(Ders$biases), names = c(names(beta), names(gamma)))
-    else NULL,
-    ## number of iterations
-    niter = iter,
-#    hessian = hess,
+    estfun = ef,
+    bias = bias,
+    addit = iter, ## FIXME@Z: number of additional iterations, reuse in print/summary
+    hessian = hessian,
     pseudo.r.squared = pseudor2,
     link = list(mean = linkobj, precision = phi_linkobj),
-    converged = opt$convergence < 1
+    converged = converged
   )
   return(rval)
 }
@@ -631,15 +588,15 @@ predict.betareg <- function(object, newdata = NULL,
       "precision" = {
         gamma <- object$coefficients$precision
         z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-	offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
-	object$link$precision$linkinv(drop(z %*% gamma + offset))
+        offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
+        object$link$precision$linkinv(drop(z %*% gamma + offset))
       },
       "variance" = {
         gamma <- object$coefficients$precision
         z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-	offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
-	phi <- object$link$precision$linkinv(drop(z %*% gamma + offset))
-	object$fitted.values * (1 - object$fitted.values) / (1 + phi)
+        offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
+        phi <- object$link$precision$linkinv(drop(z %*% gamma + offset))
+        object$fitted.values * (1 - object$fitted.values) / (1 + phi)
       }
     )
     return(rval)
@@ -683,7 +640,7 @@ predict.betareg <- function(object, newdata = NULL,
       "variance" = {
         mu <- object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
         phi <- object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
-	mu * (1 - mu) / (1 + phi)
+        mu * (1 - mu) / (1 + phi)
       }
     )
     return(rval)
@@ -749,8 +706,12 @@ bread.betareg <- function(x, phi = NULL, ...) {
   vcov(x, phi = phi) * x$nobs
 }
 
-estfun.betareg <- function(x, phi = NULL, ...)
-{
+estfun.betareg <- function(x, phi = NULL, ...) {
+  phi_full <- if(is.null(phi)) x$phi else phi
+  if(phi_full) x$estfun else x$estfun[, seq_along(x$coefficients$mean)]
+}
+
+old_estfun.betareg <- function(x, phi = NULL, ...) {
   ## extract response y and regressors X and Z
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
   xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean

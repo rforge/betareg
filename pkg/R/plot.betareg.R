@@ -97,10 +97,12 @@ halfnormal.betareg <- function(model, nsim = 100, level = 0.90, type = "sweighte
   
   for(i in 1:nsim) {
     ysim <- rbeta(n, mu * phi, (1 - mu) * phi)
+    ctrl <- model$control
+    ctrl$hessian <- FALSE
+    ctrl$start <- model$coefficients
     fit <- suppressWarnings(betareg.fit(x, ysim, z, weights = wts, offset = model$offset,
       link = model$link$mean$name, link.phi = model$link$precision$name,
-        control = c(model$control, list(phi = model$phi, method = model$method,
-	  hessian = FALSE, start = model$coefficients))))
+        control = ctrl))
     fit$y <- ysim
     fit$x <- list(mean = x, precision = z)
     class(fit) <- "betareg"
