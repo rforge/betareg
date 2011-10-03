@@ -338,20 +338,20 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
           prodfun(x, bbComp)
         }
         else
-          crossprod(x)
+          sapply(1:nobs, function(x) matrix(0, k, k))
         bg <- if ((k > 0L) & (m > 0L)) {
           bgComp <- weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dPsi2 + kappa2) * Xt * z
           prodfun(x, bgComp)
         }
         else
-          crossprod(x, z)
+          sapply(1:nobs, function(x) matrix(0, k, m))
         gg <- if (m > 0L) {
           ggComp <- weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dPsi2 + 2 * mu * dPsi2) * Xt * z +
             weights * phi * D1 * D2dash * (mu * kappa2 - Psi2) * Xt * z
           prodfun(z, ggComp)
         }
         else
-          crossprod(z)
+          sapply(1:nobs, function(x) matrix(0, m, m))
       } else {
         Zt <- z[, t - k]
         bb <- if (k > 0L) {
@@ -359,20 +359,20 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
           prodfun(x, bbComp)
         }
         else
-          crossprod(x)
+          sapply(1:nobs, function(x) matrix(0, k, k))
         bg <- if ((k > 0L) & (m > 0L)) {
           bgComp <- weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dPsi2 + mu * kappa2 - Psi2) * Zt * z
           prodfun(x, bgComp)
         }
         else
-          crossprod(x, z)
+          sapply(1:nobs, function(x) matrix(0, k, m))
         gg <- if (m > 0L) {
           ggComp <- weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dPsi2 - dPsi3) * Zt * z +
             weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi2 - Psi3) * Zt * z
           prodfun(z, ggComp)
         }
         else
-          crossprod(z)
+          sapply(1:nobs, function(x) matrix(0, m, m))
       }
       sapply(seq_len(nobs), function(i)
              sum(diag(InfoInv %*% rbind(cbind(bb[[i]], bg[[i]]), cbind(t(bg[[i]]), gg[[i]]))))/2,
@@ -811,7 +811,7 @@ estfun.betareg <- function(x, phi = NULL, ...) {
   }
   attr(rval, "assign") <- NULL
 
-  ## 
+  ##
   if(x$type == "BR") {
     adjustment <- NULL ## compute adjustment contributions
     ## ...
