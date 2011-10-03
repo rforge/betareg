@@ -306,7 +306,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   }
 
   ## compute biases and adjustment for bias correction/reduction
-  biasfun <- function(par, fit = NULL, vcov = NULL) {
+  biasfun <- function(par, fit = NULL, vcov = NULL, sum = TRUE) {
     if (is.null(fit)) fit <- fitfun(par, deriv = 3L)
     InfoInv <- if(is.null(vcov)) try(hessfun(par, inverse = TRUE), silent = TRUE) else vcov
     mu <- fit$mu
@@ -324,7 +324,62 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     kappa3 <- dPsi1 - dPsi2
     Psi3 <- psigamma(phi, 1)
     dPsi3 <- psigamma(phi, 2)
+    ## PQ produces the contribution of each observation to the
+    ## adustments to the score functions and is terribly slow for
+    ## iteration
     PQ <- function(t) {
+      prodfun <- function(mat1, mat2) {
+        sapply(seq_len(nobs), function(i) tcrossprod(mat1[i,], mat2[i,]), simplify = FALSE)
+      }
+      if (t <= k)  {
+        Xt <- x[,t]
+        bb <- if (k > 0L) {
+          bbComp <- weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x
+          prodfun(x, bbComp)
+        }
+        else
+          crossprod(x)
+        bg <- if ((k > 0L) & (m > 0L)) {
+          bgComp <- weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dPsi2 + kappa2) * Xt * z
+          prodfun(x, bgComp)
+        }
+        else
+          crossprod(x, z)
+        gg <- if (m > 0L) {
+          ggComp <- weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dPsi2 + 2 * mu * dPsi2) * Xt * z +
+            weights * phi * D1 * D2dash * (mu * kappa2 - Psi2) * Xt * z
+          prodfun(z, ggComp)
+        }
+        else
+          crossprod(z)
+      } else {
+        Zt <- z[, t - k]
+        bb <- if (k > 0L) {
+          bbComp <- weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dPsi2 + D1dash * mu * kappa2 - D1dash * Psi2) * Zt * x
+          prodfun(x, bbComp)
+        }
+        else
+          crossprod(x)
+        bg <- if ((k > 0L) & (m > 0L)) {
+          bgComp <- weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dPsi2 + mu * kappa2 - Psi2) * Zt * z
+          prodfun(x, bgComp)
+        }
+        else
+          crossprod(x, z)
+        gg <- if (m > 0L) {
+          ggComp <- weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dPsi2 - dPsi3) * Zt * z +
+            weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi2 - Psi3) * Zt * z
+          prodfun(z, ggComp)
+        }
+        else
+          crossprod(z)
+      }
+      sapply(seq_len(nobs), function(i)
+             sum(diag(InfoInv %*% rbind(cbind(bb[[i]], bg[[i]]), cbind(t(bg[[i]]), gg[[i]]))))/2,
+             simplify = TRUE)
+    }
+    ## PQsum produces the the adustments to the score functions and is suggested for iteration
+    PQsum <- function(t) {
       if (t <= k)  {
         Xt <- x[,t]
         bb <- if (k > 0L)
@@ -363,17 +418,23 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       bias <- adjustment <- rep.int(NA_real_, k + m)
     }
     else {
-      adjustment <- sapply(1:(k + m), PQ)
-      bias <- - InfoInv %*% adjustment
+      if (sum) {
+        adjustment <- sapply(1:(k + m), PQsum)
+        bias <- - InfoInv %*% adjustment
+      }
+      else {
+        adjustment <- sapply(1:(k + m), PQ)
+        bias <- - InfoInv %*% colSums(adjustment)
+      }
     }
     list(bias = bias, adjustment = adjustment)
   }
+
 
   ## optimize likelihood
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = hessian, control = control)
   par <- opt$par
-
   ## conduct further (quasi) Fisher scoring to move ML derivatives
   ## even further to zero or conduct bias reduction
   ## (suppressed if fsmaxit = 0 or if only numerical optim result desired)
@@ -394,19 +455,22 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
           warning("failed to invert the information matrix: iteration stopped prematurely")
           break
         }
-        bias <- if(type == "BR") biasfun(par, fit = fit, vcov = InfoInv)$bias else 0
+        bias <- if(type == "BR") biasfun(par, fit = fit, vcov = InfoInv, sum = TRUE)$bias else 0
         par <- par + 2^(-stepFactor) * (step <- InfoInv %*% scores - bias)
         stepFactor <- stepFactor + 1
         testhalf <- drop(crossprod(stepPrev) < crossprod(step))
       }
-      if (failedInv | (all(abs(step) < fstol))) {        
+      if (failedInv | (all(abs(step) < fstol))) {
         break
       }
     }
   }
 
-  ## check whether both optim() and manual iteration converged 
-  if(opt$convergence > 0 | iter >= fsmaxit) {
+  ## check whether both optim() and manual iteration converged
+  ## IK: modified the condition a bit... optim might not fail to converge
+  ## but if additional iteration are requested Fisher scoring might
+  ## get there
+  if((fsmaxit == 0 & opt$convergence > 0) | iter >= fsmaxit) {
     converged <- FALSE
     warning("optimization failed to converge")
   } else {
@@ -429,10 +493,13 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ef <- gradfun(par, fit = fit, sum = FALSE)
   vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
 
-  ## bias and adjustments (FIXME@IK: please recheck)
+  ## bias and adjustments.
+  ## There is no estimating function for BC
+  ## estimates... Wald-type inferences are applicable though, using
+  ## the Fisher information at the BC estimates
   if(type != "ML") {
-    bias <- biasfun(par, fit = fit, vcov = vcov)
-    if(type == "BR") ef <- t(t(ef) + bias$adjustment/NROW(ef)) ## FIXME@IK: and for type = "BC"?    
+    bias <- biasfun(par, fit = fit, vcov = vcov, sum = FALSE)
+    if(type == "BR") ef <- ef + bias$adjustment
   }
   bias <- if(type == "BC") bias$bias else rep.int(NA_real_, k + m)
 
