@@ -203,7 +203,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     ##
     ## Additionally, sum(phi_y) might not even be > 0 which should be caught.
     if(!isTRUE(phi_linkinv(phi[1L]) > 0)) {
-      warning("No valid starting value for precision parameter found, using 1 instead.")
+      warning("no valid starting value for precision parameter found, using 1 instead")
       phi[1L] <- 1
     }
     start <- list(mean = beta, precision = phi)
@@ -307,7 +307,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
   ## compute biases and adjustment for bias correction/reduction
   biasfun <- function(par, fit = NULL, vcov = NULL, sum = TRUE) {
-    if (is.null(fit)) fit <- fitfun(par, deriv = 3L)
+    if (is.null(fit)) fit <- fitfun(par, deriv = 2L)
     InfoInv <- if(is.null(vcov)) try(hessfun(par, inverse = TRUE), silent = TRUE) else vcov
     mu <- fit$mu
     phi <- fit$phi
@@ -318,8 +318,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     D1dash <- dmu.deta(eta)
     D2dash <- phi_dmu.deta(phi_eta)
     Psi2 <- fit$psi2
-    dPsi1 <-  psigamma(mu * phi, 2)
-    dPsi2 <-  psigamma((1 - mu) * phi, 2)
+    dPsi1 <-  psigamma(mu * phi, 2)       ## potentially move to fitfun() when we add support for
+    dPsi2 <-  psigamma((1 - mu) * phi, 2) ## observed information (as opposed to expected)
     kappa2 <- fit$psi1 + Psi2
     kappa3 <- dPsi1 - dPsi2
     Psi3 <- psigamma(phi, 1)
