@@ -375,6 +375,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = hessian, control = control)
   par <- opt$par
+  
   ## conduct further (quasi) Fisher scoring to move ML derivatives
   ## even further to zero or conduct bias reduction
   ## (suppressed if fsmaxit = 0 or if only numerical optim result desired)
@@ -463,6 +464,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     optim = opt,
     method = method,
     control = ocontrol,
+    scoring = iter,
     start = start,
     weights = if(identical(as.vector(weights), rep.int(1, n))) NULL else weights,
     offset = list(mean = if(identical(offset[[1L]], rep.int(0, n))) NULL else offset[[1L]],
@@ -475,8 +477,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     loglik = ll,
     vcov = vcov,
     bias = bias,
-    addit = iter, ## FIXME@Z: number of additional iterations, reuse in print/summary
-    hessian = hessian,
     pseudo.r.squared = pseudor2,
     link = list(mean = linkobj, precision = phi_linkobj),
     converged = converged
@@ -531,7 +531,7 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
   object$coefficients <- cf
 
   ## number of iterations
-  object$iterations <- as.vector(tail(na.omit(object$optim$count), 1))
+  object$iterations <- c("optim" = as.vector(tail(na.omit(object$optim$count), 1)), "scoring" = as.vector(object$scoring))
 
   ## delete some slots
   object$fitted.values <- object$terms <- object$model <- object$y <-
@@ -571,10 +571,19 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
     if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[, 4L] < 0.1))
       cat("---\nSignif. codes: ", "0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", "\n")
 
+    cat("\nType of estimator:", x$type, switch(x$type,
+      "ML" = "(maximum likelihood)",
+      "BC" = "(bias-corrected)",
+      "BR" = "(bias-reduced)"))
     cat("\nLog-likelihood:", formatC(x$loglik, digits = digits),
       "on", sum(sapply(x$coefficients, NROW)), "Df")
     if(!is.na(x$pseudo.r.squared)) cat("\nPseudo R-squared:", formatC(x$pseudo.r.squared, digits = digits))
-    cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations, "\n"))
+    if(x$iterations[2L] > 0) {
+      cat(paste("\nNumber of iterations:", x$iterations[1L],
+        sprintf("(%s) +", x$method), x$iterations[2L], "(Fisher scoring) \n"))
+    } else {
+      cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations[1L], "\n"))
+    }
   }
 
   invisible(x)
