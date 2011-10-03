@@ -517,6 +517,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     coefficients = list(mean = beta, precision = gamma),
     residuals = y - mu,
     fitted.values = structure(mu, .Names = names(y)),
+    type = type,
     optim = opt,
     method = method,
     control = ocontrol,
@@ -531,7 +532,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi = phi_full,
     loglik = ll,
     vcov = vcov,
-    estfun = ef,
     bias = bias,
     addit = iter, ## FIXME@Z: number of additional iterations, reuse in print/summary
     hessian = hessian,
@@ -774,11 +774,6 @@ bread.betareg <- function(x, phi = NULL, ...) {
 }
 
 estfun.betareg <- function(x, phi = NULL, ...) {
-  phi_full <- if(is.null(phi)) x$phi else phi
-  if(phi_full) x$estfun else x$estfun[, seq_along(x$coefficients$mean)]
-}
-
-old_estfun.betareg <- function(x, phi = NULL, ...) {
   ## extract response y and regressors X and Z
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
   xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean
@@ -814,8 +809,15 @@ old_estfun.betareg <- function(x, phi = NULL, ...) {
       as.vector(x$link$precision$mu.eta(phi_eta)) * wts * zmat)
     colnames(rval) <- names(coef(x, phi = phi_full))
   }
-
   attr(rval, "assign") <- NULL
+
+  ## 
+  if(x$type == "BR") {
+    adjustment <- NULL ## compute adjustment contributions
+    ## ...
+    rval <- rval + adjustment
+  }
+
   return(rval)
 }
 
