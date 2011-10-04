@@ -1,5 +1,4 @@
 ## Package and data
-library("betareg")
 data("GasolineYield", package = "betareg")
 
 ## Same results as in Table 1 in Kosmidis and Firth (2010, EJS,
