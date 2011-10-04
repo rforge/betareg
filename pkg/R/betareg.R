@@ -375,7 +375,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
     method = method, hessian = hessian, control = control)
   par <- opt$par
-  
+
   ## conduct further (quasi) Fisher scoring to move ML derivatives
   ## even further to zero or conduct bias reduction
   ## (suppressed if fsmaxit = 0 or if only numerical optim result desired)
@@ -418,8 +418,15 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     converged <- TRUE
   }
 
-  ## conduct single bias correction (if selected)
-  if(type == "BC") par <- par - biasfun(par)$bias
+  ## conduct single bias correction (if BC selected) else do not
+  ## estimate the first order biases
+  if(type == "BC") {
+    bias <- as.vector(biasfun(par)$bias)
+    par <- par - bias
+  }
+  else {
+    bias <- rep.int(NA_real_, k + m)
+  }
 
   ## extract fitted values/parameters
   fit <- fitfun(par, deriv = 2L)
@@ -435,17 +442,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## ef <- gradfun(par, fit = fit, sum = FALSE)
   vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
 
-  ## bias and adjustments.
-  ## There is no estimating function for BC
-  ## estimates... Wald-type inferences are applicable though, using
-  ## the Fisher information at the BC estimates
-  if(type != "ML") {
-    bias <- biasfun(par, fit = fit, vcov = vcov)
-    ## No need to evaluate ef below.
-    # if(type == "BR") ef <- ef + bias$adjustment
-  }
-
-  bias <- if(type == "BC") bias$bias else rep.int(NA_real_, k + m)
   ## R-squared
   pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
 
