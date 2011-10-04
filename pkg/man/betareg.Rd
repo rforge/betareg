@@ -66,7 +66,12 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   resulting in a model with variable dispersion.  
   Estimation is performed by maximum likelihood (ML) via \code{\link[stats]{optim}} using
   analytical gradients and (by default) starting values from an auxiliary linear regression
-  of the transformed response.
+  of the transformed response. Subsequently, the \code{optim} result may be enhanced
+  by an additional Fisher scoring iteration using analytical gradients and expected information.
+  This slightly improves the optimization by moving the gradients even closer to zero
+  (for \code{type = "ML"} and \code{"BC"}) or solving the bias-adjusted estimating equations
+  (for \code{type = "BR"}). For the former two estimators, the optional Fisher scoring
+  can be disabled by setting \code{fsmaxit = 0} in the control arguments.
 
   In the beta regression as introduced by Ferrari and Cribari-Neto (2004), the mean of
   the response is linked to a linear predictor described by \code{y ~ x1 + x2} using
