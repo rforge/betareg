@@ -77,7 +77,7 @@ prettyPrint <- function(x, sep = " ", linebreak = "\n\t", width = getOption("wid
 cache <- TRUE
 enumerate <- function(x) paste(paste(x[-length(x)], collapse = ", "), x[length(x)], sep = " and ")
 betamix_methods <- 
-  enumerate(paste("\\fct{", gsub("\\.betamix", "", as.character(methods(class = "betamix"))), "}", sep = ""))
+  enumerate(paste("\\\\fct{", gsub("\\.betamix", "", as.character(methods(class = "betamix"))), "}", sep = ""))
 @
 \begin{document}
 
@@ -182,6 +182,48 @@ building on earlier work \citep{betareg:Firth:1993,betareg:Kosmidis+Firth:2009}.
 While \cite{betareg:Kosmidis+Firth:2010} consider only regressions
 with a fixed precision parameter $\phi$, we extend their results to 
 models with a regression part for $\phi$.
+
+\fixme{theory outline}
+
+Support for both, bias correction and bias reduction, has been added
+in the principal model fitting function \fct{betareg} starting from
+\pkg{betareg}~2.4-0. The interface of \fct{betareg} is essentially
+the same as described in \cite{betareg:Cribari-Neto+Zeileis:2010}, just
+a \code{type} argument has been added specifying the type of estimator.
+%
+\begin{Code}
+  betareg(formula, data, subset, na.action, weights, offset,
+    link = "logit", link.phi = NULL, type = c("ML", "BC", "BR"),
+    control = betareg.control(...), model = TRUE, y = TRUE, x = FALSE, ...)
+\end{Code}
+%
+The arguments in the first line (\code{formula}, \code{data}, \dots) pertain
+to the data and model specification using a formula that potentially may
+have two parts pertaining to mean and precision equation, respectively.
+The arguments \code{link} and \code{link.phi} specify the link functions
+$g_1(\cdot)$ and $g_2(\cdot)$, respectively. The argument \code{type}
+controls whether \fixme{refer to equations from theory}. Finally,
+\code{control} is a list of control arguments and \code{model}, \code{y},
+and \code{x} control whether the respective data components are included
+in the fitted model object. See \cite{betareg:Cribari-Neto+Zeileis:2010}
+for more details on all arguments except \code{type}.
+
+While the interface of \fct{betareg} is almost the same as in previous
+versions, the internal code has been substantially enhanced. Specifically,
+the optimization via \fct{optim} is now (optionally) enhanced by an
+additional Fisher scoring iteration. As in previous versions, the initial
+optimization of the likelihood is carried out via \fct{optim}, by default
+with \code{method = "BFGS"}, using analytical gradients. In recent versions,
+this is followed by a Fisher scoring iteration with both analytical gradients
+and expected information. This iteration is either used to further improve
+the numerical maximization of the likelihood (for \code{type = "ML"} or \code{"BC"})
+or to carry out the bias reduction (for \code{type = "BR"}) based on bias-adjusted
+analytical gradients. To control the details of the Fisher scoring, \fct{betareg.control}
+takes two additional arguments \code{fsmaxit = 200} and \code{fstol = 1e-8}
+controlling the maximal number of iterations and convergance tolerance, respectively.
+If the number of iterations is set to zero (\code{fsmaxit = 0}), no Fisher
+scoring is carried out (allowed only for \code{type = "ML"} and \code{"BC"})
+and thus exactly replicating results from previous versions of \pkg{betareg}.
 
 
 
@@ -448,6 +490,65 @@ dispersion. Their model as well as the comparison to the results of an
 OLS regression using the logit-transformed \code{accuracy} as response
 are given in \cite{betareg:Cribari-Neto+Zeileis:2010}. 
 
+\subsection{Bias correction and reduction}
+
+Compute all three flavors of models for the model with interactions both in
+the mean and precision equations.
+
+<<ReadingSkills-bias>>=
+data("ReadingSkills", package = "betareg")
+rs_f <- accuracy ~ dyslexia * iq | dyslexia * iq
+rs_ml <- betareg(rs_f, data = ReadingSkills, type = "ML")
+rs_bc <- betareg(rs_f, data = ReadingSkills, type = "BC")
+rs_br <- betareg(rs_f, data = ReadingSkills, type = "BR")
+@
+
+Resulting coefficient estimates, standard errors, and log-likelihood are reported
+in Table~\ref{tab:ReadingSkills-bias}. All three estimators give very similar results for
+the mean equation. In the precision equation, main effects are slightly damped and the interaction
+effect slightly amplified when using bias correction/reduction.
+
+\fixme{I guess one cannot say much more exciting about this data set with respect to bias?}
+
+The results from Table~\ref{tab:ReadingSkills-bias} are reassuring and illustrate that it
+is valid to employ the plain ML estimator for analysis. This may not always be the case:
+Appendix~\ref{sec:gasoline} replicate the results of \cite{betareg:Kosmidis+Firth:2010}
+for a beta regression where the upward bias in precision leads to overoptimistic
+standard errors of all regression coefficients.
+
+
+\begin{table}[t!]
+\centering
+\begin{tabular}{llrrr}
+\hline
+ & & ML & Bias-corrected & Bias-reduced \\ \hline
+<<ReadingSkills-bias-table, echo=FALSE, results=tex>>=
+rs_list <- list(rs_ml, rs_bc, rs_br)
+cf <- paste("$", format(round(sapply(rs_list, coef), digits = 3), nsmall = 3), "$\\phantom{)}", sep = "")
+se <- paste("(", format(round(sapply(rs_list, function(x) sqrt(diag(vcov(x)))), digits = 3), nsmall = 3), ")", sep = "")
+ll <- paste("$", format(round(sapply(rs_list, logLik), digits = 3), nsmall = 3), "$\\phantom{)}", sep = "")
+cfse <- matrix(as.vector(rbind(cf, se)), ncol = 3)
+cfse <- cbind(
+  c("Mean", rep("", 7), "Precision", rep("", 7)),
+  rep(as.vector(rbind(c("(Intercept)", "\\code{dyslexia}", "\\code{iq}", "\\code{dyslexia:iq}"), "")), 2),
+  cfse[, 1:2],
+  paste(cfse[,3],
+    c(rep("\\\\", 7), "\\\\ \\hline", rep("\\\\", 7), "\\\\ \\hline")))
+cfse <- rbind(cfse, c("Log-likelihood", "", ll[1:2], paste(ll[3], "\\\\ \\hline")))
+writeLines(apply(cfse, 1, paste, collapse = " & "))
+@
+
+\end{tabular}
+\caption{\label{tab:ReadingSkills-bias} Comparison of coefficients and standard errors
+(in parentheses) in interaction model for reading skills. The ML estimator from
+\texttt{rs\_ml}, the bias-corrected estimator from
+\texttt{rs\_bc}, the bias-reduced estimator from \texttt{rs\_br} all give very similar results for
+the mean equation. In the precision equation, main effects are slightly damped and the interaction
+effect slightly amplified when using bias correction/reduction.}
+\end{table}
+
+\subsection{Beta regression tree}
+
 For illustrating the use of model-based recursive partitioning methods
 we assume a beta regression model with \code{accuracy} as response and
 \code{iq} as explanatory variable for the nodes. The score on the
@@ -463,7 +564,6 @@ categorical variable which takes two different values with equal
 probability.
 
 <<ReadingSkills-noise, echo=TRUE>>=
-data("ReadingSkills", package = "betareg")
 set.seed(1071)
 n <- nrow(ReadingSkills)
 ReadingSkills$x1 <- rnorm(n)
@@ -514,7 +614,7 @@ The returned object is of class \code{"\Sexpr{class(rs_tree)}"} which
 contains an object of class
 \code{"\Sexpr{class(rs_tree[["mob"]])}"}. All methods for
 \code{"\Sexpr{class(rs_tree[["mob"]])}"} can be re-used, e.g., the
-\fct{plot}-method (see Figure~\ref{fig:betatree}).
+\fct{plot} method (see Figure~\ref{fig:betatree}).
 
 <<ReadingSkills-tree3, echo=TRUE>>=
 plot(rs_tree)
@@ -532,14 +632,13 @@ two leaf nodes. Note that the fitted models use the IQ score as
 predictor for the mean as well as the dispersion.
 
 \begin{figure}[t!]
-\begin{center}
+\centering
 \setkeys{Gin}{width=\textwidth}
 <<ReadingSkills-tree-plot, fig=TRUE, height=7, width=10, echo=FALSE>>=
 plot(rs_tree)
 @
-\caption{\label{fig:betatree}Partitioned beta regression model for the
+\caption{\label{fig:betatree} Partitioned beta regression model for the
   \code{ReadingSkills} data.}
-\end{center}
 \end{figure}
 
 \fixme{One could add the information about the significance tests.
@@ -559,11 +658,25 @@ sctest(rs_tree)
 coef(rs_tree)
 @
 
+\subsection{Latent class beta regression}
+
 In the following we assume that the information if the children are
 dyslexic or not is not available. Modelling the relationship between
 reading accuracy and IQ score is now complicated by the fact that
 latent groups exist in the data where this relationship is
-different. We fit a finite mixture model with three components where
+different. 
+
+\fixme{Comment on: The group of non-dyslexic children is challenging
+as it has rather high variance induced by two subgroups -- one with
+essentially perfect accuracy and one with strongly increasing accuracy
+by IQ score. In a model with observed \code{dyslexia}, this can be
+captured by different variances in the two components. However, if
+\code{dyslexia} is unobserved and a mixture model is employed to
+infer the groups, then this is problematic. The subgroup with perfect
+reading score will typically be selected as one component but then
+not all parameters are identified. To adress this \dots}
+
+We fit a finite mixture model with three components where
 one component is used to capture those children who have a perfect
 reading accuracy test score. Following
 \cite{betareg:Smithson+Merkle+Verkuilen:2011} this additional
@@ -602,8 +715,8 @@ already determines the result.
 The returned fitted model is of class \code{"\Sexpr{class(rs_mix)}"}
 and has methods for \Sexpr{betamix_methods}. These methods re-use
 functionality already available for finite mixture models directly
-fitted using \fct{flexmix()} from package \pkg{flexmix}. The
-\fct{print}-method shows the function call as well as provides
+fitted using \fct{flexmix} from package \pkg{flexmix}. The
+\fct{print} method shows the function call as well as provides
 information on how many observations are assigned to each of the
 components according to the maximum a-posteriori
 probability. Furthermore it is indicated if the EM algorith converged
@@ -614,7 +727,7 @@ performed.
 rs_mix
 @ 
 
-The \fct{summary}-method provides more information on the estimated
+The \fct{summary} method provides more information on the estimated
 coefficients as well as their standard errors. Internally function
 \fct{optim} is used to determine the Hessian matrix needed for the
 standard errors.
@@ -654,16 +767,24 @@ specified in the regressions for mean and precision are
 provided. These mean regression lines are equivalent to those obtained
 using model-based recursive partitioning. 
 
+\fixme{Comment on: With observed dyslexia, the increased heterogeneity
+in the control group can be captured by differences in the precision
+equation, i.e., in the variance. However, for unobserved dyslexia, it
+is more appropriate to capture the increased heterogeneity in the
+control group by two components, one of which corresponds to perfect
+reading accuracy independent of IQ score.}
+
 <<ReadingSkills-betamix-plot1, eval = FALSE, echo=FALSE, fig=TRUE>>=
 ix <- as.numeric(ReadingSkills$dyslexia)
 col1 <- hcl(c(0, 260), 90, 40)[ix]
 col2 <- hcl(c(0, 260), 10, 95)[ix]
-plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19,
+  cex = 1.5, xlim = c(-2, 2), main = "Partitioned model (dyslexia observed)")
 points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
 @
 
 \begin{figure}[t!]
-\begin{center}
+\centering
 \setkeys{Gin}{width=\textwidth}
 <<ReadingSkills-betamix-plot3, echo=FALSE, fig=TRUE, height=5.5, width=10>>=
 par(mfrow = c(1, 2))
@@ -672,7 +793,8 @@ prob <- 2 * (posterior(rs_mix)[cbind(seq_along(ix), clusters(rs_mix))] - 0.5)
 col3 <- hcl(c(260, 0, 130), 65, 45, fixup = FALSE)
 col1 <- col3[clusters(rs_mix)]
 col2 <- hcl(c(260, 0, 130)[clusters(rs_mix)], 65 * abs(prob)^1.5, 95 - 50 * abs(prob)^1.5, fixup = FALSE)
-plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5,
+  xlim = c(-2, 2), main = "Mixture model (dyslexia unobserved)")
 points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
 iq <- -30:30/10
 cf <- rbind(coef(rs_mix, model = "mean", component = 1:2), c(qlogis(0.99), 0))
@@ -682,13 +804,12 @@ cf <- coef(rs_tree, model = "mean")
 col3 <- hcl(c(0, 260), 90, 40)
 for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]) 
 @
-\caption{\label{fig:betamix}Fitted regression lines for the mixture
+\caption{\label{fig:betamix} Fitted regression lines for the mixture
   model with three components and the observations shaded according to
-  their a-posteriori probabilities (left) and fitted regression lines
+  their a-posteriori probabilities (left). Fitted regression lines
   for the partitioned beta regression model with shading according to
-  the variable \code{dyslexic} where the dyslexic children are in blue
-  (right).}
-\end{center}
+  the observed \code{dyslexic} variable where dyslexic and non-dyslexic
+  children are in blue and red, respectively (right).}
 \end{figure}
 
 \section{Conclusions}\label{sec:conclusions}
@@ -699,5 +820,64 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
 This research was funded by the Austrian Science Fund (FWF): V170-N18.
 
 \bibliography{betareg}
+
+\newpage
+
+\begin{appendix}
+
+\section{Bias correction/reduction for gasoline yield data} \label{sec:gasoline}
+
+Replicate results from \cite{betareg:Kosmidis+Firth:2010}
+
+Compute all three flavors of estimators for the fixed precision beta regression
+model considered in \cite{betareg:Ferrari+Cribari-Neto:2004} and replicated
+in \cite{betareg:Cribari-Neto+Zeileis:2010}.
+
+<<GasolineYield-bias>>=
+data("GasolineYield", package = "betareg")
+gy <- lapply(c("ML", "BC", "BR"), function(x)
+  betareg(yield ~ batch + temp, data = GasolineYield, type = x))
+@
+
+\begin{table}[b!]
+\centering
+\begin{tabular}{lrrrrrr}
+\hline
+& \multicolumn{2}{c}{ML} & \multicolumn{2}{c}{Bias-corrected} & \multicolumn{2}{c}{Bias-reduced} \\ \hline
+<<ReadingSkills-bias-table, echo=FALSE, results=tex>>=
+cf <- matrix(paste("$", format(round(sapply(gy, coef), digits = 5), nsmall = 5), "$\\phantom{)}", sep = ""), ncol = 3)
+se <- matrix(gsub(" ", "",
+  paste("(", format(round(sapply(gy, function(x) sqrt(diag(vcov(x)))), digits = 5), nsmall = 5), ")", sep = ""),
+  fixed = TRUE), ncol = 3)
+cfse <- cbind(cf[,1], se[,1], cf[,2], se[,2], cf[,3], se[,3])
+cfse <- cbind(
+  c(paste("$\\beta_{", 1:11, "}$", sep = ""), "$\\phi$"),
+  cfse[, 1:5],
+  paste(cfse[,6],
+    c(rep("\\\\", 11), "\\\\ \\hline")))
+writeLines(apply(cfse, 1, paste, collapse = " & "))
+@
+
+\end{tabular}
+\caption{\label{tab:GasolineYield-bias} Coefficient estimates and standard errors (in parentheses)
+for fixed precision beta regression models with different types of estimators on gasoline yield data.}
+\end{table}
+
+The precision parameter is considerably dampened by bias correction/reduction
+
+<<GasolineYield-phi>>=
+sapply(gy, coef, model = "precision")
+@
+
+while the log-likelihood does not change much
+
+<<GasolineYield-phi>>=
+sapply(gy, coef, model = "precision")
+@
+
+Coefficients and standard errors in Table~\ref{tab:GasolineYield-bias}
+
+
+\end{appendix}
 
 \end{document}
