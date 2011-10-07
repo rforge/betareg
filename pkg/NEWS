@@ -1,5 +1,14 @@
 Changes in Version 2.4-0
 
+  o Support bias-corrected (BC) and bias-reduced (BR) maximum likelihood
+    estimation of beta regressions. See the "type" argument of betareg().
+    To enable BC/BR, an additional Fisher scoring iteration was added
+    that (by default) also enhances the usual ML results.
+    
+  o New vignette("betareg-ext", package = "betareg") introducing BC/BR
+    estimation along with the recent additions beta regression trees and latent
+    class beta regression (aka finite mixture beta regression models).
+
   o Enabled fitting of beta regression models without coefficients in the
     mean equation.
 
