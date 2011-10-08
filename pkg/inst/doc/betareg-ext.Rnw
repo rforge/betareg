@@ -10,7 +10,7 @@
 \newcommand{\fixme}[1]{\emph{\marginpar{FIXME} (#1)}}
 \newcommand{\readme}[1]{\emph{\marginpar{README} (#1)}}
 \newcommand*{\hder}[2]{\partial{#1}/\partial{#2} }
-\newcommand*{\hderstraight}[2]{\mathrm{d}{#1}/\mathrm{d}{#2} }
+\newcommand*{\hderstraight}[2]{\partial{#1}/\partial{#2} }
 \newcommand{\diag}{\mathop{\rm diag}}
 \newcommand{\trace}{\mathop{\rm tr}}
 \newcommand{\topd}{{\rm D}}
@@ -23,13 +23,26 @@
 \title{Extended Beta Regression in \proglang{R}: Shaken, Stirred, Mixed, and Partitioned}
 \Plaintitle{Extended Beta Regression in R: Shaken, Stirred, Mixed, and Partitioned}
 
-\Keywords{Beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, \proglang{R}}
-\Plainkeywords{Beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
+\Keywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, \proglang{R}}
+\Plainkeywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
 
 \Abstract{
-shaken and stirred (bias correction and reduction),
-mixed (finite mixture model),
-and partitioned (tree model)
+Beta regression -- an increasingly popular approach for modeling rates and proportions --
+is extended in various directions: (1)~bias correction/reduction of the maximum
+likelihood estimator, (2)~beta regression tree models by means of recursive partitioning,
+(3)~latent class beta regression by means of finite mixture models. All three
+extensions may be of importance for enhancing the beta regression toolbox in practice
+to provide more reliable inference and capture both observed and unobserved/latent
+heterogeneity in the data. Using the analogy of \cite{betareg:Smithson+Verkuilen:2006},
+these extensions make beta regression not only ``a better lemon squeezer'' (compared to classical
+least squares regression) but a full-fledged modern juicer offering lemon-based drinks:
+shaken and stirred (bias correction and reduction), mixed (finite mixture model),
+or partitioned (tree model). All three extensions are provided in the \proglang{R} package
+\pkg{betareg} (at least 2.4.0), building on generic algorithms and implementations
+for bias correction/reduction, model-based recursive partioning, and finite mixture
+models, respectively. Specifically, the new functions \fct{betatree} and \fct{betamix}
+reuse the object-oriented flexible implementation from the \proglang{R} packages
+\pkg{party} and \pkg{flexmix}.
 }
 
 \Address{
@@ -63,7 +76,7 @@ and partitioned (tree model)
 \SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
 %\VignetteIndexEntry{Extended Beta Regression in R: Shaken, Stirred, Mixed, and Partitioned}
 %\VignetteDepends{stats,betareg,car,lmtest,sandwich,strucchange}
-%\VignetteKeywords{Beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
+%\VignetteKeywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
 %\VignettePackage{betareg}
 
 <<preliminaries, echo=FALSE, results=hide>>=
@@ -87,18 +100,19 @@ betamix_methods <-
 
 \section{Introduction}\label{sec:intro}
 
+\subsubsection*{A brief review of beta regression}
+
 Beta regression is a model for continuous response variables $y$ which
 assume values in the open standard unit interval $(0, 1)$. Such
 response variables may stem from rates, proportions, concentrations,
 etc. A double index regression allowing to model the mean as well as
 the precision through covariates was introduced by
-\cite{betareg:Ferrari+Cribari-Neto:2004} and extensions were proposed
+\cite{betareg:Ferrari+Cribari-Neto:2004} along with the extensions by
 by \cite{betareg:Smithson+Verkuilen:2006} and
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}.
 \cite{betareg:Ferrari+Cribari-Neto:2004} employed an alternative
-parametrization of the Beta distribution such that the mean and
-variance of a Beta-distributed variable are easily characterized by
-the parameterization.  In this parameterization the Beta distribution
+parametrization of the beta distribution characterizing more easily the mean
+variance.  In this parameterization the beta distribution
 has the density
 %
 \begin{equation} \label{eq:density}
@@ -107,54 +121,51 @@ f(y;\mu,\phi) =
 ,\quad 0<y<1\, ,\quad  0<\mu<1\, , \quad \phi > 0 \, ,
 \end{equation}
 %
-where $\Gamma(\cdot)$ is the gamma function.  The mean of a
-Beta-distributed variable is then given by $\E(Y) = \mu$ and the
-variance by $\VAR(Y) = \mu(1-\mu)/(1+\phi)$. Hence $\phi$ is a
+where $\Gamma(\cdot)$ is the gamma function.  A
+beta-distributed variable $Y$ then has mean $\E(Y) = \mu$ and
+variance $\VAR(Y) = \mu(1-\mu)/(1+\phi)$ so that $\phi$ can be seen as a
 precision parameter.
 
-The double index Beta regression model is specified in the following
-way. Suppose we have observations on $n$ independent Beta distributed
-random variables $Y_1, \ldots, Y_n$, with $Y_i$ having mean $\mu_i$
-and variance $\VAR(Y) = \mu_i(1-\mu_i)/(1+\phi_i)$ $(i = 1, \dots,
-n)$.  The parameters $\mu_i$ and $\phi_i$ are linked to linear
-predictors $\eta_i$ and $\zeta_i$ as follows
-\begin{align}
-  g_1(\mu_i) & =  \eta_i =   x_i^\top \beta \, , \label{eq:link1}  \\
-  g_2(\phi_i) &  = \zeta_i =   z_i^\top \gamma\, , \label{eq:link2}
-\end{align}
+The double index beta regression model is specified in the following
+way. Given observations on $n$ independent beta distributed
+random variables $Y_i$ ($i = 1, \dots, n$), the corresponding parameters
+$\mu_i$ and $\phi_i$ are linked to linear predictors $\eta_i$ and $\zeta_i$
+as follows
+\begin{eqnarray}
+  g_1(\mu_i) & = & \eta_i ~=~   x_i^\top \beta \, , \label{eq:link1}  \\
+  g_2(\phi_i) & = & \zeta_i ~=~   z_i^\top \gamma\, , \label{eq:link2}
+\end{eqnarray}
 where $x_i$ and $z_i$ are $p$ and $q$ dimensional vectors of
-covariates observed along $y_i$ $(i = 1, \ldots, n)$, and $\beta =
-(\beta_1, \ldots, \beta_p)$, $\gamma = (\gamma_1, \ldots, \gamma_q)$
+covariates observed along with $Y_i$ $(i = 1, \ldots, n)$, and $\beta =
+(\beta_1, \ldots, \beta_p)^\top$, $\gamma = (\gamma_1, \ldots, \gamma_q)^\top$
 are the vectors of parameters associated with the means and the
-precisions, respectively. The functions $g_1(.)$ and $g_2(.)$ are link
-functions with the property of being monotone on their arguments. By
-the range of $\mu_i$ and $\phi_i$, $g_1(.)$ should ideally be such
-that the unit interval $(0, 1)$ is mapped on the real line, and
-$g_2(.)$ should ideally be such that the interval $(0, \infty)$ is
-mapped on the real line. Suitable candidates for $g_1(\cdot)$ are the
+precisions, respectively. The functions $g_1(.)$ and $g_2(.)$ are monotonic link
+functions, preferably with the property of mapping the range of $\mu_i$
+$(0, 1)$ and $\phi_i$ $(0, \infty)$, respectively, to the real line.
+Suitable candidates for $g_1(\cdot)$ are the
 logit, probit and generally any inverse of a cumulative distribution
 function, and for $g_2(\cdot)$ the log function. Another common
-candidate function for $g_2(\cdot)$ is the identity function which,
-though, when used one should take care to constrain the model to have
-$\zeta_i > 0$ $(i = 1, \ldots, n)$.
+choice for $g_2(\cdot)$ is the identity function which, however,
+may lead to invalid results if not all $\zeta_i > 0$.
 
-The coefficients $\beta$ and $\gamma$ can be estimated by maximum
-likelihood (ML). The usual central limit theorem holds with associated
-asymptotic tests, e.g., likelihood ratio, Wald, score/Lagrange
+Typically, the coefficients $\beta$ and $\gamma$ are estimated by maximum
+likelihood (ML) and inference is based on the usual central limit theorem
+with its associated asymptotic tests, e.g., likelihood ratio, Wald, score/Lagrange
 multiplier (LM).
 
-The \proglang{R} package \pkg{betareg} which implements ML estimation
-was introduced by \cite{betareg:Cribari-Neto+Zeileis:2010}. The main
-model fitting function is \fct{betareg}. The interface as well as the
-fitted models are designed to be similar to those for \fct{glm}. The
+\subsubsection*{Implementation in \proglang{R}}
+
+The \proglang{R} package \pkg{betareg} \citep{betareg:Cribari-Neto+Zeileis:2010}
+provides ML estimation of beta regressions in its main
+model fitting function \fct{betareg}. The interface as well as the
+fitted model objects are designed to be similar to those from \fct{glm}. The
 model specification is via a \code{formula} plus \code{data}. Because
 two types of covariates need to be distinguished a two part formula is
-allowed, e.g., \code{y ~ x1 + x2 + x3 | z1 + z2}. The covariates
-\code{x1}, \code{x2} and \code{x3} are the covariates for the mean and
-\code{z1} and \code{z1} are the covariates for the precision
-parameter. The formula is processed using package \pkg{Formula}
-\citep{betareg:Zeileis+Croissant:2010}. Function \fct{betareg}
-internally uses function \fct{optim} as a general purpose optimizer to
+allowed \citep[by means of \pkg{Formula},][]{betareg:Zeileis+Croissant:2010},
+e.g., \code{y ~ x1 + x2 + x3 | z1 + z2}, where the covariates
+\code{x1}, \code{x2}, and \code{x3} pertain to the mean equation~\eqref{eq:link1} and
+\code{z1} and \code{z1} to the precision equation~\eqref{eq:link2}, respectively.
+Function \fct{betareg} internally uses function \fct{optim} as a general purpose optimizer to
 maximize the log-likelihood. The fitted model has methods for several
 extractor functions, e.g., \fct{coef}, \fct{vcov}, \fct{residuals},
 \fct{logLik}. Base methods for the returned fitted model are
@@ -167,144 +178,151 @@ testing is possible via package \pkg{multcomp}
 tests can be performed using package \pkg{strucchange}
 \citep{betareg:Zeileis+Leisch+Hornik:2002}.
 
-The specified Beta regression model intends to capture the
-relationship between certain predictor variables and the dependent
-$(0,1)$ variable. However, these relationships vary for groups in the
-population if heterogeneity is present. If variables can be identified
-which are directly related to these groups, these variables can be
-included in the regression. Disadvantages of this approach are that
-(1) the resulting regression model is very complex and hard to
-understand and interpret and (2) unnecessary complexity is introduced
-if the differences are only present in a subset of the combined groups
-induced by several categorical variables. Model-based recursive
-partitioning is an alternative approach which avoids these
-drawbacks. If these groups cannot be directly related to observed
-variables, the heterogeneity can be accounted for using finite mixture
-models \citep[for an introduction to finite mixture models see for
-example][]{betareg:McLachlan+Peel:2000,
-  betareg:Fruehwirth-Schnatter:2006}.
+\subsubsection*{Extensions}
 
-In this paper, we introduce extensions of the \pkg{betareg} package
+Although the \pkg{betareg} package as published by \cite{betareg:Cribari-Neto+Zeileis:2010}
+provides a rather complete beta regression toolbox based on classical
+ML inference, further techniques may be required in practice. First,
+it has been shown that ML inference may be severely biased in the
+context of beta regression \citep{betareg:Kosmidis+Firth:2010}, possibly
+leading to overly optimistic effects. Second, it is not always easy
+to capture all heterogeneity in the data through the two linear predictors,
+especially when there are latent unobserved groups/clusters of observations.
+
+To address the first issue of potentially biased inference, the results
+of \cite{betareg:Kosmidis+Firth:2010} are extended to the case with
+both linear predictors (and not only one for the mean) and implemented
+in the \fct{betareg} function starting from version~2.4-0 of \pkg{betareg}.
+The software optionally allows for bias-corrected or bias-reduced ML
+estimation by adopting the unifying iteration developed in
+\cite{betareg:Kosmidis+Firth:2010}.
+
+To address the second issue of heterogeneity between groups/clusters
+of observations, two generic strategies, model-based recursive partitioning
+\citep{betareg:Zeileis+Hothorn+Hornik:2008} and finite mixture models
+\citep[see e.g.,][]{betareg:McLachlan+Peel:2000, betareg:Fruehwirth-Schnatter:2006},
+are applied to beta regressions. The idea for both techniques is to
+capture situations in which the regression relationships vary across groups in the population.
+If variables can be identified which are directly related to these groups, 
+one may be able to include them directly in the regression. However,
+(1)~this may lead to rather complex and hard to interpret models,
+and (2)~unnecessary complexity is introduced if the differences are only
+present in a subset of the combined groups induced by several variables.
+Model-based recursive partitioning is an alternative approach which avoids these
+drawbacks. Furthermore, if groups cannot be directly related to observed
+variables, the heterogeneity can be accounted for using finite mixture
+models. Therefore, extensions of the \pkg{betareg} package are introduced
 where model heterogeneity is taken into account in the case where
 covariates to characterize the groups are available as well as when
-the heterogeneity is due to latent variables. We present model-based
-recursive partitioning of Beta regressions and finite mixtures of Beta
-regression models by building on funtionality provided by packages
-\pkg{party} \citep{betareg:Hothorn+Hornik+Strobl:2011} and
-\pkg{flexmix} \citep{betareg:Leisch+Gruen:2011}. Both extensions are
-derived by re-using the fitting function in more complex models which
-provide a general framework for extending regression models.
+the heterogeneity is due to latent variables. The new function \fct{betatree}
+provides model-based recursive partitioning of beta regressions 
+leveraging tools from the \pkg{party} package \citep{betareg:Hothorn+Hornik+Strobl:2011}
+and function \fct{betamix} provides beta regression mixture models
+(or latent class beta regression) reusing the generic functionality
+from the \pkg{flexmix} package \citep{betareg:Leisch+Gruen:2011}.
 
-Furthermore, in the light of the inferential drawbacks that the
-maximum likelihood estimator may exhibit in the context of Beta
-regression \citep{betareg:Kosmidis+Firth:2010}, the \pkg{betareg}
-package supports estimation via three alternative methods (maximum
-likelihood estimation, bias reduction and bias correction) by adopting
-the unifying iteration developed in \cite{betareg:Kosmidis+Firth:2010}.
 
-\section{Bias correction and reduction in Beta regressions}
-\label{sec:bias}
-\subsection{Preample}
-\cite{betareg:Kosmidis+Firth:2010} show that the reduction or
-correction of the bias of the maximum likelihood estimator in
+\section{Bias correction and reduction in beta regressions} \label{sec:bias}
+
+\subsection{Preamble}
+
+\cite{betareg:Kosmidis+Firth:2010} show that bias correction (BC) or
+bias reduction (BR) of the ML estimator in
 parametric models may be achieved via a unifying \emph{quasi} Fisher
-scoring algorithm. \cite{betareg:Kosmidis+Firth:2010} illustrate the
-applicability of their algorithm at a Beta regression setting with a
-common dispersion parameter $\phi$ for all subjects, also reveling
-some errors in previous literature for the reduction of bias in Beta
-regression models (specifically mistakes
-\citealt*{betareg:Ospina+Cribari-Neto+Vasconcellos:2006} and
-\citealt*{betareg:Simas+Barreto-Souza+Rocha:2010} that led to
-misleading negative conclusions about the effect of the
-reduction/correction of the bias on inferences for Beta regression
-models). In \cite{betareg:Kosmidis+Firth:2010}, it is shown that the
-reduction/correction of bias for Beta regression models can be
-desirable because the maximum likelihood estimator of $\phi$
-demonstrates substantial upwards bias, which in turn leads to
+scoring algorithm. They illustrate the
+applicability of their algorithm in a beta regression setting with a
+common dispersion parameter $\phi$ for all subjects, also revealing
+some errors in previous literature for the reduction of bias in beta
+regression models -- specifically mistakes in
+\cite{betareg:Ospina+Cribari-Neto+Vasconcellos:2006} and
+\cite{betareg:Simas+Barreto-Souza+Rocha:2010} that led to
+misleading negative conclusions about the effect of BC/BR
+on inferences for beta regression models. In \cite{betareg:Kosmidis+Firth:2010},
+it is shown that BC/BR for beta regression models can be
+desirable because the ML estimator of $\phi$
+may demonstrate substantial upwards bias, which in turn may lead to
 underestimation of asymptotic standard errors and hence
-over-optimistic Wald-type inferences (for example, confidence
-intervals with coverage far below the nominal levels). From a
-practical point of view, covariates with significant contributions to
-explaining the response may appear insignificant if the maximum
-likelihood estimator is used for Wald-type inferences.
+over-optimistic Wald-type inferences (e.g., confidence
+intervals with coverage far below the nominal levels).
 
 The results in \cite{betareg:Kosmidis+Firth:2010} are extended here to
 cover the case of models that involve a regression part for the
-dipersion parameters as shown in equation (\ref{eq:link2}).
+dipersion parameters as shown in Equation~\ref{eq:link2}.
 
-\subsection{Shaking and stirring: Iteration}
-\label{sub:iteration}
+\subsection{Generic framework} \label{sub:iteration}
+
 Denote by $0_{k}$ a vector of $k$ zeros and by $S(\theta)$ the vector
 of the log-likelihood derivatives for a parametric model with
 parameter $\theta$. \cite{betareg:Firth:1993} showed that the solution
 $\tilde\theta$ of the equation
 \begin{equation}
   \label{eq:adjest}
-S(\tilde{\theta}) + A(\tilde{\theta}) = 0_{p+q} \, ,
+S(\tilde{\theta}) + A(\tilde{\theta}) ~=~ 0_{p+q} \, ,
 \end{equation}
-has smaller asymptotic bias than the maximum likelihood estimator, if
-the $t$th component of the vector $A(\theta)$ has the form
+has smaller asymptotic bias than the ML estimator, if
+the $t$-th component of the vector $A(\theta)$ has the form
 \[
-A_t(\theta) = \frac{1}{2}\trace\left[\{F(\theta)\}^{-1} \left\{
+A_t(\theta) ~=~ \frac{1}{2}\trace\left[\{F(\theta)\}^{-1} \left\{
     P_t(\theta) + Q_t(\theta) \right\}\right] \quad (t = 1, \ldots,
 p + q) \, ,
 \]
-where $F(\theta)$ is the expected infromation matrix and
-\begin{align}
-  P_t(\theta) & = \E\{S(\theta)S^\top(\theta)S_t(\theta)\}
+where $F(\theta)$ is the expected information matrix and
+\begin{eqnarray}
+  P_t(\theta) & = & \E\{S(\theta)S^\top(\theta)S_t(\theta)\}
   \quad (t = 1, \ldots, p + q)\, , \label{eq:P} \\
-  Q_t(\theta) & = -\E\left\{I(\theta)S_t(\theta) \right\} \quad (t =
+  Q_t(\theta) & = & -\E\left\{I(\theta)S_t(\theta) \right\} \quad (t =
   p + 1, \ldots, p + q)\, , \label{eq:Q}
-\end{align}
-where $S_t(\theta)$ denotes the $t$th component of $S(\theta)$ $(t =
+\end{eqnarray}
+where $S_t(\theta)$ denotes the $t$-th component of $S(\theta)$ $(t =
 1, \ldots, p + q)$ and $I(\theta)$ is the observed information matrix
 (minus the matrix of second derivatives of the log-likelihood with
 respect to $\theta$).
 
 The quasi Fisher scoring iteration that has been developed in
-\cite{betareg:Kosmidis+Firth:2010} attempts to solve equation
-\eqref{eq:adjest}. Specifically, at the $j$th step of the iterative
+\cite{betareg:Kosmidis+Firth:2010} attempts to solve
+Equation~\ref{eq:adjest}. Specifically, at the $j$-th step of the iterative
 procedure, the current value $\theta^{(j)}$ of the parameter vector is
 updated to $\theta^{(j+1)}$ by
 \begin{equation}
   \label{eq:iteration}
-\theta^{(j+1)} = \theta^{(j)} + \left\{F\left(\theta^{(j)}\right)\right\}^{-1}
+\theta^{(j+1)} ~=~ \theta^{(j)} + \left\{F\left(\theta^{(j)}\right)\right\}^{-1}
 S\left(\theta^{(j)}\right) - b\left(\theta^{(j)}\right) \, ,
 \end{equation}
 where $b(\theta) = - \{F(\theta)\}^{-1} A(\theta)$ is the vector of
-the first term in the expansion of the bias of the maximum
-likelihood estimator.
+the first term in the expansion of the bias of the ML estimator.
 
-If the summand $b\left(\theta^{(j)}\right)$ was ignored, then
-iteration \eqref{eq:iteration} would be the usual Fisher scoring
-iteration that can be used to solve the maximum likelihood score
+If the summand $b\left(\theta^{(j)}\right)$ is ignored, then
+iteration \eqref{eq:iteration} becomes the usual Fisher scoring
+iteration that can be used to solve the ML score
 equations $S(\hat\theta) = 0_{p+q}$.
 
-On the other hand, if the starting value $\theta^{(0)}$ is the maximum
-likelihood estimator $\hat\theta$, then $\theta^{(1)}$ is the
+Furthermore, if the starting value $\theta^{(0)}$ is the ML
+estimator $\hat\theta$, then $\theta^{(1)}$ is the
 bias-corrected estimator $\theta^\dagger$ of $\theta$ defined as
 \[
-\theta^\dagger = \hat\theta - b(\hat\theta) \, ,
+\theta^\dagger ~=~ \hat\theta - b(\hat\theta) \, ,
 \]
-which also has smaller asymptotic bias than that of the maximum
-likelihood estimator \citep{betareg:efron:75}.
+which also has smaller asymptotic bias compared to the ML
+estimator \citep{betareg:Efron:1975}.
 
-Hence, iteration provides a unified framework for implementing all
-maximum likelihood, bias reduction and bias correction by merely
+Hence, iteration provides a unified framework for implementing all three types of
+estimators -- ML, BC, and BR -- by merely
 deciding whether the summand $b\left(\theta^{(j)}\right)$ is absent or
-present in the right hand side of \eqref{eq:iteration}, or whether
+present in the right hand side of \eqref{eq:iteration}, and whether
 more than one iterations should be allowed in the latter case.
 
-\subsection{Shaking and stirring: Ingredients}
-Denote the vector of all model $p + q$ parameters by $\theta =
+
+\subsection{BC/BR for beta regressions}
+
+Denote the vector of all model $p + q$ parameters in a beta regression by $\theta =
 (\beta^\top, \gamma^\top)^\top$, and let $X$ and $Z$ be the $n\times
-p$ and $n\times q$ matrices with $i$th row $x_i$ and $z_i$ $(i = 1,
-\ldots, n)$, respectively. The ingredients required for setting the
-iteration described in Subsection~\ref{sub:iteration} are closed-form
+p$ and $n\times q$ regressor matrices with $i$-th row $x_i$ and $z_i$, respectively.
+The ingredients required for setting the
+iteration described in Section~\ref{sub:iteration} are closed-form
 expressions for the vector of log-likelihood derivatives $S(\theta)$,
 the expected information matrix $F(\theta)$ and the two higher-order
 joint null cumulants of log-likelihood derivatives $P_t(\theta)$ and
-$Q_t(\theta)$ shown in \eqref{eq:P} and \eqref{eq:Q}. Then all matrix
+$Q_t(\theta)$ shown in \eqref{eq:P} and \eqref{eq:Q}. Based on these, all matrix
 multiplications and inversions can be performed numerically during the
 iterative procedure.
 
@@ -315,18 +333,18 @@ for notational simplicity.  The same convention is used for the
 derivations below, additionally concealing the dependence on $\theta$
 unless otherwise stated.
 
-The log-likelihood for the Beta regression model in \eqref{eq:density}
-is $l(\theta) = \sum_{i =1}^nl_i(\theta)$ with
+The log-likelihood for the beta regression model in \eqref{eq:density}
+is $\ell(\theta) = \sum_{i =1}^n \ell_i(\theta)$ with
 \begin{equation}
 \label{eq:loglik}
-l_i(\theta) = \phi_i\mu_i
+\ell_i(\theta) = \phi_i\mu_i
   (T_i - U_i) + \phi_i U_i +
   \log\Gamma(\phi_i) -
   \log\Gamma(\phi_i\mu_i) -\log\Gamma(\phi_i(1-\mu_i))
 \end{equation}
 where $\mu_i$ and $\phi_i$ are defined by inverting \eqref{eq:link1}
 and \eqref{eq:link2}, respectively, and where $T_i = \log Y_i$ and
-$U_i = \log(1 - Y_i)$ are the sufficient statistics for the Beta
+$U_i = \log(1 - Y_i)$ are the sufficient statistics for the beta
 distribution with natural parameters $\phi_i\mu_i$ and $\phi_i(1 -
 \mu_i)$ $(i =1, \ldots, n)$, respectively.
 
@@ -334,18 +352,18 @@ Direct differentiation of the log-likelihood function gives that the
 vector of log-likelihood derivatives has the form
 \begin{equation}
   \label{eq:scores}
-S(\theta) = \nabla_\theta l(\theta) = \left[
+S(\theta) = \nabla_\theta \ell(\theta) = \left[
 \begin{array}{c}
   X^\top \Phi D_1 \left(\bar{T} - \bar{U}\right) \\
   Z^\top D_2 \left\{ M\left(\bar{T} - \bar{U}\right) + \bar{U}  \right\}
 \end{array}
 \right]\, ,
 \end{equation}
-In the above expression, $\Phi = \diag\{\phi_1, \ldots, \phi_n\}$, $M
+with $\Phi = \diag\{\phi_1, \ldots, \phi_n\}$, $M
 = \diag\{\mu_1, \ldots, \mu_n\}$, $D_1 = \diag\{d_{1,1}, \ldots, d_{1,
-  n}\}$ and $D_2 = \diag\{d_{2,1}, \ldots, d_{2, n}\}$, where $d_{1,
+  n}\}$, and $D_2 = \diag\{d_{2,1}, \ldots, d_{2, n}\}$, where $d_{1,
   i} = \hderstraight{\mu_i}{\eta_i}$ and $d_{2,i} =
-\hderstraight{\phi_i}{\zeta_i}$ $(i = 1, \ldots, n)$. Furthermore,
+\hderstraight{\phi_i}{\zeta_i}$. Furthermore,
 $\bar{T} = (\bar{T}_1, \ldots, \bar{T}_n)^\top$ and $\bar{U} =
 (\bar{U}_1, \ldots, \bar{U}_n)^\top$ are the vectors of centred
 sufficient statistics, with
@@ -358,7 +376,7 @@ $\E(U_i) = \psi^{(0)}(\phi(1-\mu_i)) + \psi^{(0)}(\phi_i)$, with
 $\psi^{(r)}(k) = \hderstraight{^{r+1} \log\Gamma(k)}{k^{r+1}}$ the
 polygamma function of degree $r$ $(r = 0, 1, \ldots)$.
 
-Differentiating $l(\theta)$ one more time gives that the observed
+Differentiating $\ell(\theta)$ one more time gives that the observed
 information on $\theta$ is
 \begin{equation}
 \label{eq:obsinfo}
@@ -448,9 +466,10 @@ with $\kappa_{3,i} = \E\left\{\left(\bar{T}_i -
     \bar{U}_i\right)^3\right\} = \psi^{(2)}(\phi_i\mu_i) -
 \psi^{(2)}(\phi_i(1 - \mu_i))$ $(i =1, \ldots, n)$. Furthermore,
 $C_t^\topd$ denotes the diagonal matrix with non-zero components the
-elements of $t$th column of a matrix $C$.
+elements of $t$-th column of a matrix $C$.
 
-\subsection{Shaking and stirring with betareg}
+\subsection[Implementation in betareg]{Implementation in \pkg{betareg}}
+
 Support for both, bias correction and bias reduction, has been added
 in the principal model fitting function \fct{betareg} starting from
 \pkg{betareg}~2.4-0. The interface of \fct{betareg} is essentially
@@ -468,14 +487,10 @@ pertain to the data and model specification using a formula that
 potentially may have two parts pertaining to mean and precision
 equation, respectively.  The arguments \code{link} and \code{link.phi}
 specify the link functions $g_1(\cdot)$ and $g_2(\cdot)$,
-respectively. The argument \code{type} controls which estimates are
-produced between the maximum likelihood (\code{type = "ML"}) , the
-bias-reduced (\code{type = "BR"}) and the bias-corrected (\code{type =
-  "BC"}) estimates. Internally, this is done by either neglecting or
-not the summand $b\left(\theta^{(j)}\right)$ in iteration
-\eqref{eq:iteration}, and by setting the number of allowed quasi
-Fisher scoring iterations to zero in the latter case. Finally,
-\code{control} is a list of control arguments and \code{model},
+respectively. The argument \code{type} controls which of the
+maximum likelihood (\code{type = "ML"}), bias-corrected (\code{type = "BC"}),
+or bias-reduced (\code{type = "BR"}) estimates is computed.
+Finally, \code{control} is a list of control arguments and \code{model},
 \code{y}, and \code{x} control whether the respective data components
 are included in the fitted model object. See
 \cite{betareg:Cribari-Neto+Zeileis:2010} for more details on all
@@ -489,10 +504,12 @@ previous versions, the initial optimization of the likelihood is
 carried out via \fct{optim}, by default with \code{method = "BFGS"},
 using analytical gradients. In recent versions, this is followed by a
 Fisher scoring iteration with both analytical gradients and expected
-information. This iteration is either used to further improve the
+information that either neglects or includes the summand
+$b\left(\theta^{(j)}\right)$ in iteration \eqref{eq:iteration}.
+Thus, the iteration is either used to further improve the
 numerical maximization of the likelihood (for \code{type = "ML"} or
-\code{type = "BC"}) or to carry out the bias reduction (for \code{type
-  = "BR"}) as detailed in Subsection~\ref{sub:iteration}. To control
+\code{type = "BC"}) or to carry out the bias reduction (for
+\code{type = "BR"}) as detailed in Section~\ref{sub:iteration}. To control
 the details of the (quasi) Fisher scoring, \fct{betareg.control} takes
 two additional arguments \code{fsmaxit = 200} and \code{fstol = 1e-8}
 controlling the maximal number of iterations and convergance
@@ -519,21 +536,21 @@ In particular, this allows to incorporate regressor variables in a
 parametric model for the response variable.
 
 Here, we adapt the general MOB framework to the model-based partitioning
-of Beta regressions, called \dquote{beta regression trees} for short.
+of beta regressions, called \dquote{beta regression trees} for short.
 The aim is to capture differences in the distribution that are not yet
 adequately described by the regressor variables through a forward search.
-Basically, the approach proceeds by (1)~fitting a Beta regression model,
+Basically, the approach proceeds by (1)~fitting a beta regression model,
 (2)~assessing whether its parameters are stable across all partitioning
 variables, (3)~splitting the sample along the partitioning variable associated
 with the highest parameter instability, (4)~repeating these steps until some
 stopping criterion is met. Thus, interactions and nonlinearities can
 be incorporated by locally maximizing the likelihood of a partitioned
-model. More precisely, the steps of the MOB algorithm adapted to Beta
+model. More precisely, the steps of the MOB algorithm adapted to beta
 regression are the following, where $c_{ij}$ is the $j$-th partitioning
 variable ($j = 1, \dots, p$) for observation~$i$.
 %
 \begin{enumerate}
-  \item Fit a Beta regression model with parameters $\beta$ and $\gamma$
+  \item Fit a beta regression model with parameters $\beta$ and $\gamma$
         by maximizing the log-likelihood for all observations $y_i$ in the
 	current sample.
   \item Assess whether the parameters $\beta$ and $\gamma$ are stable across
@@ -551,12 +568,12 @@ variable ($j = 1, \dots, p$) for observation~$i$.
 The MOB framework of \cite{betareg:Zeileis+Hothorn+Hornik:2008} is
 generic in that it requires only the specification of a model with
 additive objective function for which a central limit theorem
-holds. This is the case for Beta regression under the usual ML
+holds. This is the case for beta regression under the usual ML
 regularity conditions and the main building blocks that the MOB
 algorithm requires are the contributions to the additive objective
 function (in steps~1 and~3) and its associated score function (in
-step~2). Here, the objective is the log-likelihood $l(\theta)$ and its
-contributions $l_i(\theta)$ are given in \eqref{eq:loglik} . By
+step~2). Here, the objective is the log-likelihood $\ell(\theta)$ and its
+contributions $\ell_i(\theta)$ are given in \eqref{eq:loglik} . By
 \eqref{eq:scores} and using the notation in Section \ref{sec:bias}, the
 corresponding score (or gradient) contributions have the form
 \begin{equation*}
@@ -585,7 +602,7 @@ d_{2,i}\left\{ \mu_i\left(\bar{T}_i -
   $\chi^2$ type test \citep{betareg:Hjort+Koning:2002}. See
   \cite{betareg:Zeileis+Hothorn+Hornik:2008} for further details and
   references.\footnote{An example of M-fluctuation tests for parameter
-    instability (also known as structural change) in Beta regressions
+    instability (also known as structural change) in beta regressions
     is also discussed in \cite{betareg:Zeileis:2006} and replicated in
     \cite{betareg:Cribari-Neto+Zeileis:2010}. However, this uses a
     double-maximum type test statistic, not a $\sup$LM or $\chi^2$
@@ -627,14 +644,16 @@ somewhat different from \fct{betareg} where \code{...} is passed to
 \fct{betareg.control}.)
 
 
-\section{Finite mixtures of Beta regressions}\label{sec:finite-mixtures-beta}
+\pagebreak
+
+\section{Finite mixtures of beta regressions}\label{sec:finite-mixtures-beta}
 
 Finite mixtures are suitable models if the data is assumed to be from
 different groups, but the group memberships are not observed. If
 mixture models are fitted one aims at determining the parameters of
 each group as well as the group sizes. Furthermore, the model can be
 used to estimate from which group each observation is. In the case of
-finite mixtures of Beta regression models the latent groups can be
+finite mixtures of beta regression models the latent groups can be
 assumed to differ in their mean and/or in their
 precision. Furthermore, the group sizes can depend on further
 covariates.
@@ -646,7 +665,7 @@ groups is given by
   g_1^{-1}(x^{\top}\beta_k), g_2^{-1}(z^{\top}\gamma_k)),
 \end{align*}
 where $h(\cdot ; \cdot)$ is the mixture density and $f(y | \mu, \phi)$
-is the density of the Beta distribution using the mean-precision
+is the density of the beta distribution using the mean-precision
 parameterization. Further the component weights $\pi(k ; \cdot)$ are
 nonnegative and sum to one for all $k$. In the following they are
 assumed to be determined by
@@ -658,7 +677,7 @@ with $\alpha_1 \equiv 0$ to ensure identifiability.
 
 \cite{betareg:Smithson+Segale:2009} and
 \cite{betareg:Smithson+Merkle+Verkuilen:2011} consider finite mixtures
-of Beta regression models to analyze priming effects in judgements of
+of beta regression models to analyze priming effects in judgements of
 imprecise probabilities. \cite{betareg:Smithson+Segale:2009} fit
 mixture models where they investigate if priming has an effect on the
 size of the latent groups, i.e., they include the information on
@@ -668,7 +687,7 @@ one component distribution the location parameter is a-priori known
 due to so-called ``anchors''. E.g. for partition priming, an anchor
 would be assumed at position $1/K$ if the respondents are primed to
 believe that there are $K$ possible events. The component distribution
-for this anchor can be either assumed to follow a Beta distribution
+for this anchor can be either assumed to follow a beta distribution
 with known parameters for the mean and the precision or a uniform
 distribution with known support.
 
@@ -687,9 +706,9 @@ likelihood where the missing component memberships are replaced by the
 a-posteriori probabilities. This implies that different mixture models
 only require the implementation of a suitable M-step driver. Function
 \fct{betareg.fit} provides functionality for weighted ML estimation of
-Beta regression models and allows to easily implement the M-step.
+beta regression models and allows to easily implement the M-step.
 
-The function \fct{betamix} allows to fit finite mixtures of Beta
+The function \fct{betamix} allows to fit finite mixtures of beta
 regression models using the package \pkg{betareg}. It has the
 following arguments:
 %
@@ -712,7 +731,7 @@ betamix(formula, data, k, fixed, subset, na.action,
   \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
   specify the repeated runs of the EM algorithm using function
   \fct{stepFlexmix} and which model should be returned.
-\item Because the formula for specifying the Beta regression model is
+\item Because the formula for specifying the beta regression model is
   already a two-part formula a grouping variable can be specified via
   argument \code{ID}.
 \item Further arguments for the component specific model are
@@ -743,7 +762,7 @@ mean_iq <-
          nsmall = 3)
 @
 
-In the following we re-consider an analysis of reading accuracy data
+In the following we reconsider an analysis of reading accuracy data
 for nondyslexic and dyslexic Australian children
 \citep{betareg:Smithson+Verkuilen:2006}. The data consists of
 \Sexpr{nrow(ReadingSkills)} observations of children aged between
@@ -761,17 +780,68 @@ score of $\Sexpr{mean_iq["no"]}$.
 
 \cite{betareg:Smithson+Verkuilen:2006} investigated whether dyslexic
 children have a different score on the reading accuracy test even when
-corrected for IQ score. They fit a Beta regression with main and
+corrected for IQ score. They fit a beta regression with main and
 interaction effects for \code{iq} and \code{dyslexic} for modelling
 the mean and only main effects for both variables for the
 dispersion. Their model as well as the comparison to the results of an
 OLS regression using the logit-transformed \code{accuracy} as response
-are given in \cite{betareg:Cribari-Neto+Zeileis:2010}.
+are given in \cite{betareg:Cribari-Neto+Zeileis:2010}. Here, we
+provide their model visualizations in Figure~\ref{fig:ReadingSkills}
+to briefly highlight the most important findings: In the control group,
+reading skills increase clearly with IQ score while variance clearly decreases.
+In the dyslexic group, reading skills are generally lower and almost
+unaffected by IQ score.
+
+\begin{figure}[t!]
+\centering
+\setkeys{Gin}{width=0.75\textwidth}
+<<ReadingSkills, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
+data("ReadingSkills", package = "betareg")
+rs_ols <- lm(qlogis(accuracy) ~ dyslexia * iq, data = ReadingSkills)
+rs_beta <- betareg(accuracy ~ dyslexia * iq | dyslexia + iq,
+  data = ReadingSkills, hessian = TRUE)
+cl1 <- hcl(c(260, 0), 90, 40)
+cl2 <- hcl(c(260, 0), 10, 95)
+plot(accuracy ~ iq, data = ReadingSkills, col = cl2[as.numeric(dyslexia)],
+  main = "Reading skills data", xlab = "IQ score", ylab = "Reading accuracy",
+  pch = c(19, 17)[as.numeric(dyslexia)], cex = 1.5)
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5,
+  pch = (1:2)[as.numeric(dyslexia)], col = cl1[as.numeric(dyslexia)])
+nd <- data.frame(dyslexia = "no", iq = -30:30/10)
+lines(nd$iq, predict(rs_beta, nd), col = cl1[1], lwd = 2)
+lines(nd$iq, plogis(predict(rs_ols, nd)), col = cl1[1], lty = 2, lwd = 2)
+nd <- data.frame(dyslexia = "yes", iq = -30:30/10)
+lines(nd$iq, predict(rs_beta, nd), col = cl1[2], lwd = 2)
+lines(nd$iq, plogis(predict(rs_ols, nd)), col = cl1[2], lty = 2, lwd = 2)
+legend("topleft", c("control", "dyslexic", "betareg", "lm"),
+  lty = c(NA, NA, 1:2), pch = c(19, 17, NA, NA), lwd = 2,
+  col = c(cl2, 1, 1), bty = "n")
+legend("topleft", c("control", "dyslexic", "betareg", "lm"),
+  lty = c(NA, NA, 1:2), pch = c(1, 2, NA, NA),
+  col = c(cl1, NA, NA), bty = "n")
+@
+\caption{\label{fig:ReadingSkills} Reading skills data from \cite{betareg:Smithson+Verkuilen:2006}:
+Linearly transformed reading accuracy by IQ score and dyslexia status (control, blue vs.\
+dyslexic, red). Fitted curves correspond to beta regression (solid) and OLS
+regression with logit-transformed dependent variable (dashed).}
+\end{figure}
+
+Subsequently, it is first assessed whether the ML inference results in this
+analysis may have been affected by bias. Subsequently, it is illustrated
+how the differences with respect to dyslexia could have been discovered in
+a data-driven way. While in the original study dyslexia has, of course, been of prime
+interest in the model, the data set is used here to illustrate how (a)~the dyslexia
+groups would also have been found by recursive partitioning if dyslexia had just been
+one of many covariates and how (b)~mixture modeling recovers the dyslexia
+groups if that covariable had not been known at all.
+
 
 \subsection{Bias correction and reduction}
 
-Compute all three flavors of models for the model with interactions both in
-the mean and precision equations.
+To investigate whether the results of \cite{betareg:Smithson+Verkuilen:2006}
+may have been affected by biased inference, all three flavors of estimators
+are obtained for the model with interactions (both in
+the mean and precision equations).
 
 <<ReadingSkills-bias>>=
 data("ReadingSkills", package = "betareg")
@@ -786,7 +856,7 @@ rs_br <- betareg(rs_f, data = ReadingSkills, type = "BR")
 \centering
 \begin{tabular}{llrrr}
 \hline
- & & Maximum likelihood & Bias-corrected & Bias-reduced \\ \hline
+ & & Maximum likelihood & Bias correction & Bias reduction \\ \hline
 <<ReadingSkills-bias-table, echo=FALSE, results=tex>>=
 rs_list <- list(rs_ml, rs_bc, rs_br)
 cf <- paste("$", format(round(sapply(rs_list, coef), digits = 3), nsmall = 3), "$\\phantom{)}", sep = "")
@@ -806,64 +876,62 @@ writeLines(apply(cfse, 1, paste, collapse = " & "))
 \end{tabular}
 \caption{\label{tab:ReadingSkills-bias} Comparison of coefficients and standard errors
 (in parentheses) in interaction model for reading skills. The ML estimator from
-\texttt{rs\_ml}, the bias-corrected estimator from
-\texttt{rs\_bc}, the bias-reduced estimator from \texttt{rs\_br} all give very similar results for
+\texttt{rs\_ml}, the BC estimator from \texttt{rs\_bc}, and the BR estimator from \texttt{rs\_br} all give very similar results for
 the mean equation. In the precision equation, main effects are slightly damped and the interaction
-effect slightly amplified when using bias correction/reduction.}
+effect slightly amplified when using BC/BR.}
 \end{table}
 
 
 \begin{figure}[t!]
 \centering
 \setkeys{Gin}{width=\textwidth}
-<<ReadingSkills-phi-plot, fig=TRUE, height=7, width=10, echo=FALSE>>=
-pr_phi <- sapply(list("Maximum Likelihood" = rs_ml,
-                      "Bias Correction" = rs_bc,
-                      "Bias Reduction" = rs_br), predict, type = "precision")
+<<ReadingSkills-phi-plot, fig=TRUE, height=6.5, width=6.5, echo=FALSE>>=
+pr_phi <- sapply(list("Maximum likelihood" = rs_ml,
+                      "Bias correction" = rs_bc,
+                      "Bias reduction" = rs_br), predict, type = "precision")
 pairs(log(pr_phi), panel = panel.smooth)
 @
-\caption{\label{fig:readingskillsbias} Scatterlots of the logarithm of
-  the estimated logarithms of the precision parameters based on the
+\caption{\label{fig:readingskillsbias} Scatterplots of the logarithm of
+  the estimated precision parameters $\log(\phi_i)$ based on the
   maximum likelihood, bias-corrected and bias-reduced estimate.}
 \end{figure}
 
 
-Resulting coefficient estimates, standard errors, and log-likelihood
-are reported in Table~\ref{tab:ReadingSkills-bias}. All three
+The resulting coefficient estimates, standard errors, and log-likelihood
+can be displayed using the \fct{summary} method and are reported
+in Table~\ref{tab:ReadingSkills-bias}. All three
 estimators give very similar results for the mean equation. In the
 precision equation, main effects are slightly damped and the
-interaction effect slightly amplified when using bias
-correction/reduction. Figure~\ref{fig:readingskillsbias} shows the
+interaction effect slightly amplified when using
+BC/BR. Figure~\ref{fig:readingskillsbias} shows the
 scatter plots of the logarithm of the estimated precision parameters
-based on the maximum likelihood, the bias-corrected and the
-bias-reduced estimates. It is apparent that the logarithms of the
+based on the ML, BC, and BR estimates. It is apparent that the logarithms of the
 estimated precision parameters based on the bias-corrected and
 bias-reduced estimates are mildly shrunk towards zero. This is a
-similar but much milder effect to the one described in
-\cite{betareg:Kosmidis+Firth:2010} where substantial upwards bias was
-detected on the maximum likelihood estimator of the precision
-parameter, which in turn causes underestimated asymptotic standard
-errors (note the direct dependence of the expected information matrix
-on the precision parameters in \eqref{eq:expinfo}). The reason that
+similar but much milder effect compared to the one described in
+\cite{betareg:Kosmidis+Firth:2010}. The reason that
 the effect is milder in this particular example relates to the fact
-that bias for the precision parameters is reduced/corrected on the
-log-scale where the maximum likelihood estimator has a more symmetric
-distribution than in the original scale. Appendix~\ref{sec:gasoline}
-replicates the corresponding results in
-\cite{betareg:Kosmidis+Firth:2010} for a Beta regression where the
-upward bias in precision leads to severely overoptimistic estimated
-standard errors for all regression coefficients.
+that bias for the precision parameters is corrected/reduced on the
+log-scale where the ML estimator has a more symmetric
+distribution than on the original scale. To emphasize that BC/BR
+may potentially be crucial for empirical analyses, Appendix~\ref{sec:gasoline}
+replicates the results of \cite{betareg:Kosmidis+Firth:2010} for a
+beta regression where where substantial upwards bias was
+detected for the ML estimator of the precision
+parameter, which in turn causes underestimated asymptotic standard
+errors. (Note the direct dependence of the expected information matrix
+on the precision parameters in \eqref{eq:expinfo}.)
 
 For the reading accuracy data, the similarity of the results in
 Table~\ref{tab:ReadingSkills-bias} between the three different
 estimation methods and Figure \ref{fig:readingskillsbias} are
-reassuring and illustrate that analysis based on the ML estimator
+reassuring and illustrates that analysis based on the ML estimator
 would not be affected by any serious inferential disadvantages.
 
 \subsection{Beta regression tree}
 
 For illustrating the use of model-based recursive partitioning methods
-we assume a Beta regression model with \code{accuracy} as response and
+we assume a beta regression model with \code{accuracy} as response and
 \code{iq} as explanatory variable for the nodes. The score on the
 reading accuracy test is therefore assumed to vary with the nonverbal
 IQ score. In order to assess if also being dyslexic has an influence
@@ -886,7 +954,7 @@ ReadingSkills$x3 <- factor(sample(0:1, n, replace = TRUE))
 
 The model-based tree is fitted using \fct{betatree}. The first
 argument is a formula which specifies the model for the node: We have
-a Beta regression where the mean as well as the dispersion depend on
+a beta regression where the mean as well as the dispersion depend on
 \code{iq} to model \code{accuracy}. The second argument is a formula
 for the symbolic description of the partitioning variables. The
 formulas are evaluated using \code{data}. Additional control arguments
@@ -926,7 +994,7 @@ rs_tree <- betatree(accuracy ~ iq | iq | dyslexia + x1 + x2 + x3,
 The returned object is of class \code{"\Sexpr{class(rs_tree)}"} which
 contains an object of class
 \code{"\Sexpr{class(rs_tree[["mob"]])}"}. All methods for
-\code{"\Sexpr{class(rs_tree[["mob"]])}"} can be re-used, e.g., the
+\code{"\Sexpr{class(rs_tree[["mob"]])}"} can be reused, e.g., the
 \fct{plot} method (see Figure~\ref{fig:betatree}).
 
 <<ReadingSkills-tree3, echo=TRUE>>=
@@ -939,7 +1007,7 @@ order to perform a split, but only variable \code{dyslexia}. This
 indicates that the relationship between the IQ score and the reading
 accuracy doesn not depend on the noise variables which we would
 expect. By contrast, the relationship between these two variables
-differ for dyslexic and nondyslexic children. The Beta regressions
+differ for dyslexic and nondyslexic children. The beta regressions
 fitted two each of the two groups of children are illustrated in the
 two leaf nodes. Note that the fitted models use the IQ score as
 predictor for the mean as well as the dispersion.
@@ -950,7 +1018,7 @@ predictor for the mean as well as the dispersion.
 <<ReadingSkills-tree-plot, fig=TRUE, height=7, width=10, echo=FALSE>>=
 plot(rs_tree)
 @
-\caption{\label{fig:betatree} Partitioned Beta regression model for the
+\caption{\label{fig:betatree} Partitioned beta regression model for the
   \code{ReadingSkills} data.}
 \end{figure}
 
@@ -971,7 +1039,7 @@ sctest(rs_tree)
 coef(rs_tree)
 @
 
-\subsection{Latent class Beta regression}
+\subsection{Latent class beta regression}
 
 In the following we assume that the information if the children are
 dyslexic or not is not available. Modelling the relationship between
@@ -1026,7 +1094,7 @@ best only converge to a local optimum and the initialization
 already determines the result.
 
 The returned fitted model is of class \code{"\Sexpr{class(rs_mix)}"}
-and has methods for \Sexpr{betamix_methods}. These methods re-use
+and has methods for \Sexpr{betamix_methods}. These methods reuse
 functionality already available for finite mixture models directly
 fitted using \fct{flexmix} from package \pkg{flexmix}. The
 \fct{print} method shows the function call as well as provides
@@ -1089,8 +1157,8 @@ reading accuracy independent of IQ score.}
 
 <<ReadingSkills-betamix-plot1, eval = FALSE, echo=FALSE, fig=TRUE>>=
 ix <- as.numeric(ReadingSkills$dyslexia)
-col1 <- hcl(c(0, 260), 90, 40)[ix]
-col2 <- hcl(c(0, 260), 10, 95)[ix]
+col1 <- hcl(c(260, 0), 90, 40)[ix]
+col2 <- hcl(c(260, 0), 10, 95)[ix]
 plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19,
   cex = 1.5, xlim = c(-2, 2), main = "Partitioned model (dyslexia observed)")
 points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
@@ -1103,9 +1171,9 @@ points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
 par(mfrow = c(1, 2))
 ix <- as.numeric(ReadingSkills$dyslexia)
 prob <- 2 * (posterior(rs_mix)[cbind(seq_along(ix), clusters(rs_mix))] - 0.5)
-col3 <- hcl(c(260, 0, 130), 65, 45, fixup = FALSE)
+col3 <- hcl(c(0, 260, 130), 65, 45, fixup = FALSE)
 col1 <- col3[clusters(rs_mix)]
-col2 <- hcl(c(260, 0, 130)[clusters(rs_mix)], 65 * abs(prob)^1.5, 95 - 50 * abs(prob)^1.5, fixup = FALSE)
+col2 <- hcl(c(0, 260, 130)[clusters(rs_mix)], 65 * abs(prob)^1.5, 95 - 50 * abs(prob)^1.5, fixup = FALSE)
 plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5,
   xlim = c(-2, 2), main = "Mixture model (dyslexia unobserved)")
 points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
@@ -1114,23 +1182,26 @@ cf <- rbind(coef(rs_mix, model = "mean", component = 1:2), c(qlogis(0.99), 0))
 for(i in 1:3) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i])
 <<ReadingSkills-betamix-plot1>>
 cf <- coef(rs_tree, model = "mean")
-col3 <- hcl(c(0, 260), 90, 40)
+col3 <- hcl(c(260, 0), 90, 40)
 for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i])
 @
 \caption{\label{fig:betamix} Fitted regression lines for the mixture
   model with three components and the observations shaded according to
   their a-posteriori probabilities (left). Fitted regression lines
-  for the partitioned Beta regression model with shading according to
+  for the partitioned beta regression model with shading according to
   the observed \code{dyslexic} variable where dyslexic and non-dyslexic
   children are in blue and red, respectively (right).}
 \end{figure}
 
 \section{Conclusions}\label{sec:conclusions}
 
+\fixme{still to do}
+
 
 \section*{Acknowledgments}
 
 This research was funded by the Austrian Science Fund (FWF): V170-N18.
+\fixme{indicate that this is for BG?}
 
 \bibliography{betareg}
 
@@ -1140,23 +1211,24 @@ This research was funded by the Austrian Science Fund (FWF): V170-N18.
 
 \section{Bias correction/reduction for gasoline yield data} \label{sec:gasoline}
 
-Replicate results from \cite{betareg:Kosmidis+Firth:2010}
-
-Compute all three flavors of estimators for the fixed precision Beta regression
-model considered in \cite{betareg:Ferrari+Cribari-Neto:2004} and replicated
-in \cite{betareg:Cribari-Neto+Zeileis:2010}.
-
+To illustrate how upward bias in the ML estimator of the precision parameter
+in beta regressions can severely affect inference, results from
+\cite{betareg:Kosmidis+Firth:2010} are replicated. All three flavors of estimators
+(ML, BC, and BR) are computed for the fixed-precision beta regression
+model considered in \cite{betareg:Ferrari+Cribari-Neto:2004} (also replicated
+in \citealp{betareg:Cribari-Neto+Zeileis:2010}):
+%
 <<GasolineYield-bias>>=
 data("GasolineYield", package = "betareg")
 gy <- lapply(c("ML", "BC", "BR"), function(x)
   betareg(yield ~ batch + temp, data = GasolineYield, type = x))
 @
-
+%
 \begin{table}[b!]
 \centering
 \begin{tabular}{lrrrrrr}
   \hline
-  & \multicolumn{2}{c}{Maximum likelihood} & \multicolumn{2}{c}{Bias-corrected} & \multicolumn{2}{c}{Bias-reduced} \\ \hline
+  & \multicolumn{2}{c}{Maximum likelihood} & \multicolumn{2}{c}{Bias correction} & \multicolumn{2}{c}{Bias reduction} \\ \hline
 <<ReadingSkills-bias-table, echo=FALSE, results=tex>>=
 cf <- matrix(paste("$", format(round(sapply(gy, coef), digits = 5), nsmall = 5), "$\\phantom{)}", sep = ""), ncol = 3)
 se <- matrix(gsub(" ", "",
@@ -1173,22 +1245,57 @@ writeLines(apply(cfse, 1, paste, collapse = " & "))
 
 \end{tabular}
 \caption{\label{tab:GasolineYield-bias} Coefficient estimates and standard errors (in parentheses)
-for fixed precision Beta regression models with different types of estimators on gasoline yield data.}
+for fixed-precision beta regression models with identity link and different types of estimators on gasoline yield data.}
 \end{table}
-
+%
 The precision parameter is considerably dampened by bias correction/reduction
-
+%
 <<GasolineYield-phi>>=
 sapply(gy, coef, model = "precision")
 @
-
+%
 while the log-likelihood does not change much
-
+%
 <<GasolineYield-phi>>=
-sapply(gy, coef, model = "precision")
+sapply(gy, logLik)
+@
+%
+This results in much larger standard errors (and hence smaller test statistics
+and larger $p$~values) for all coefficients in the mean equation of the model,
+see Table~\ref{tab:GasolineYield-bias} that replicates \citet[Table~1]{betareg:Kosmidis+Firth:2010}.
+The picture does also not change much when a log-link is used in the precision model,
+see below and Table~\ref{tab:GasolineYield-bias2} replicating \citet[Table~3]{betareg:Kosmidis+Firth:2010}.
+
+<<GasolineYield-bias2>>=
+data("GasolineYield", package = "betareg")
+gy2 <- lapply(c("ML", "BC", "BR"), function(x)
+  betareg(yield ~ batch + temp | 1, data = GasolineYield, type = x))
+sapply(gy2, logLik)
 @
 
-Coefficients and standard errors in Table~\ref{tab:GasolineYield-bias}
+\begin{table}[t!]
+\centering
+\begin{tabular}{lrrrrrr}
+  \hline
+  & \multicolumn{2}{c}{Maximum likelihood} & \multicolumn{2}{c}{Bias correction} & \multicolumn{2}{c}{Bias reduction} \\ \hline
+<<ReadingSkills-bias-table, echo=FALSE, results=tex>>=
+cf <- matrix(paste("$", format(round(sapply(gy2, coef), digits = 5), nsmall = 5), "$\\phantom{)}", sep = ""), ncol = 3)
+se <- matrix(gsub(" ", "",
+  paste("(", format(round(sapply(gy2, function(x) sqrt(diag(vcov(x)))), digits = 5), nsmall = 5), ")", sep = ""),
+  fixed = TRUE), ncol = 3)
+cfse <- cbind(cf[,1], se[,1], cf[,2], se[,2], cf[,3], se[,3])
+cfse <- cbind(
+  c(paste("$\\beta_{", 1:11, "}$", sep = ""), "$\\phi$"),
+  cfse[, 1:5],
+  paste(cfse[,6],
+    c(rep("\\\\", 11), "\\\\ \\hline")))
+writeLines(apply(cfse, 1, paste, collapse = " & "))
+@
+
+\end{tabular}
+\caption{\label{tab:GasolineYield-bias2} Coefficient estimates and standard errors (in parentheses)
+for fixed-precision beta regression models with log link and different types of estimators on gasoline yield data.}
+\end{table}
 
 
 \end{appendix}
