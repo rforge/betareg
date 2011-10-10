@@ -247,7 +247,7 @@ intervals with coverage far below the nominal levels).
 
 The results in \cite{betareg:Kosmidis+Firth:2010} are extended here to
 cover the case of models that involve a regression part for the
-dipersion parameters as shown in Equation~\ref{eq:link2}.
+dispersion parameters as shown in Equation~\ref{eq:link2}.
 
 \subsection{Generic framework} \label{sub:iteration}
 
@@ -1158,7 +1158,7 @@ using model-based recursive partitioning.
 
 The fitted regression lines for the dyslexic children as well as the
 latent group capturing the dyslexic children (component~1) are very
-similar as indicated by the comparsion of the two red lines. By
+similar as indicated by the comparison of the two red lines. By
 contrast the group of nondyslexic children is modelled
 differently. With observed dyslexia, the heterogeneity in the control
 group is captured by differences in the precision equation, i.e., in
@@ -1210,7 +1210,7 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
 The new extensions of the package \pkg{betareg} allow to go beyond
 classical ML inference when fitting beta regression models. Bias
 correction / reduction of the ML estimates helps in performing more
-reliable inference. Recursive partitiong methods and finite mixture
+reliable inference. Recursive partitioning methods and finite mixture
 models enable the user to investigate heterogeneity -- observed as well
 as unobserved -- in the regression model fitted to the whole sample.
 
@@ -1220,7 +1220,7 @@ estimators does not require them to learn about any new functions,
 only the \code{type} argument when fitting the model using
 \fct{betareg} needs to be modified. To fit beta regression trees as
 well as finite mixtures of beta regressions two new functions are
-available in package \pkg{betareg}. Thses functions reuse
+available in package \pkg{betareg}. These functions reuse
 functionality from packages \pkg{party} and \pkg{flexmix}. Their
 interface is aimed to be as similar as possible to \fct{betareg} in
 order to facilitate the use for those who are already familiar with
@@ -1230,7 +1230,7 @@ The implementation of the extensions required changes in the fitting
 function \fct{betareg.fit} in order to allow quasi Fisher scoring
 iterations to follow ML estimation using \fct{optim}. This
 functionality can now be either used to obtain improved ML estimates or
-the bias corrected / reducted versions of the ML estimates. For
+the bias corrected / reduced versions of the ML estimates. For
 modelling heterogeneity \fct{betareg.fit} is reused to fit the models
 in the nodes in the case of beta regression trees and in the M-step
 for finite mixture models. Only a small amount of additional code,
