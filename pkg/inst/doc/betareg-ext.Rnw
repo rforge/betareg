@@ -108,11 +108,11 @@ response variables may stem from rates, proportions, concentrations,
 etc. A double index regression allowing to model the mean as well as
 the precision through covariates was introduced by
 \cite{betareg:Ferrari+Cribari-Neto:2004} along with the extensions by
-by \cite{betareg:Smithson+Verkuilen:2006} and
+\cite{betareg:Smithson+Verkuilen:2006} and
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}.
 \cite{betareg:Ferrari+Cribari-Neto:2004} employed an alternative
 parametrization of the beta distribution characterizing more easily the mean
-variance.  In this parameterization the beta distribution
+and the variance.  In this parameterization the beta distribution
 has the density
 %
 \begin{equation} \label{eq:density}
@@ -305,11 +305,11 @@ bias-corrected estimator $\theta^\dagger$ of $\theta$ defined as
 which also has smaller asymptotic bias compared to the ML
 estimator \citep{betareg:Efron:1975}.
 
-Hence, iteration provides a unified framework for implementing all three types of
+Hence, the quasi Fisher scoring iteration provides a unified framework for implementing all three types of
 estimators -- ML, BC, and BR -- by merely
 deciding whether the summand $b\left(\theta^{(j)}\right)$ is absent or
 present in the right hand side of \eqref{eq:iteration}, and whether
-more than one iterations should be allowed in the latter case.
+more than one iteration should be allowed in the latter case.
 
 
 \subsection{BC/BR for beta regressions}
@@ -326,7 +326,7 @@ $Q_t(\theta)$ shown in \eqref{eq:P} and \eqref{eq:Q}. Based on these, all matrix
 multiplications and inversions can be performed numerically during the
 iterative procedure.
 
-The fact that all the aforementioned quantities depend on $Z$ and $X$,
+The fact that all the aforementioned quantities depend on $X$ and $Z$,
 and that $S(\theta)$ and $I(\theta)$ depend additionally on the random
 variables $Y_i$ $(i = 1, \ldots, n)$ has been concealed here merely
 for notational simplicity.  The same convention is used for the
@@ -384,7 +384,7 @@ I(\theta) = F(\theta) - \left[
 \begin{array}{cc}
   X^\top \Phi D_1' \diag\{\bar{T} - \bar{U}\}X & X^\top D_1\diag\{\bar{T} - \bar{U}\}D_2Z \\
   Z^\top D_2\diag\{\bar{T} - \bar{U}\}D_1X & Z^\top D_2'\left(M\diag\left\{\bar{T} -
-      \bar{U}\} + \diag\{\bar{U}\right)Z \right\} \\
+      \bar{U}\} + \diag\{\bar{U}\right\}\right)Z \\
 \end{array}
 \right] \, ,
 \end{equation}
@@ -400,21 +400,21 @@ F(\theta) = \left[
 \right]\, ,
 \end{equation}
 is the expected information on $\theta$, because the second summand in
-the right hand side of \eqref{eq:obsinfo} depends linearly to centred
-sufficient statistics and hence has expectation zero. Here, $1_n$ is
-the $n \times n$ identity matrix, $D_1' = \diag\{d'_{1,1}, \ldots,
-d'_{1,n}\}$ with $d'_{1,i} = \hderstraight{^2\mu_i}{\eta_i^2}$ and
-$D_2' = \diag\{d'_{2,1}, \ldots, d'_{2,n}\}$ with $d'_{2,i} =
+the right hand side of \eqref{eq:obsinfo} depends linearly on the
+centred sufficient statistics and hence has expectation zero. Here,
+$1_n$ is the $n \times n$ identity matrix, $D_1' = \diag\{d'_{1,1},
+\ldots, d'_{1,n}\}$ with $d'_{1,i} = \hderstraight{^2\mu_i}{\eta_i^2}$
+and $D_2' = \diag\{d'_{2,1}, \ldots, d'_{2,n}\}$ with $d'_{2,i} =
 \hderstraight{^2\phi_i}{\zeta_i^2}$ $(i = 1, \ldots, n)$. Furthermore,
 $K_2 = \diag\{\kappa_{2,1}, \ldots, \kappa_{2,n}\}$, where
 $\kappa_{2,i} = \VAR\left(\bar{T}_i -\bar{U}_i\right) =
-\psi^{(1)}(\phi_i\mu_i) + \psi^{(1)}(\phi_i(1-\mu_i))$ and
+\psi^{(1)}(\phi_i\mu_i) + \psi^{(1)}(\phi_i(1-\mu_i))$ for $i =1,
+\ldots, n$ and
 \begin{align*}
   \Psi_r & = \diag\left\{\psi^{(r)}(\phi_1(1-\mu_1)), \ldots,
   \psi^{(r)}(\phi_n(1-\mu_n))\right\} \, ,\\
   \Omega_r & = \diag\left\{\psi^{(r)}(\phi_1), \ldots,
-  \psi^{(r)}(\phi_n)\right\}\quad (r = 0, 1, \ldots; i =1,
-\ldots, n)\, .
+  \psi^{(r)}(\phi_n)\right\}\quad (r = 0, 1, \ldots)\, .
 \end{align*}
 
 Some tedious but straightforward algebra, along with direct use of the
@@ -512,7 +512,7 @@ numerical maximization of the likelihood (for \code{type = "ML"} or
 \code{type = "BR"}) as detailed in Section~\ref{sub:iteration}. To control
 the details of the (quasi) Fisher scoring, \fct{betareg.control} takes
 two additional arguments \code{fsmaxit = 200} and \code{fstol = 1e-8}
-controlling the maximal number of iterations and convergance
+controlling the maximal number of iterations and convergence
 tolerance, respectively.  If the number of iterations is set to zero
 (\code{fsmaxit = 0}), no Fisher scoring is carried out (allowed only
 for \code{type = "ML"} and \code{"BC"}) and thus exactly replicating
@@ -667,7 +667,7 @@ groups is given by
 where $h(\cdot ; \cdot)$ is the mixture density and $f(y | \mu, \phi)$
 is the density of the beta distribution using the mean-precision
 parameterization. Further the component weights $\pi(k ; \cdot)$ are
-nonnegative and sum to one for all $k$. In the following they are
+nonnegative for all $k$ and sum to one. In the following they are
 assumed to be determined by
 \begin{align*}
   \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{w^{\top}\alpha_k\}}
@@ -697,12 +697,12 @@ estimating finite mixture models using the EM algorithm. The EM
 algorithm is an iterative method for ML estimation in a missing data
 setting. The missing data for mixture models is the information to
 which component an observation belongs. The EM algorithm exploits the
-fact that the complete likelihood for the data as well as the missing
+fact that the complete-data log-likelihood for the data as well as the missing
 information is easier to maximize.  In general for mixture models the
 a-posteriori probabilities of an observation to be from each component
 given the current parameter estimates are determined in the
-E-steop. The M-step then consists of maximising the complete
-likelihood where the missing component memberships are replaced by the
+E-step. The M-step then consists of maximising the complete-data
+log-likelihood where the missing component memberships are replaced by the
 a-posteriori probabilities. This implies that different mixture models
 only require the implementation of a suitable M-step driver. Function
 \fct{betareg.fit} provides functionality for weighted ML estimation of
@@ -916,7 +916,7 @@ log-scale where the ML estimator has a more symmetric
 distribution than on the original scale. To emphasize that BC/BR
 may potentially be crucial for empirical analyses, Appendix~\ref{sec:gasoline}
 replicates the results of \cite{betareg:Kosmidis+Firth:2010} for a
-beta regression where where substantial upwards bias was
+beta regression where substantial upwards bias was
 detected for the ML estimator of the precision
 parameter, which in turn causes underestimated asymptotic standard
 errors. (Note the direct dependence of the expected information matrix
@@ -960,8 +960,7 @@ for the symbolic description of the partitioning variables. The
 formulas are evaluated using \code{data}. Additional control arguments
 for the recursive partitioning method used in \fct{mob\_control} can
 be specified via the \code{\dots} argument. In this case the minimum
-number of observations in a node in order to allow a split is given by
-\code{minsplit = 10}.
+number of observations in a node is given by \code{minsplit = 10}.
 %
 <<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
 rs_tree <- betatree(accuracy ~ iq | iq,
@@ -1005,10 +1004,10 @@ Figure~\ref{fig:betatree} indicates that the data was only split into
 two sub-samples. None of the three noise variables was selected in
 order to perform a split, but only variable \code{dyslexia}. This
 indicates that the relationship between the IQ score and the reading
-accuracy doesn not depend on the noise variables which we would
+accuracy does not depend on the noise variables which we would
 expect. By contrast, the relationship between these two variables
 differ for dyslexic and nondyslexic children. The beta regressions
-fitted two each of the two groups of children are illustrated in the
+fitted to each of the two groups of children are illustrated in the
 two leaf nodes. Note that the fitted models use the IQ score as
 predictor for the mean as well as the dispersion.
 
@@ -1022,18 +1021,29 @@ plot(rs_tree)
   \code{ReadingSkills} data.}
 \end{figure}
 
-\fixme{One could add the information about the significance tests.
-In node~1 only dyslexia shows significant instability while the
-noise variables are all nonsignificant. In node~2, dyslexia cannot be
-used for splitting anymore and all other variables are still nonsignificant.
-With only 19~observations, node~3 is considered too small to warrant
-further splitting and hence no tests are carried out.}
+In each node the parameter instabilities for the partitioning
+variables are determined if the resulting node size is sufficiently
+large. The test statistics together with the corresponding $p$ values
+can be obtained using function \fct{sctest}. This indicates if more
+than one partitioning variable indicated significant instability and
+the reason for performing no further split, i.e., either because all
+parameter instability tests were insignificant (see node~2) or because
+the node size is too small for a further split (see node~3).
 
 <<ReadingSkills-tree-sctest>>=
 sctest(rs_tree)
 @
 
-\fixme{maybe also show something else of the fitted model, e.g.}
+In node~1 only dyslexia shows significant instability while the noise
+variables are all nonsignificant. In node~2, dyslexia cannot be used
+for splitting anymore and all other variables are still
+nonsignificant.  With only 19~observations, node~3 is considered too
+small to warrant further splitting given that \code{minsplit=10}
+requires that each node contains at least 10 observations and hence no
+tests are carried out.
+
+Function \fct{coef} allows to inspect the parameters of the fitted
+models in the terminal nodes (nodes~2 and 3). 
 
 <<ReadingSkills-tree-coef>>=
 coef(rs_tree)
@@ -1047,22 +1057,20 @@ reading accuracy and IQ score is now complicated by the fact that
 latent groups exist in the data where this relationship is
 different.
 
-\fixme{Comment on: The group of non-dyslexic children is challenging
-as it has rather high variance induced by two subgroups -- one with
-essentially perfect accuracy and one with strongly increasing accuracy
-by IQ score. In a model with observed \code{dyslexia}, this can be
-captured by different variances in the two components. However, if
-\code{dyslexia} is unobserved and a mixture model is employed to
-infer the groups, then this is problematic. The subgroup with perfect
-reading score will typically be selected as one component but then
-not all parameters are identified. To adress this \dots}
-
-We fit a finite mixture model with three components where
-one component is used to capture those children who have a perfect
-reading accuracy test score. Following
-\cite{betareg:Smithson+Merkle+Verkuilen:2011} this additional
-component is assumed to follow a uniform distribution on the interval
-\code{coef} $\pm$ \code{delta}.
+The group of nondyslexic children is challenging as it consists of two
+subgroups -- one with essentially perfect accuracy and one with
+strongly increasing accuracy by IQ score. In a model with observed
+\code{dyslexia}, this can be captured by different variances in the
+two groups. However, if \code{dyslexia} is unobserved and a
+mixture model is employed to infer the groups, then this is
+problematic. The subgroup with perfect reading score will typically be
+selected as one component where the variance converges to zero leading
+to an unbounded likelihood. To address this we fit a finite mixture
+model with three components where one component is used to capture
+those children who have a perfect reading accuracy test
+score. Following \cite{betareg:Smithson+Merkle+Verkuilen:2011} this
+additional component is assumed to follow a uniform distribution on
+the interval \code{coef} $\pm$ \code{delta}.
 %
 <<ReadingSkills-mix, echo=TRUE, eval=FALSE>>=
 rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
@@ -1100,7 +1108,7 @@ fitted using \fct{flexmix} from package \pkg{flexmix}. The
 \fct{print} method shows the function call as well as provides
 information on how many observations are assigned to each of the
 components according to the maximum a-posteriori
-probability. Furthermore it is indicated if the EM algorith converged
+probability. Furthermore it is indicated if the EM algorithm converged
 or not and in the case of convergence how many iterations were
 performed.
 
@@ -1139,21 +1147,25 @@ table(clusters(rs_mix), ReadingSkills$dyslexia)
 The fitted mean regression lines for each of the three components are
 provided in Figure~\ref{fig:betamix} (left). The observations are
 shaded according to their a-posteriori probabilities. The stronger the
-shading is in blue the higher is the a-posteriori probability for this
-observation to be from component 1. Red shading corresponds to the
+shading is in red the higher is the a-posteriori probability for this
+observation to be from component 1. Blue shading corresponds to the
 second component and green to the third. For comparison on the right
-the mean regression lines for the dyslexic and non-dyslexic children
+the mean regression lines for the dyslexic and nondyslexic children
 of the model where an interaction with the variable \code{dyslexic} is
 specified in the regressions for mean and precision are
 provided. These mean regression lines are equivalent to those obtained
 using model-based recursive partitioning.
 
-\fixme{Comment on: With observed dyslexia, the increased heterogeneity
-in the control group can be captured by differences in the precision
-equation, i.e., in the variance. However, for unobserved dyslexia, it
-is more appropriate to capture the increased heterogeneity in the
-control group by two components, one of which corresponds to perfect
-reading accuracy independent of IQ score.}
+The fitted regression lines for the dyslexic children as well as the
+latent group capturing the dyslexic children (component~1) are very
+similar as indicated by the comparsion of the two red lines. By
+contrast the group of nondyslexic children is modelled
+differently. With observed dyslexia, the heterogeneity in the control
+group is captured by differences in the precision equation, i.e., in
+the variance. However, for unobserved dyslexia, it is more appropriate
+to capture the increased heterogeneity in the control group by two
+components, one of which corresponds to perfect reading accuracy
+independent of IQ score.
 
 <<ReadingSkills-betamix-plot1, eval = FALSE, echo=FALSE, fig=TRUE>>=
 ix <- as.numeric(ReadingSkills$dyslexia)
@@ -1189,7 +1201,7 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
   model with three components and the observations shaded according to
   their a-posteriori probabilities (left). Fitted regression lines
   for the partitioned beta regression model with shading according to
-  the observed \code{dyslexic} variable where dyslexic and non-dyslexic
+  the observed \code{dyslexic} variable where nondyslexic and dyslexic
   children are in blue and red, respectively (right).}
 \end{figure}
 
@@ -1200,8 +1212,8 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
 
 \section*{Acknowledgments}
 
-This research was funded by the Austrian Science Fund (FWF): V170-N18.
-\fixme{indicate that this is for BG?}
+BG gratefully acknowledges financial support from the Austrian Science
+Fund (FWF): V170-N18.
 
 \bibliography{betareg}
 
@@ -1294,7 +1306,7 @@ writeLines(apply(cfse, 1, paste, collapse = " & "))
 
 \end{tabular}
 \caption{\label{tab:GasolineYield-bias2} Coefficient estimates and standard errors (in parentheses)
-for fixed-precision beta regression models with log link and different types of estimators on gasoline yield data.}
+for fixed-precision beta regression models with log-link and different types of estimators on gasoline yield data.}
 \end{table}
 
 
