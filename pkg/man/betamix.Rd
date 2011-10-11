@@ -22,12 +22,12 @@
 
 \usage{
 betamix(formula, data, k, subset, na.action, 
-        link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
-        link.phi = "log", 
-        control = betareg.control(...),
-        cluster = NULL, FLXconcomitant = NULL, FLXcontrol = list(), 
-        verbose = FALSE, nstart = if (missing(cluster)) 3 else 1, which = "BIC", 
-        ID, fixed, extra_components, ...)
+  link = c("logit", "probit", "cloglog", "cauchit", "log",
+    "loglog"), link.phi = "log",
+  control = betareg.control(...), cluster = NULL,
+  FLXconcomitant = NULL, FLXcontrol = list(), verbose = FALSE,
+  nstart = if (missing(cluster)) 3 else 1, which = "BIC", 
+  ID, fixed, extra_components, ...)
 
 extraComponent(type = c("uniform", "betareg"), coef, delta,
   link = "logit", link.phi = "log")
@@ -151,18 +151,25 @@ rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
 
 ## visualize result
 ## intensities based on posterior probabilities
-prob <- 2 * (posterior(rs_mix)[cbind(1:nrow(ReadingSkills), clusters(rs_mix))] - 0.5)
+prob <- 2 * (posterior(rs_mix)[cbind(1:nrow(ReadingSkills),
+   clusters(rs_mix))] - 0.5)
 ## associated HCL colors
 col0 <- hcl(c(260, 0, 130), 65, 45, fixup = FALSE)
 col1 <- col0[clusters(rs_mix)]
-col2 <- hcl(c(260, 0, 130)[clusters(rs_mix)], 65 * abs(prob)^1.5, 95 - 50 * abs(prob)^1.5, fixup = FALSE)
+col2 <- hcl(c(260, 0, 130)[clusters(rs_mix)], 65 * abs(prob)^1.5,
+   95 - 50 * abs(prob)^1.5, fixup = FALSE)
 ## scatter plot
-plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19, cex = 1.5, xlim = c(-2, 2))
-points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1, col = col1)
+plot(accuracy ~ iq, data = ReadingSkills, col = col2, pch = 19,
+   cex = 1.5, xlim = c(-2, 2))
+points(accuracy ~ iq, data = ReadingSkills, cex = 1.5, pch = 1,
+   col = col1)
 ## fitted lines
 iq <- -30:30/10
-cf <- rbind(coef(rs_mix, model = "mean", component = 1:2), c(qlogis(0.99), 0))
-for(i in 1:3) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col0[i]) 
+cf <- rbind(coef(rs_mix, model = "mean", component = 1:2),
+   c(qlogis(0.99), 0))
+for(i in 1:3)
+   lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2,
+         col = col0[i]) 
 }
 
 \keyword{regression}

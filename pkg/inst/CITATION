@@ -15,7 +15,7 @@ citEntry(entry = "Article",
   paste("Francisco Cribari-Neto, Achim Zeileis (2010).",
         "Beta Regression in R.",
         "Journal of Statistical Software 34(2), 1-24.",
-        "URL http://www.jstatsoft.org/v34/i02/.")
+        "URL http://www.jstatsoft.org/v34/i02/."),
 
   header       = "If you use betareg(), please cite:"
 )

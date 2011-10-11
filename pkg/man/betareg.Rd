@@ -15,8 +15,9 @@
 \usage{
 betareg(formula, data, subset, na.action, weights, offset,
   link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
-  link.phi = NULL, type = c("ML", "BC", "BR"), control = betareg.control(\dots),
-  model = TRUE, y = TRUE, x = FALSE, \dots)
+  link.phi = NULL, type = c("ML", "BC", "BR"),
+  control = betareg.control(\dots), model = TRUE,
+  y = TRUE, x = FALSE, \dots)
 
 betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   link = "logit", link.phi = "log", type = "ML", control = betareg.control())
@@ -189,7 +190,7 @@ Kosmidis, I., and Firth, D. (2010).
 
 Simas, A.B., Barreto-Souza, W., and Rocha, A.V. (2010).
   Improved Estimators for a General Class of Beta Regression Models.
-  \emph{Computational Statistics \& Data Analysis}, \bold{54}(2), 348--366.
+  \emph{Computational Statistics & Data Analysis}, \bold{54}(2), 348--366.
 }
 
 \seealso{\code{\link{summary.betareg}}, \code{\link{predict.betareg}}, \code{\link{residuals.betareg}},
