@@ -24,8 +24,8 @@ betareg.control(phi = TRUE, method = "BFGS", maxit = 5000,
   \item{trace}{logical or integer controlling whether tracing information on  
     the progress of the optimization should be produced (passed to \code{\link[stats]{optim}}).}
   \item{hessian}{logical. Should the numerical Hessian matrix from the \code{optim} output
-    be used for estimation of the covariance matrix? If \code{FALSE} (the default),
-    the analytical solution is employed.}
+    be used for estimation of the covariance matrix? By default the analytical solution is employed.
+    For details see below.}
   \item{start}{an optional vector with starting values for all parameters (including phi).}
   \item{fsmaxit}{integer specifying maximal number of additional (quasi) Fisher scoring
     iterations. For details see below.}
@@ -48,8 +48,10 @@ betareg.control(phi = TRUE, method = "BFGS", maxit = 5000,
 
   Starting values can be supplied via \code{start} or estimated by
   \code{\link[stats:lmfit]{lm.wfit}}, using the link-transformed response.
-  Covariances are derived analytically (if \code{hessian = FALSE}, the default) or
-  numerically using the Hessian matrix returned by \code{\link[stats]{optim}}.
+  Covariances are in general derived analytically. Only if \code{type = "ML"} and
+  \code{hessian = TRUE}, they are determined numerically using the Hessian matrix
+  returned by \code{optim}. In the latter case no Fisher scoring iterations are
+  performed.
   
   The main parameters of interest are the coefficients in the linear predictor of the
   model and the additional precision parameter phi which can either
