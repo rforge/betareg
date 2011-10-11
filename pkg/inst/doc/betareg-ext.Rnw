@@ -28,9 +28,9 @@
 
 \Abstract{Beta regression -- an increasingly popular approach for
   modeling rates and proportions -- is extended in various directions:
-  i) bias correction/reduction of the maximum likelihood estimator,
-  ii) beta regression tree models by means of recursive partitioning,
-  iii) latent class beta regression by means of finite mixture
+  (a)~bias correction/reduction of the maximum likelihood estimator,
+  (b)~beta regression tree models by means of recursive partitioning,
+  (c)~latent class beta regression by means of finite mixture
   models. All three extensions may be of importance for enhancing the
   beta regression toolbox in practice to provide more reliable
   inference and capture both observed and unobserved/latent
@@ -46,7 +46,8 @@
   model-based recursive partioning, and finite mixture models,
   respectively. Specifically, the new functions \fct{betatree} and
   \fct{betamix} reuse the object-oriented flexible implementation from
-  the \proglang{R} packages \pkg{party} and \pkg{flexmix}.  }
+  the \proglang{R} packages \pkg{party} and \pkg{flexmix}, respectively.
+}
 
 \Address{
   Bettina Gr\"un\\
@@ -130,7 +131,7 @@ variance $\VAR(Y) = \mu(1-\mu)/(1+\phi)$ so that $\phi$ can be seen as a
 precision parameter.
 
 The double index beta regression model is specified in the following
-way. Given observations on $n$ independent beta distributed
+way. Given observations on $n$ independent beta-distributed
 random variables $Y_i$ ($i = 1, \dots, n$), the corresponding parameters
 $\mu_i$ and $\phi_i$ are linked to linear predictors $\eta_i$ and $\zeta_i$
 as follows
@@ -138,11 +139,11 @@ as follows
   g_1(\mu_i) & = \eta_i =   x_i^\top \beta \, , \label{eq:link1}  \\
   g_2(\phi_i) & = \zeta_i =   z_i^\top \gamma\, , \label{eq:link2}
 \end{align}
-where $x_i$ and $z_i$ are $p$ and $q$ dimensional vectors of
+where $x_i$ and $z_i$ are $p$- and $q$-dimensional vectors of
 covariates observed along with $Y_i$ $(i = 1, \ldots, n)$, and $\beta =
 (\beta_1, \ldots, \beta_p)^\top$, $\gamma = (\gamma_1, \ldots, \gamma_q)^\top$
-are the vectors of parameters associated with the means and the
-precisions, respectively. The functions $g_1(.)$ and $g_2(.)$ are monotonic link
+are the vectors of coefficients associated with the means and the
+precisions, respectively. The functions $g_1(\cdot)$ and $g_2(\cdot)$ are monotonic link
 functions, preferably with the property of mapping the range of $\mu_i$
 $(0, 1)$ and $\phi_i$ $(0, \infty)$, respectively, to the real line.
 Suitable candidates for $g_1(\cdot)$ are the
@@ -164,12 +165,12 @@ beta regressions in its main model fitting function \fct{betareg}. The
 interface as well as the fitted model objects are designed to be
 similar to those from \fct{glm}. The model specification is via a
 \code{formula} plus \code{data}. Because two types of covariates need
-to be distinguished a two part formula is allowed by using
+to be distinguished a two-part formula is allowed based on
 functionality provided by the \pkg{Formula} package
-\citep[][]{betareg:Zeileis+Croissant:2010}; for example, \code{y ~ x1
+\citep[][]{betareg:Zeileis+Croissant:2010}. For example, \code{y ~ x1
   + x2 + x3 | z1 + z2} would assign the covariates \code{x1},
-\code{x2}, and \code{x3} to the mean expression \eqref{eq:link1} and
-\code{z1} and \code{z2} to the precision expression \eqref{eq:link2},
+\code{x2}, and \code{x3} to the mean equation~\eqref{eq:link1} and
+\code{z1} and \code{z2} to the precision equation~\eqref{eq:link2},
 respectively.  Function \fct{betareg} internally uses function
 \fct{optim} as a general purpose optimizer to maximize the
 log-likelihood. The fitted model has methods for several extractor
@@ -178,7 +179,7 @@ functions, e.g., \fct{coef}, \fct{vcov}, \fct{residuals},
 \fct{summary}, \fct{AIC}, \fct{confint}. Further methods are available
 for functions from \pkg{lmtest} \citep{betareg:Zeileis+Hothorn:2002}
 and \pkg{car} \citep{betareg:Fox+Weisberg:2011}, e.g., \fct{lrtest},
-\fct{waldtest}, \fct{coeftest} and \fct{linearHypothesis}. Multiple
+\fct{waldtest}, \fct{coeftest}, and \fct{linearHypothesis}. Multiple
 testing is possible via package \pkg{multcomp}
 \citep{betareg:Hothorn+Bretz+Westfall:2008} and structural change
 tests can be performed using package \pkg{strucchange}
@@ -213,10 +214,10 @@ mixture models \citep[see e.g.,][]{betareg:McLachlan+Peel:2000,
   betareg:Fruehwirth-Schnatter:2006}, are applied to beta
 regressions. The idea for both techniques is to capture situations in
 which the regression relationships vary across groups in the
-population.  If variables can be identified which are directly related
+population.  If variables can be identified which are related
 to these groups, one may be able to include them directly in the
-regression. However, i) this may lead to rather complex and hard to
-interpret models, and ii) unnecessary complexity is introduced if the
+regression. However, (a)~this may lead to rather complex and hard to
+interpret models, and (b)~unnecessary complexity is introduced if the
 differences are only present in a subset of the combined groups
 induced by several variables.  Model-based recursive partitioning is
 an alternative approach which avoids these drawbacks. Furthermore, if
@@ -257,8 +258,8 @@ over-optimistic Wald-type inferences (e.g., confidence intervals with
 coverage far below the nominal levels).
 
 The results in \cite{betareg:Kosmidis+Firth:2010} are extended here to
-cover the case of models that involve a regression part for the
-dispersion parameters as shown in expression~\ref{eq:link2}.
+cover not only the case of constant $\phi$ but also a regression part for the
+dispersion parameters as shown in Equation~\ref{eq:link2}.
 
 \subsection{Generic framework} \label{sub:iteration}
 
@@ -291,7 +292,7 @@ respect to $\theta$).
 
 The quasi Fisher scoring iteration that has been developed in
 \cite{betareg:Kosmidis+Firth:2010} attempts to solve
-equation~\ref{eq:adjest}. Specifically, at the $j$-th step of the iterative
+Equation~\ref{eq:adjest}. Specifically, at the $j$-th step of the iterative
 procedure, the current value $\theta^{(j)}$ of the parameter vector is
 updated to $\theta^{(j+1)}$ by
 \begin{equation}
@@ -533,7 +534,7 @@ for \code{type = "ML"} and \code{"BC"}) and thus exactly replicating
 results from previous versions of \pkg{betareg}.
 
 
-\section{Beta regression trees}
+\section{Beta regression trees} \label{sec:tree}
 \label{sec:trees}
 Model-based recursive partitioning
 \citep[MOB,][]{betareg:Zeileis+Hothorn+Hornik:2008} builds on the more
@@ -554,14 +555,14 @@ partitioning of beta regressions, called \dquote{beta regression
   trees} for short.  The aim is to capture differences in the
 distribution that are not yet adequately described by the regressor
 variables through a forward search.  Basically, the approach proceeds
-by i) fitting a beta regression model, ii) assessing whether its
-parameters are stable across all partitioning variables, iii)
-splitting the sample along the partitioning variable associated with
-the highest parameter instability, iv) repeating these steps until
+by (a)~fitting a beta regression model, (b)~assessing whether its
+parameters are stable across all partitioning variables,
+(c)~splitting the sample along the partitioning variable associated with
+the highest parameter instability, (d)~repeating these steps until
 some stopping criterion is met. Thus, interactions and nonlinearities
 can be incorporated by locally maximizing the likelihood of a
 partitioned model. More precisely and denoting $c_{ij}$ the $j$-th
-partitioning variable ($j = 1, \dots, p$) for observation $i$, the
+partitioning variable ($j = 1, \dots, l$) for observation $i$, the
 steps of the MOB algorithm adapted to beta regression are as follows.
 %
 \begin{enumerate}
@@ -589,7 +590,7 @@ algorithm requires are the contributions to the additive objective
 function (in steps 1 and 3) and to the associated score function (in
 step 2). For Beta regressions, the objective is the log-likelihood
 $\ell(\theta)$ and its contributions $\ell_i(\theta)$ are given in
-\eqref{eq:loglik} . By \eqref{eq:scores} and using the notation in
+\eqref{eq:loglik}. By \eqref{eq:scores} and using the notation in
 Section \ref{sec:bias}, the corresponding score (or gradient)
 contributions have the form
 \begin{equation*}
@@ -635,9 +636,10 @@ Beta regression trees are implemented in the \pkg{betareg} package in function
 %
 Essentially, almost all arguments work as for the basic \fct{betareg} function.
 The main difference is that a \code{partition} formula (without left-hand side),
-such as \code{~ c1 + c2 + c3} has to be provided to specify the partitioning variables $c_i$.
+such as \code{~ c1 + c2 + c3} has to be provided to specify the vector of partitioning variables
+$c_i = (c_{i1}, \dots, c_{il})^\top$.
 As an alternative, \code{partition} may be omitted when \code{formula} has three parts
-on the right-hand side, such as \code{y ~ x1 + z2 | z1 | c1 + c2 + c3}, specifying
+on the right-hand side, such as \code{y ~ x1 + x2 | z1 | c1 + c2 + c3}, specifying
 mean regressors $x_i$, dispersion regressors $z_i$, and partitioning variables $c_i$,
 respectively.
 
@@ -652,7 +654,7 @@ extractor functions are available for the optimized
 log-likelihood \eqref{eq:loglik} and the score function
 \eqref{eq:scores} at the estimated parameters. For model fitting
 \fct{betareg.fit} is employed (through a suitable convenience
-interface call \fct{betaReg}) and for extractions the \fct{logLik} and
+interface called \fct{betaReg}) and for extractions the \fct{logLik} and
 \fct{estfun} methods \citep[see also][]{betareg:Zeileis:2006a} are
 leveraged. To control details of the MOB algorithm -- such as the
 significance level and the minimal subsample size in step~4 -- the
@@ -663,7 +665,7 @@ somewhat different from \fct{betareg} where \code{...} is passed to
 
 \pagebreak
 
-\section{Finite mixtures of beta regressions}\label{sec:finite-mixtures-beta}
+\section{Finite mixtures of beta regressions} \label{sec:mix}
 
 Finite mixtures are suitable models if the data is assumed to be from
 different groups, but the group memberships are not observed. If
@@ -683,14 +685,15 @@ groups is given by
 \end{align*}
 where $h(\cdot ; \cdot)$ is the mixture density and $f(y | \mu, \phi)$
 is the density of the beta distribution using the mean-precision
-parameterization. Further the component weights $\pi(k ; \cdot)$ are
+parameterization from Equation~\ref{eq:density}. Further the component weights $\pi(k ; \cdot)$ are
 nonnegative for all $k$ and sum to one. In the following they are
-assumed to be determined by
+assumed to be determined from a vector of covariates $c$ by
 \begin{align*}
-  \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{w^{\top}\alpha_k\}}
-  {\sum_{u=1}^K\textrm{exp}\{w^{\top}\alpha_u\}}
+  \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{c^{\top}\alpha_k\}}
+  {\sum_{u=1}^K\textrm{exp}\{c^{\top}\alpha_u\}}
 \end{align*}
-with $\alpha_1 \equiv 0$ to ensure identifiability.
+with $\alpha_1 \equiv 0$. If $c = 1$ just contains a constant, this reduces
+to fixed prior probabilities.
 
 \cite{betareg:Smithson+Segale:2009} and
 \cite{betareg:Smithson+Merkle+Verkuilen:2011} consider finite mixtures
@@ -698,7 +701,7 @@ of beta regression models to analyze priming effects in judgements of
 imprecise probabilities. \cite{betareg:Smithson+Segale:2009} fit
 mixture models where they investigate if priming has an effect on the
 size of the latent groups, i.e., they include the information on
-priming as a predictor variable $w$.
+priming as a predictor variable $c$.
 \cite{betareg:Smithson+Merkle+Verkuilen:2011} assume that for at least
 one component distribution the location parameter is a-priori known
 due to so-called ``anchors''. E.g. for partition priming, an anchor
@@ -716,11 +719,11 @@ setting. The missing data for mixture models is the information on to
 which component an observation belongs. The EM algorithm exploits the
 fact that the complete-data log-likelihood for the data as well as the
 missing information is easier to maximize.  In general for mixture
-models the a-posteriori probabilities of an observation to be from
+models the posterior probabilities of an observation to be from
 each component given the current parameter estimates are determined in
-the E-step. The M-step then consists of maximising the complete-data
+the E-step. The M-step then consists of maximizing the complete-data
 log-likelihood where the missing component memberships are replaced by
-the a-posteriori probabilities. This implies that different mixture
+the posterior probabilities. This implies that different mixture
 models only require the implementation of a suitable M-step
 driver. Function \fct{betareg.fit} provides functionality for weighted
 ML estimation of beta regression models and allows to easily implement
@@ -750,7 +753,7 @@ betamix(formula, data, k, fixed, subset, na.action,
   specify the repeated runs of the EM algorithm using function
   \fct{stepFlexmix} and which model should be returned.
 \item Because the formula for specifying the beta regression model is
-  already a two-part formula a grouping variable can be specified via
+  already a two-part formula, a potential grouping variable can be specified via
   argument \code{ID}.
 \item Further arguments for the component specific model are
   \code{fixed} and \code{extra_components}. \code{fixed} can be used
@@ -844,6 +847,8 @@ dyslexic, red). Fitted curves correspond to beta regression (solid) and OLS
 regression with logit-transformed dependent variable (dashed).}
 \end{figure}
 
+In the following, this data is reanalyzed using the methods from
+Sections~\ref{sec:bias}--\ref{sec:mix}.
 Initially, the effect of bias to ML inference is
 assessed. Subsequently, it is illustrated how the differences with
 respect to dyslexia could have been discovered in a data-driven
@@ -1126,7 +1131,7 @@ functionality already available for finite mixture models directly
 fitted using \fct{flexmix} from package \pkg{flexmix}. The
 \fct{print} method shows the function call as well as provides
 information on how many observations are assigned to each of the
-components according to the maximum a-posteriori
+components according to the maximum posterior
 probability. Furthermore it is indicated if the EM algorithm converged
 or not and in the case of convergence how many iterations were
 performed.
@@ -1165,9 +1170,9 @@ table(clusters(rs_mix), ReadingSkills$dyslexia)
 
 The fitted mean regression lines for each of the three components are
 provided in Figure~\ref{fig:betamix} (left). The observations are
-shaded according to the magnitude of the corresponding a-posteriori
+shaded according to the magnitude of the corresponding posterior
 probabilities. The stronger the shading of an observation is in red,
-the higher the a-posteriori probability for this observation being
+the higher the posterior probability for this observation being
 from the first component is. Blue shading corresponds to the second
 component and green to the third. For comparison purposes, the right
 plot in Figure~\ref{fig:betamix} shows the mean regression lines for
@@ -1220,7 +1225,7 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
 @
 \caption{\label{fig:betamix} Fitted regression lines for the mixture
   model with three components and the observations shaded according to
-  their a-posteriori probabilities (left). Fitted regression lines
+  their posterior probabilities (left). Fitted regression lines
   for the partitioned beta regression model with shading according to
   the observed \code{dyslexic} variable where nondyslexic and dyslexic
   children are in blue and red, respectively (right).}
