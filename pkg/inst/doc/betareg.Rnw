@@ -24,8 +24,9 @@
   This introduction to the \proglang{R} package \pkg{betareg} is a (slightly)
   modified version of \cite{betareg:Cribari-Neto+Zeileis:2010}, published in the
   \emph{Journal of Statistical Software}. A follow-up paper with various
-  extensions is available in the package as
-  \code{vignette("betareg-ext", package = "betareg")} %% FIXME
+  extensions is \cite{betareg:Gruen+Kosmidis+Zeileis:2011} -- a slightly modified
+  version of which is also provided within the package as
+  \code{vignette("betareg-ext", package = "betareg")}
 
   The class of beta regression models is commonly used by 
   practitioners to model variables that assume values in the standard 
@@ -634,7 +635,7 @@ The dependent variable is \code{food/income}, the proportion of household
 the previously mentioned household \code{income} and the number of \code{persons}
 living in the household. All three variables are visualized in Figure~\ref{fig:FoodExpenditure}.
 
-\begin{figure}[b!]
+\begin{figure}[t!]
 \begin{center}
 \setkeys{Gin}{width=0.75\textwidth}
 <<FoodExpenditure-visualization, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
