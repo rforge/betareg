@@ -692,7 +692,7 @@ assumed to be determined from a vector of covariates $c$ by
   \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{c^{\top}\alpha_k\}}
   {\sum_{u=1}^K\textrm{exp}\{c^{\top}\alpha_u\}}
 \end{align*}
-with $\alpha_1 \equiv 0$. If $c = 1$ just contains a constant, this reduces
+with $\alpha_1 \equiv 0$. If $c = 1$, it just contains a constant and this reduces
 to fixed prior probabilities.
 
 \cite{betareg:Smithson+Segale:2009} and
@@ -1144,9 +1144,9 @@ The argument \code{nstart} is set to
 algorithm is run \Sexpr{rs_mix$flexmix@control@nrep} times with
 different random initializations and that only the best solution
 according to the log-likelihood is returned in order to increase the
-chance that the global optimum is detected. The EM algorithm does at
-least converge to a local optimum and the initialization already
-determines the result.
+chance that the global optimum is detected. The EM algorithm in
+general only converges to a local optimum and the convergence
+behaviour depends on the initialization.
 
 The returned fitted model is of class \code{"\Sexpr{class(rs_mix)}"}
 and has methods for \Sexpr{betamix_methods}. These methods reuse
