@@ -79,7 +79,7 @@
 %% need no \usepackage{Sweave}
 \SweaveOpts{engine = R, eps = FALSE, keep.source = TRUE}
 %\VignetteIndexEntry{Extended Beta Regression in R: Shaken, Stirred, Mixed, and Partitioned}
-%\VignetteDepends{stats,betareg,car,lmtest,sandwich,strucchange}
+%\VignetteDepends{stats,betareg,party,flexmix}
 %\VignetteKeywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
 %\VignettePackage{betareg}
 
