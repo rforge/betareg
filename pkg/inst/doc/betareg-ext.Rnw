@@ -915,11 +915,15 @@ effect slightly amplified when using BC/BR.}
 pr_phi <- sapply(list("Maximum likelihood" = rs_ml,
                       "Bias correction" = rs_bc,
                       "Bias reduction" = rs_br), predict, type = "precision")
-pairs(log(pr_phi), panel = panel.smooth)
+pairs(log(pr_phi), panel = function(x, y, ...) {
+  panel.smooth(x, y, ...)
+  abline(0, 1, lty = 2)
+  })
 @
 \caption{\label{fig:readingskillsbias} Scatterplots of the logarithm of
   the estimated precision parameters $\log(\phi_i)$ based on the
-  maximum likelihood, bias-corrected and bias-reduced estimate.}
+  maximum likelihood, bias-corrected and bias-reduced estimate. The dashed black
+  line is the main diagonal, the solid red line is a scatterplot smoother.}
 \end{figure}
 
 
