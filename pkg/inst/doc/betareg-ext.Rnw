@@ -95,7 +95,7 @@ prettyPrint <- function(x, sep = " ", linebreak = "\n\t", width = getOption("wid
   x <- strsplit(x, sep)[[1]]
   paste(combine(x, sep, width), collapse = paste(sep, linebreak, collapse = ""))
 }
-cache <- TRUE
+cache <- FALSE
 enumerate <- function(x) paste(paste(x[-length(x)], collapse = ", "), x[length(x)], sep = " and ")
 betamix_methods <-
   enumerate(paste("\\\\fct{", gsub("\\.betamix", "", as.character(methods(class = "betamix"))), "}", sep = ""))
@@ -783,7 +783,8 @@ mean_iq <-
          nsmall = 3)
 @
 
-In the following we reconsider an analysis of reading accuracy data
+To illustrate the methods introduced above,
+we reconsider an analysis of reading accuracy data
 for nondyslexic and dyslexic Australian children
 \citep{betareg:Smithson+Verkuilen:2006}. The data consists of
 \Sexpr{nrow(ReadingSkills)} observations of children with ages between
@@ -815,7 +816,7 @@ unaffected by IQ score.
 
 \begin{figure}[t!]
 \centering
-\setkeys{Gin}{width=0.75\textwidth}
+\setkeys{Gin}{width=0.73\textwidth}
 <<ReadingSkills, echo=FALSE, fig=TRUE, width=6, height=5.5>>=
 data("ReadingSkills", package = "betareg")
 rs_ols <- lm(qlogis(accuracy) ~ dyslexia * iq, data = ReadingSkills)
@@ -864,8 +865,8 @@ had not been known at all.
 
 To investigate whether the results of
 \cite{betareg:Smithson+Verkuilen:2006} may have been affected by
-severe bias in the ML estimator , all three flavors of estimators are
-obtained for the model with interactions (both in the mean and
+severe bias in the ML estimator, all three flavors of estimators are
+obtained and compared for the model with interactions (both in the mean and
 precision equations).
 
 <<ReadingSkills-bias>>=
@@ -938,36 +939,42 @@ similar but much milder effect compared to the one described in
 milder in this particular example relates to the fact that bias for
 the precision parameters is corrected/reduced on the log-scale where
 the ML estimator has a more symmetric distribution than on the
-original scale. To emphasize that BC/BR may potentially be crucial for
+original scale.
+
+
+To emphasize that BC/BR may potentially be crucial for
 empirical analyses, Appendix~\ref{sec:gasoline} replicates the results
 of \cite{betareg:Kosmidis+Firth:2010} for a beta regression where
 substantial upwards bias was detected for the ML estimator of the
 precision parameter, which in turn causes underestimated asymptotic
-standard errors (note the direct dependence of the expected
-information matrix on the precision parameters in \eqref{eq:expinfo}).
+standard errors. (Note the direct dependence of the expected
+information matrix on the precision parameters in \eqref{eq:expinfo}.)
 
 For the reading accuracy data, the similarity of the results in
 Table~\ref{tab:ReadingSkills-bias} between the three different
 estimation methods and Figure~\ref{fig:readingskillsbias} are
 reassuring and illustrates that analysis based on the ML estimator
-would not be influenced by bias-related issues.
+would not be influenced by bias-related issues. Furthermore, the effect
+of BC/BR would become even smaller when the model without interaction
+in the precision equation  \citealp[as chosen by][]{betareg:Smithson+Verkuilen:2006}
+is considered.
 
 \subsection{Beta regression tree}
 
 For illustrating the use of model-based recursive partitioning methods
-we assume a beta regression model with \code{accuracy} as response and
-\code{iq} as explanatory variable for the nodes. The score on the
-reading accuracy test is therefore assumed to vary with the nonverbal
-IQ score. In order to assess whether being dyslexic has an influence
-on the relationship between \code{accuracy} and \code{iq}, the
-variable \code{dyslexia} is used as a partitioning variable. For
-investigating the ability of the method to select suitable variables
-for partitioning, additional random noise variables are added to the
-list of partitioning variables. One noise variable is drawn from a
+we assume the following situation: A researcher wants to assess whether
+the relationship between reading \code{accuracy} and nonverbal \code{iq}
+score is  different for some subgroups in the data. Covariates potentially describing
+these subgroups are available but no prior knowledge how exactly the
+subgroups can be described by these covariates. For
+investigating the ability of the tree to select suitable variables
+for partitioning, \code{dyslexia} is considered as a partitioning variable
+along with three additional randomly generated noise variables. One noise
+variable is drawn from a
 standard normal distribution, one from a uniform distribution and the
 third is a categorical variable which takes two different values with
 equal probability.
-
+%
 <<ReadingSkills-noise, echo=TRUE>>=
 set.seed(1071)
 n <- nrow(ReadingSkills)
@@ -975,7 +982,7 @@ ReadingSkills$x1 <- rnorm(n)
 ReadingSkills$x2 <- runif(n)
 ReadingSkills$x3 <- factor(sample(0:1, n, replace = TRUE))
 @
-
+%
 The model-based tree is fitted using \fct{betatree}. The first
 argument is a formula which specifies the model for the node: We have
 a beta regression where the mean as well as the dispersion depend on
@@ -1008,33 +1015,22 @@ if(cache) {
 Alternatively the model could be specified using a three-part formula
 where the third part is the symbolic description of the partitioning
 variables.
-
+%
 <<ReadingSkills-tree2, echo=TRUE, eval=FALSE>>=
 rs_tree <- betatree(accuracy ~ iq | iq | dyslexia + x1 + x2 + x3,
   data = ReadingSkills, minsplit = 10)
 @
-
+%
 The returned object is of class \code{"\Sexpr{class(rs_tree)}"} which
 contains an object of class
 \code{"\Sexpr{class(rs_tree[["mob"]])}"}. All methods for
 \code{"\Sexpr{class(rs_tree[["mob"]])}"} can be reused, e.g., the
 \fct{plot} method (see Figure~\ref{fig:betatree}).
-
+%
 <<ReadingSkills-tree3, echo=TRUE>>=
 plot(rs_tree)
 @
-
-Figure~\ref{fig:betatree} indicates that the data was only split into
-two sub-samples. None of the three noise variables was selected in
-order to perform a split, but only variable \code{dyslexia}. This
-indicates that the relationship between the IQ score and the reading
-accuracy does not depend on the noise variables which we would
-expect. By contrast, the relationship between these two variables
-differ for dyslexic and nondyslexic children. The beta regressions
-fitted to each of the two groups of children are illustrated in the
-two leaf nodes. Note that the fitted models use the IQ score as
-predictor for the mean as well as the dispersion.
-
+%
 \begin{figure}[t!]
 \centering
 \setkeys{Gin}{width=\textwidth}
@@ -1044,45 +1040,73 @@ plot(rs_tree)
 \caption{\label{fig:betatree} Partitioned beta regression model for the
   \code{ReadingSkills} data.}
 \end{figure}
-
-In each node the parameter instabilities for the partitioning
-variables are determined if the resulting node size is sufficiently
-large. The test statistics together with the corresponding $p$ values
-can be obtained using function \fct{sctest}. This indicates if more
-than one partitioning variable indicated significant instability and
-the reason for performing no further split, i.e., either because all
-parameter instability tests were insignificant (see node~2) or because
-the node size is too small for a further split (see node~3).
-
-<<ReadingSkills-tree-sctest>>=
-sctest(rs_tree)
-@
-
-In node~1 only dyslexia shows significant instability while the noise
-variables are all nonsignificant. In node~2, dyslexia cannot be used
-for splitting anymore and all other variables are still
-nonsignificant.  With only 19~observations, node~3 is considered too
-small to warrant further splitting given that \code{minsplit=10}
-requires that each node contains at least 10 observations and hence no
-tests are carried out.
-
-Function \fct{coef} allows to inspect the parameters of the fitted
-models in the terminal nodes (nodes~2 and 3).
-
+%
+Figure~\ref{fig:betatree} indicates that the data was only split into
+two subsamples. None of the three noise variables was selected in
+order to perform a split, but only variable \code{dyslexia}. This
+indicates that the relationship between the IQ score and the reading
+accuracy does not depend on the noise variables as
+expected. By contrast, the relationship between these two variables
+differ for dyslexic and nondyslexic children. The beta regressions
+fitted to each of the two groups of children are illustrated in the
+two leaf nodes. Note that the fitted models use the IQ score as
+predictor for the mean as well as the dispersion and hence are
+equivalent to the ML results from Table~\ref{tab:ReadingSkills-bias}
+(where sum contrasts are employed
+for \code{dyslexia}). Function \fct{coef} allows to inspect the parameters
+of the fitted models, by default in the terminal nodes (nodes~2 and 3).
+%
 <<ReadingSkills-tree-coef>>=
 coef(rs_tree)
 @
+%
+This emphasizes again that in the nondyslexic group there is a positive
+association of both mean accuracy and its precision with IQ score.
+In the dyslexic group, the mean accuracy is generally lower with almost
+no dependence on IQ score while its precision is higher and slightly
+decreasing with IQ score. Some further details could be revealed by
+considering for example \code{summary(rs_tree, node = 3)} that provides
+the usual regression model summary (unadjusted for recursive partitioning)
+for the model associated with node~3.
+
+To gain further insight into the recursive construction of the beta regression
+tree, the results of the parameter instability tests in all three nodes
+could be considered. The test statistics together with the corresponding $p$~values
+can be obtained using function \fct{sctest} (for structural change test).
+This indicates which partitioning variables in each node indicated significant instability and
+the reason for performing no further split, i.e., either because all
+parameter instability tests were insignificant (see node~2) or because
+the node size is too small for a further split (see node~3).
+%
+<<ReadingSkills-tree-sctest>>=
+sctest(rs_tree)
+@
+%
+In node~1 only dyslexia shows significant instability while the noise
+variables are all nonsignificant. In node~2, dyslexia cannot be used
+for splitting anymore and all other variables are still
+nonsignificant and thus the partitioning stops.  With only 19~observations,
+node~3 is considered too small to warrant further splitting given that \code{minsplit = 10}
+requires that each node contains at least 10 observations and hence no
+tests are carried out.
+
+
 
 \subsection{Latent class beta regression}
 
-In the following we assume that the information if the children are
+For illustrating the use of finite mixture models
+we assume the following situation: A researcher wants to assess whether
+the relationship between reading \code{accuracy} and nonverbal \code{iq}
+score is  different for some subgroups in the data without having
+further covariates potentially describing the groups available.
+In particular, we assume that the information if the children are
 dyslexic or not is not available. Modelling the relationship between
 reading accuracy and IQ score is now complicated by the fact that
 latent groups exist in the data where this relationship is
 different.
 
-The group of nondyslexic children is challenging as it consists of two
-subgroups -- one with essentially perfect accuracy and one with
+The group of nondyslexic children is challenging as some of them
+essentially have a perfect reading accuracy while for others it is
 strongly increasing accuracy by IQ score. In a model with observed
 \code{dyslexia}, this can be captured by different variances in the
 two groups. However, if \code{dyslexia} is unobserved and a
@@ -1101,7 +1125,6 @@ rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
   extra_components = extraComponent(type = "uniform",
     coef = 0.99, delta = 0.01), nstart = 10)
 @
-
 %
 <<ReadingSkills-mix2, echo=FALSE>>=
 if(cache & file.exists("betareg-ext-betamix.rda")) {
@@ -1115,7 +1138,7 @@ if(cache) {
 }
 }
 @
-
+%
 The argument \code{nstart} is set to
 \Sexpr{rs_mix$flexmix@control@nrep}. This implies that the EM
 algorithm is run \Sexpr{rs_mix$flexmix@control@nrep} times with
@@ -1135,20 +1158,20 @@ components according to the maximum posterior
 probability. Furthermore it is indicated if the EM algorithm converged
 or not and in the case of convergence how many iterations were
 performed.
-
+%
 <<ReadingSkills-mix3>>=
 rs_mix
 @
-
+%
 The \fct{summary} method provides more information on the estimated
-coefficients as well as their standard errors. Internally function
-\fct{optim} is used to determine the Hessian matrix needed for the
+coefficients as well as their standard errors. Internally, function
+\fct{optim} is used to numerically determine the Hessian matrix needed for the
 standard errors.
-
+%
 <<ReadingSkills-mix4>>=
 summary(rs_mix)
 @
-
+%
 Because only two components are freely estimated and the parameters
 for the third component were fixed a-priori, the detailed information
 on the estimated parameters is only provided for components 1 and
@@ -1156,42 +1179,6 @@ on the estimated parameters is only provided for components 1 and
 component the IQ score does not significantly affect the achieved
 accuracy, while there is a positive significant effect of the
 IQ score on accuracy in the second component.
-
-A cross-tabulation of the cluster assignments of the mixture model
-with the variable \code{dyslexia} indicates that no dyslexic children
-are assigned to the third component. Furthermore, children assigned to
-the first component have a high probability
-(\Sexpr{round(prop.table(table(clusters(rs_mix),ReadingSkills$dyslexia),1)[1,2]*100)}\%)
-of being dyslexic.
-
-<<ReadingSkills-mix5>>=
-table(clusters(rs_mix), ReadingSkills$dyslexia)
-@
-
-The fitted mean regression lines for each of the three components are
-provided in Figure~\ref{fig:betamix} (left). The observations are
-shaded according to the magnitude of the corresponding posterior
-probabilities. The stronger the shading of an observation is in red,
-the higher the posterior probability for this observation being
-from the first component is. Blue shading corresponds to the second
-component and green to the third. For comparison purposes, the right
-plot in Figure~\ref{fig:betamix} shows the mean regression lines for
-the dyslexic and nondyslexic children of the model where an
-interaction with the variable \code{dyslexic} is specified in the
-regressions for mean and precision are provided. These mean regression
-lines are equivalent to those obtained using model-based recursive
-partitioning.
-
-The fitted regression lines for the dyslexic children as well as the
-latent group capturing the dyslexic children (component~1) are very
-similar as indicated by the comparison of the two red lines. By
-contrast the group of nondyslexic children is modelled
-differently. With observed dyslexia, the heterogeneity in the control
-group is captured by differences in the precision equation, i.e., in
-the variance. However, for unobserved dyslexia, it is more appropriate
-to capture the increased heterogeneity in the control group by two
-components, one of which corresponds to perfect reading accuracy
-independent of IQ score.
 
 <<ReadingSkills-betamix-plot1, eval = FALSE, echo=FALSE, fig=TRUE>>=
 ix <- as.numeric(ReadingSkills$dyslexia)
@@ -1231,6 +1218,42 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
   children are in blue and red, respectively (right).}
 \end{figure}
 
+A cross-tabulation of the cluster assignments of the mixture model
+with the variable \code{dyslexia} indicates that no dyslexic children
+are assigned to the third component. Furthermore, children assigned to
+the first component have a high probability
+(\Sexpr{round(prop.table(table(clusters(rs_mix),ReadingSkills$dyslexia),1)[1,2]*100)}\%)
+of being dyslexic.
+%
+<<ReadingSkills-mix5>>=
+table(clusters(rs_mix), ReadingSkills$dyslexia)
+@
+%
+The fitted mean regression lines for each of the three components are
+provided in Figure~\ref{fig:betamix} (left). The observations are
+shaded according to the magnitude of the corresponding posterior
+probabilities. The stronger the shading of an observation is in red,
+the higher the posterior probability for this observation being
+from the first component is. Blue shading corresponds to the second
+component and green to the third. For comparison purposes, the right
+plot in Figure~\ref{fig:betamix} shows the mean regression lines for
+the dyslexic and nondyslexic children as obtained by recursive partitioning
+-- or equivalently for the model where an
+interaction with the variable \code{dyslexic} is specified in the
+regressions for mean and precision.
+
+The fitted regression lines for the dyslexic children as well as the
+latent group capturing the dyslexic children (component~1) are very
+similar as indicated by the comparison of the two red lines. By
+contrast the group of nondyslexic children is modelled
+differently. With observed dyslexia, the heterogeneity in the control
+group is captured by differences in the precision equation, i.e., in
+the variance. However, for unobserved dyslexia, a more natural approach
+is to capture the increased heterogeneity in the control group by two
+components, one of which corresponds to perfect reading accuracy
+independent of IQ score.
+
+
 \section{Conclusions}\label{sec:conclusions}
 
 The new extensions of the package \pkg{betareg} allow to move beyond
@@ -1238,25 +1261,24 @@ classical ML inference when fitting beta regression models. Bias
 correction and bias reduction of the ML estimates are good
 alternatives when the maximum likelihood inferences turn out to be
 unreliable, and actually their ready availability in the package
-allows to check how sensitive inferences (standard errors) can be to
+allows to check how sensitive inferences (standard errors, confidence
+intervals and Wald tests, in particular) can be to
 the bias of the maximum likelihood estimator. Recursive partitioning
 methods and finite mixture models enable the user to investigate
 heterogeneity -- both observed and unobserved -- in the regression
 model fitted to the whole sample.
 
-For users already familiar with the previous version of the
+For users already familiar with previous versions of the
 \pkg{betareg} package, obtaining the bias-corrected/reduced estimators
-does not require the use of any new function; the user only needs to
-appropriately specify the \code{type} argument (which defaults to
-\code{"ML"}).
-
+is straightforward; the user only needs to appropriately specify the
+\code{type} argument (which defaults to \code{"ML"}).
+%
 For the implementation of the aforementioned extensions some changes
 and additions in the fitting function \fct{betareg.fit} were
 necessary. Specifically, the optimization of the likelihood is now
 followed by a Fisher scoring iteration. Furthermore, if the
 bias-reduced or bias-corrected estimates are requested, that Fisher
-scoring iteration is accordingly modified, as described in
-Subsection~\ref{sub:iteration} .
+scoring iteration is accordingly modified using a bias adjustment.
 
 To fit beta regression trees and finite mixtures of beta regressions
 the new functions \fct{betatree} and \fct{betamix} are available in
@@ -1265,11 +1287,11 @@ packages \pkg{party} and \pkg{flexmix}. The interface of the two new
 functions has been designed to be as similar as possible to
 \fct{betareg}, in order to facilitate their use by users that are
 already familiar with the \fct{betareg} function.
-
+%
 For modelling heterogeneity \fct{betareg.fit} is reused to fit the
 models in the nodes when beta regression trees are constructed, and in
 the M-step when finite mixture models are fitted. For this task, only
-a small amount of additional code --- some \proglang{S4} glue ---, was
+a small amount of additional code --- some \proglang{S4} glue --- was
 necessary to inherit the functionality provided by the \pkg{party} and
 \pkg{flexmix} packages to the package \pkg{betareg}.
 
