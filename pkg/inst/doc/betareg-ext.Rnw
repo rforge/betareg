@@ -170,9 +170,9 @@ to be distinguished a two-part formula is allowed based on
 functionality provided by the \pkg{Formula} package
 \citep[][]{betareg:Zeileis+Croissant:2010}. For example, \code{y ~ x1
   + x2 + x3 | z1 + z2} would assign the covariates \code{x1},
-\code{x2}, and \code{x3} to the mean specification~\eqref{eq:link1}
+\code{x2}, and \code{x3} to the mean submodel~\eqref{eq:link1}
 and \code{z1} and \code{z2} to the precision
-specification~\eqref{eq:link2}, respectively.  Function \fct{betareg}
+submodel~\eqref{eq:link2}, respectively.  Function \fct{betareg}
 internally uses function \fct{optim} as a general purpose optimizer to
 maximize the log-likelihood. The fitted model has methods for several
 extractor functions, e.g., \fct{coef}, \fct{vcov}, \fct{residuals},
@@ -259,7 +259,7 @@ coverage far below the nominal levels).
 
 The results in \cite{betareg:Kosmidis+Firth:2010} are extended here to
 cover not only the case of constant $\phi$ but also a regression part
-for the precision parameters as shown in expression~\ref{eq:link2}.
+for the precision parameters as shown in Equation~\ref{eq:link2}.
 
 \subsection{Generic framework} \label{sub:iteration}
 
@@ -292,7 +292,7 @@ respect to $\theta$).
 
 The quasi Fisher scoring iteration that has been developed in
 \cite{betareg:Kosmidis+Firth:2010} attempts to solve
-equation~\ref{eq:adjest}. Specifically, at the $j$-th step of the iterative
+Equation~\ref{eq:adjest}. Specifically, at the $j$-th step of the iterative
 procedure, the current value $\theta^{(j)}$ of the parameter vector is
 updated to $\theta^{(j+1)}$ by
 \begin{equation}
@@ -499,7 +499,7 @@ of estimator that should be used.
 The arguments in the first line (\code{formula}, \code{data}, \dots)
 pertain to the data and model specification using a formula that
 potentially may have two parts pertaining to the mean and the
-precision specifications, respectively.  The arguments \code{link} and
+precision submodels, respectively.  The arguments \code{link} and
 \code{link.phi} specify the link functions $g_1(\cdot)$ and
 $g_2(\cdot)$, respectively. The argument \code{type} controls which of
 the maximum likelihood (\code{type = "ML"}), bias-corrected
@@ -693,8 +693,8 @@ determined from a vector of covariates $c$ by
   \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{c^{\top}\alpha_k\}}
   {\sum_{u=1}^K\textrm{exp}\{c^{\top}\alpha_u\}}
 \end{align*}
-with $\alpha_1 \equiv 0$. {\color{blue} If $c = 1$, it just contains a constant and this reduces
-to fixed prior probabilities}.
+with $\alpha_1 \equiv 0$. Without covariates and just a constant ($c = 1$),
+this reduces to prior probabilities that are fixed across all observations.
 
 \cite{betareg:Smithson+Segale:2009} and
 \cite{betareg:Smithson+Merkle+Verkuilen:2011} consider finite mixtures
@@ -706,7 +706,7 @@ priming as a predictor variable $c$.
 \cite{betareg:Smithson+Merkle+Verkuilen:2011} assume that for at least
 one component distribution the location parameter is a-priori known
 due to so-called ``anchors''. For example, for partition priming, an
-anchor would be assumed {\color{blue} at position $1/K$} if the
+anchor would be assumed at location $1/K$ if the
 respondents are primed to believe that there are $K$ possible
 events. The component distribution for this anchor can be either
 assumed to follow a beta distribution with known parameters for the
@@ -749,10 +749,13 @@ betamix(formula, data, k, fixed, subset, na.action,
 \item Arguments \code{cluster}, \code{FLXconcomitant} and
   \code{FLXcontrol} are the same as for function \fct{flexmix}
   (in the latter two cases without prefix \code{FLX}).
-\item {\color{blue} Arguments
+\item Argument
   \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
   specify the repeated runs of the EM algorithm using function
-  \fct{stepFlexmix} and which model should be returned.}
+  \fct{stepFlexmix}, where \code{k} is the (vector of) number(s) of
+  mixture components, \code{nstart} the number of random starting values
+  used, and \code{which} determines which number of components is
+  kept if \code{k} is a vector.
 \item Because the formula for specifying the beta regression model is
   already a two-part formula, a potential grouping variable can be specified via
   argument \code{ID}.
@@ -768,7 +771,7 @@ betamix(formula, data, k, fixed, subset, na.action,
 \begin{verbatim}
 <<results=tex, echo=false>>=
 cat(prettyPrint(prompt(extraComponent, filename = NA)$usage[[2]], sep = ", ",
-  linebreak = paste("\n", paste(rep(" ", nchar("extraComponent") + 1), collapse = ""), sep= ""),
+  linebreak = paste("\n", paste(rep(" ", 2), collapse = ""), sep= ""),
   width = 60))
 @
 \end{verbatim}
@@ -791,33 +794,29 @@ of reading accuracy data for nondyslexic and dyslexic Australian
 children \citep{betareg:Smithson+Verkuilen:2006}. The data consists of
 \Sexpr{nrow(ReadingSkills)} observations of children with ages between
 eight years and five months and twelve years and three months. For
-each child, the variables \code{accuracy} (the score on a test of
-reading accuracy), \code{iq} (the score on a nonverbal intelligent
+each child, the variables \code{accuracy} (the score on a
+reading accuracy test), \code{iq} (the score on a nonverbal intelligent
 quotient test, converted to $z$ score), and a binary variable on
-whether the child is dyslexic or not were recorded.
-% the scores on a test of reading accuracy (variable
-% \code{accuracy}) as well as on a nonverbal intelligent quotient
-% (variable \code{iq}, converted to $z$~scores) as well as if the child
-% is dyslexic or not (variable \code{dyslexic}) are reported.
-The \Sexpr{table(ReadingSkills$dyslexia)["yes"]} dyslexic children
-have a mean reading accuracy of \Sexpr{mean_accuracy["yes"]} and a
-mean IQ score of $\Sexpr{mean_iq["yes"]}$. The
-\Sexpr{table(ReadingSkills$dyslexia)["no"]} nondyslexic children have
-a mean reading accuracy of \Sexpr{mean_accuracy["no"]} and a mean IQ
-score of $\Sexpr{mean_iq["no"]}$.
+whether the child is dyslexic were recorded.
+The \Sexpr{table(ReadingSkills$dyslexia)["yes"]}~dyslexic children
+have a mean reading accuracy of~\Sexpr{mean_accuracy["yes"]} and a
+mean IQ score of~$\Sexpr{mean_iq["yes"]}$. The
+\Sexpr{table(ReadingSkills$dyslexia)["no"]}~nondyslexic children have
+a mean reading accuracy of~\Sexpr{mean_accuracy["no"]} and a mean IQ
+score of~$\Sexpr{mean_iq["no"]}$.
 
 \cite{betareg:Smithson+Verkuilen:2006} investigated whether dyslexic
 children have a different score on the reading accuracy test when
 corrected for IQ score. \cite{betareg:Smithson+Verkuilen:2006} fit a
 beta regression where the means are linked via the logistic link to
 main and interaction effects for \code{iq} and \code{dyslexic}, and
-where the precision parameters are linked with a log link to main
+where the precision parameters are linked with a log-link to main
 effects for the same variables.  The fitted model and its comparison
 to the results of an OLS regression using the logit-transformed
 \code{accuracy} as response are given in
 \cite{betareg:Cribari-Neto+Zeileis:2010}. Figure~\ref{fig:ReadingSkills},
 shows a visualization of the fitted models to briefly highlight the
-most important findings: in the control group (nondyslexic children),
+most important findings: In the control group (nondyslexic children),
 reading skill increases clearly with the IQ score while the variance
 decreases.  In the dyslexic group, reading skills are generally lower
 and almost unaffected by IQ score.
@@ -862,10 +861,10 @@ to ML inference is assessed. Subsequently, it is illustrated how the
 differences with respect to dyslexia could have been discovered in a
 data-driven way. While in the original study dyslexia has, of course,
 been of prime interest in the model, the data set is used here to
-illustrate how {\color{blue} (a)~the dyslexia groups would also have been found
-by recursive partitioning if dyslexia had just been one of many
-covariates and how (b)~mixture modeling recovers the dyslexia groups
-if that covariable had not been known at all.}
+illustrate how (a)~the two dyslexia groups are automatically selected
+by recursive partitioning if dyslexia is just one of many
+covariables and how (b)~mixture modeling recovers the dyslexia groups
+if that covariable is not available at all.
 
 
 \subsection{Bias correction and reduction}
@@ -874,7 +873,7 @@ To investigate whether the results of
 \cite{betareg:Smithson+Verkuilen:2006} may have been affected by
 severe bias in the ML estimator, all three flavors of estimators are
 obtained and compared for the model with interactions (both in the mean and
-precision specifications).
+precision submodels).
 
 <<ReadingSkills-bias>>=
 data("ReadingSkills", package = "betareg")
@@ -911,15 +910,15 @@ writeLines(apply(cfse, 1, paste, collapse = " & "))
   standard errors (in parentheses) in interaction model for reading
   skills. The ML estimator from \texttt{rs\_ml}, the BC estimator from
   \texttt{rs\_bc}, and the BR estimator from \texttt{rs\_br} all give
-  very similar results for the mean specification. In the precision
-  specification, main effects are slightly damped and the interaction
+  very similar results for the mean submodel. In the precision
+  submodel, main effects are slightly damped and the interaction
   effect is slightly amplified when using BC/BR.}
 \end{table}
 
 
 \begin{figure}[t!]
 \centering
-\setkeys{Gin}{width=\textwidth}
+\setkeys{Gin}{width=0.98\textwidth}
 <<ReadingSkills-phi-plot, fig=TRUE, height=6.5, width=6.5, echo=FALSE>>=
 pr_phi <- sapply(list("Maximum likelihood" = rs_ml,
                       "Bias correction" = rs_bc,
@@ -938,10 +937,10 @@ pairs(log(pr_phi), panel = function(x, y, ...) {
 
 
 The resulting coefficient estimates, standard errors, and
-log-likelihood can be displayed using the \fct{summary} method and are
+log-likelihoods can be displayed using the \fct{summary} method and are
 reported in Table~\ref{tab:ReadingSkills-bias}. All three estimators
-give very similar results for the mean specification. In the precision
-specification, main effects are slightly damped and the interaction
+give very similar results for the mean submodel. In the precision
+submodel, main effects are slightly dampened and the interaction
 effect is slightly amplified when using
 BC/BR. Figure~\ref{fig:readingskillsbias} shows the scatter plots of
 the logarithm of the estimated precision parameters based on the ML,
@@ -960,17 +959,17 @@ empirical analyses, Appendix~\ref{sec:gasoline} replicates the results
 of \cite{betareg:Kosmidis+Firth:2010} for a beta regression where
 substantial upwards bias was detected for the ML estimator of the
 precision parameter, which in turn causes underestimated asymptotic
-standard errors (note the direct dependence of the expected
-information matrix on the precision parameters in \eqref{eq:expinfo}).
+standard errors; note the direct dependence of the expected
+information matrix on the precision parameters in \eqref{eq:expinfo}.
 
 For the reading accuracy data, the similarity of the results in
 Table~\ref{tab:ReadingSkills-bias} between the three different
 estimation methods and Figure~\ref{fig:readingskillsbias} are
 reassuring and illustrates that analysis based on the ML estimator
 would not be influenced by bias-related issues. Furthermore, the
-effect of BC/BR would become even smaller when the model without
-interaction in the precision specification (\citealt[as chosen
-by][]{betareg:Smithson+Verkuilen:2006}) was considered.
+effect of BC/BR becomes even smaller when the model without
+interaction in the precision submodel \citep[as chosen
+by][]{betareg:Smithson+Verkuilen:2006} is considered.
 
 \subsection{Beta regression tree}
 
@@ -997,18 +996,17 @@ ReadingSkills$x3 <- factor(sample(0:1, n, replace = TRUE))
 @
 %
 The model-based tree is fitted using \fct{betatree}. The first
-argument is a formula which specifies the model for the node: We have
-a beta regression where both the mean and the precision depend on
-\code{iq} to model \code{accuracy}. The second argument is a formula
-for the symbolic description of the partitioning variables. The
+argument is a formula which specifies the model to be partitioned: We have
+a beta regression where both the mean and the precision of \code{accuracy} depend on
+\code{iq}. The second argument is a formula
+for the symbolic description of the partitioning variables and both
 formulas are evaluated using \code{data}. Additional control arguments
 for the recursive partitioning method used in \fct{mob\_control} can
 be specified via the \code{\dots} argument. In this case the minimum
 number of observations in a node is given by \code{minsplit = 10}.
 %
 <<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
-rs_tree <- betatree(accuracy ~ iq | iq,
-  ~ dyslexia + x1 + x2 + x3,
+rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
   data = ReadingSkills, minsplit = 10)
 @
 %
@@ -1063,11 +1061,11 @@ contrast, the relationship between these two variables differ for
 dyslexic and nondyslexic children. The beta regressions fitted to each
 of the two groups of children are illustrated in the two leaf
 nodes. Note that the fitted models use the IQ score as predictor for
-the mean and the precision. {\color{blue} Hence the results are
-  equivalent to the ML results from Table~\ref{tab:ReadingSkills-bias}
-  (where sum contrasts are employed for \code{dyslexia})}. Function
-  \fct{coef} allows to inspect the parameters of the fitted models, by
-  default in the terminal nodes (nodes~2 and 3).
+the mean and the precision. Hence the results are
+equivalent to the ML results from Table~\ref{tab:ReadingSkills-bias}
+(where sum contrasts are employed for \code{dyslexia}). Function
+\fct{coef} allows to inspect the parameters of the fitted models, by
+default in the terminal nodes (nodes~2 and 3).
 %
 <<ReadingSkills-tree-coef>>=
 coef(rs_tree)
@@ -1113,7 +1111,7 @@ we assume the following situation: A researcher wants to assess whether
 the relationship between reading \code{accuracy} and nonverbal \code{iq}
 score is  different for some subgroups in the data without having
 further covariates potentially describing the groups available.
-In particular, we assume that the information if the children are
+In particular, we assume that the information whether the children are
 dyslexic or not is not available. Modelling the relationship between
 reading accuracy and IQ score is now complicated by the fact that
 latent groups exist in the data where this relationship is
@@ -1265,7 +1263,7 @@ latent group capturing the dyslexic children (component 1) are very similar.
 % similar as indicated by the comparison of the two red lines.
 In contrast, the group of nondyslexic children is modelled
 differently. With observed dyslexia, the heterogeneity in the control
-group is captured by differences in the precision specification, i.e.,
+group is captured by differences in the precision submodel, i.e.,
 in the variance. However, for unobserved dyslexia, it is more natural
 to capture the increased heterogeneity in the control group using two
 components, one of which would correspond to perfect reading accuracy
