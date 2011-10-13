@@ -964,7 +964,7 @@ information matrix on the precision parameters in \eqref{eq:expinfo}.
 
 For the reading accuracy data, the similarity of the results in
 Table~\ref{tab:ReadingSkills-bias} between the three different
-estimation methods and Figure~\ref{fig:readingskillsbias} are
+estimation methods and Figure~\ref{fig:readingskillsbias} is
 reassuring and illustrates that analysis based on the ML estimator
 would not be influenced by bias-related issues. Furthermore, the
 effect of BC/BR becomes even smaller when the model without
@@ -1157,7 +1157,7 @@ algorithm is run \Sexpr{rs_mix$flexmix@control@nrep} times, with each
 run being randomly initialized. Then only the best solution according
 to the log-likelihood is returned. In this way, the chance that the
 global optimum is detected is increased (the EM algorithm is generally
-only guaranteed to converge a local optimum and the convergence
+only guaranteed to converge to a local optimum and the convergence
 behaviour depends on the initialization).
 
 The returned fitted model is of class \code{"\Sexpr{class(rs_mix)}"}
