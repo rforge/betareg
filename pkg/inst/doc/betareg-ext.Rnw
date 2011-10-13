@@ -1010,7 +1010,7 @@ rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
   data = ReadingSkills, minsplit = 10)
 @
 %
-<<ReadingSkills-tree0, echo=FALSE>>=
+<<ReadingSkills-tree0, echo=FALSE, results=hide>>=
 if(cache & file.exists("betareg-ext-betatree.rda")) {
   load("betareg-ext-betatree.rda")
 } else {
@@ -1138,7 +1138,7 @@ rs_mix <- betamix(accuracy ~ iq, data = ReadingSkills, k = 3,
     coef = 0.99, delta = 0.01), nstart = 10)
 @
 %
-<<ReadingSkills-mix2, echo=FALSE>>=
+<<ReadingSkills-mix2, echo=FALSE, results=hide>>=
 if(cache & file.exists("betareg-ext-betamix.rda")) {
  load("betareg-ext-betamix.rda")
 } else {
