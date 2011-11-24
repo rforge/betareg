@@ -683,7 +683,7 @@ groups is given by
   h(y ; x, z, c, \theta) & = \sum_{k = 1}^K \pi(k ; c, \alpha) f(y ;
   g_1^{-1}(x^{\top}\beta_k), g_2^{-1}(z^{\top}\gamma_k)),
 \end{align*}
-where $h(\cdot ; \cdot)$ is the mixture density and $f(y | \mu, \phi)$
+where $h(\cdot ; \cdot)$ is the mixture density and $f(y ; \mu, \phi)$
 is the density of the beta distribution using the mean-precision
 parameterization shown in \eqref{eq:density}. Furthermore the
 component weights $\pi(k ; \cdot)$ are nonnegative for all $k$ and sum

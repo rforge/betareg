@@ -1,3 +1,9 @@
+Changes in Version 2.4-1
+
+  o Formula interface for betamix() changed to allow for three parts
+    in the right hand side where the third part relates to the
+    concomitant variables.
+
 Changes in Version 2.4-0
 
   o Support bias-corrected (BC) and bias-reduced (BR) maximum likelihood

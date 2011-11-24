@@ -40,8 +40,14 @@ betamix <- function(formula, data, k, subset, na.action,
   ## formula
   oformula <- as.formula(formula)
   formula <- Formula(formula)
-  stopifnot(length(formula)[1] == 1L & length(formula)[2] >= 1L)
-  if(length(formula)[2] == 1L) {
+  stopifnot(length(formula)[1L] == 1L & length(formula)[2L] >= 1L & length(formula)[2L] <= 3L)
+  if(length(formula)[2L] == 3L){
+    if (!is.null(FLXconcomitant))
+      warning("only concomitant variables specified in formula used")
+    conc <- formula(formula, lhs = 0, rhs = 3)
+    FLXconcomitant <- FLXPmultinom(conc)
+  }
+  if(length(formula)[2L] == 1L){
     precision <- ~ 1
   } else {
     precision <- formula(formula, lhs = 0, rhs = 2)
