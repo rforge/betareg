@@ -44,7 +44,7 @@ The package:
 1. It would be nice to have an example for betatree of a quantitative
    variable that is used for splitting, although this is not essential.
 
-Reply: We added a numerical variable which continues information for a
+Reply: We added a numerical variable which contains information for a
 split in the example of the documentation for betatree.
 
 2. Pursuant to comment 4 above, the betamix arguments are not entirely
@@ -118,14 +118,13 @@ o In the mixture regression, an additional component (as proposed by Smithson et
 
 Reply: Unfortunately the argument for repeated runs of the EM
 algorithm was not specified correctly. The argument is nstart. Partial
-matching works for parts of argment names, but if the plural is
+matching works for parts of argument names, but if the plural is
 erroneously specified it goes into the ... argument. 
 
 Nevertheless, obviously in this case a lot of random initializations
-are required for the two component solution when starting with two
-components to end up with the same best model as easily detected when
-initializing with three components and dropping one component during
-the EM algorithm when the component size falls under a certain limit. 
+are required when starting with two components to end up with the same
+best model which easily detected when initializing with three
+components and dropping one component during the EM algorithm.
 However, there is no systematic difference. This only indicates that
 in certain situations a lot of random initializations are necessary to
 detect certain local optima in the likelihood.
@@ -155,7 +154,7 @@ selected where the trade-off between model fit (with smaller values
 indicating better fit) and model complexity is best, i.e., where the
 BIC is minimal. 
 
-Because the sign of the log-likehood is irrelevant for the derivation
+Because the sign of the log-likelihood is irrelevant for the derivation
 of the BIC we would not assume that it makes a difference if the
 log-likelihood is in general positive for a certain model class and
 therefore do not see any problem in using the BIC for model selection.
