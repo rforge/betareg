@@ -26,7 +26,7 @@ betamix(formula, data, k, subset, na.action,
     "loglog"), link.phi = "log",
   control = betareg.control(...), cluster = NULL,
   FLXconcomitant = NULL, FLXcontrol = list(), verbose = FALSE,
-  nstart = if (missing(cluster)) 3 else 1, which = "BIC", 
+  nstart = if (is.null(cluster)) 3 else 1, which = "BIC", 
   ID, fixed, extra_components, ...)
 
 extraComponent(type = c("uniform", "betareg"), coef, delta,
@@ -142,6 +142,7 @@ Leisch, F. (2004). FlexMix: A General Framework for Finite Mixture
 ## data with two groups of dyslexic and non-dyslexic children
 data("ReadingSkills", package = "betareg")
 
+set.seed(4040)
 ## try to capture accuracy ~ iq relationship (without using dyslexia
 ## information) using two beta regression components and one additional
 ## extra component for a perfect reading score
@@ -169,7 +170,19 @@ cf <- rbind(coef(rs_mix, model = "mean", component = 1:2),
    c(qlogis(0.99), 0))
 for(i in 1:3)
    lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2,
-         col = col0[i]) 
+         col = col0[i])
+
+## refit the model including a concomitant variable model
+## using the dyslexia information
+w <- rnorm(nrow(ReadingSkills), 
+           c(-1, 1)[as.integer(ReadingSkills$dyslexia)])
+
+rs_mix2 <- betamix(accuracy ~ iq, data = ReadingSkills,
+  extra_components = extraComponent(type = "uniform",
+  coef = 0.99, delta = 0.01), cluster = posterior(rs_mix),
+  FLXconcomitant = FLXPmultinom(~w))
+coef(rs_mix2, which = "concomitant")
+summary(rs_mix2, which = "concomitant")
 }
 
 \keyword{regression}

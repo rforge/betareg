@@ -109,15 +109,17 @@ betamix_methods <-
 Beta regression is a model for continuous response variables $y$ which
 assume values in the open unit interval $(0, 1)$. Such response
 variables may stem from rates, proportions, concentrations, etc. A
-double index regression allowing to model the mean as well as the
-precision through covariates was introduced by
+regression model where the mean as well as the precision is modelled
+through covariates was introduced by
 \cite{betareg:Ferrari+Cribari-Neto:2004} along with the extensions by
 \cite{betareg:Smithson+Verkuilen:2006} and
-\cite{betareg:Simas+Barreto-Souza+Rocha:2010}.
-\cite{betareg:Ferrari+Cribari-Neto:2004} employed an alternative
-parametrization of the beta distribution characterizing more easily
-the mean and the variance.  In this parameterization the beta
-distribution has the density
+\cite{betareg:Simas+Barreto-Souza+Rocha:2010}. This model is also
+referred to as \emph{ double index regression model} because it
+contains two regression parts: one for the mean and one for the
+precision.  \cite{betareg:Ferrari+Cribari-Neto:2004} employed an
+alternative parametrization of the beta distribution characterizing
+more easily the mean and the variance.  In this parameterization the
+beta distribution has the density
 %
 \begin{equation} \label{eq:density}
 f(y;\mu,\phi) =
@@ -360,7 +362,7 @@ $U_i = \log(1 - Y_i)$ are the sufficient statistics for the beta
 distribution with natural parameters $\phi_i\mu_i$ and $\phi_i(1 -
 \mu_i)$ $(i =1, \ldots, n)$, respectively.
 
-Direct differentiation of the log-likelihood function gives that the
+Direct differentiation of the log-likelihood function reveals that the
 vector of log-likelihood derivatives has the form
 \begin{equation}
   \label{eq:scores}
@@ -389,7 +391,7 @@ $\psi^{(r)}(k) = \hderstraight{^{r+1} \log\Gamma(k)}{k^{r+1}}$ the
 polygamma function of degree $r$ $(r = 0, 1, \ldots; i =1, \ldots,
 n)$.
 
-Differentiating $\ell(\theta)$ one more time gives that the observed
+Differentiating $\ell(\theta)$ one more time reveals that the observed
 information on $\theta$ is
 \begin{equation}
 \label{eq:obsinfo}
@@ -593,7 +595,7 @@ $\ell(\theta)$ and its contributions $\ell_i(\theta)$ are given in
 \eqref{eq:loglik}. By \eqref{eq:scores} and using the notation in
 Section \ref{sec:bias}, the corresponding score (or gradient)
 contributions have the form
-\begin{equation*}
+\begin{equation}
   S_{i}(\theta) = \left[
     \begin{array}{c}
       \mu_i \phi_i d_{1,i} \left(\bar{T}_i -
@@ -608,7 +610,7 @@ d_{2,i}\left\{ \mu_i\left(\bar{T}_i -
   \bar{U}_i\right) + \bar{U}_i \right\}z_{iq} \\
     \end{array}
     \right]\quad (i = 1, \ldots, n) \, .
-  \end{equation*}
+  \end{equation}
   The above contributions are employed for testing whether there are
   significant departures from zero across the partitioning
   variables. More specifically, MOB uses generalized M-fluctuation
@@ -679,20 +681,20 @@ covariates.
 
 The mixture model with $K$ components which corresponds to $K$
 groups is given by
-\begin{align*}
+\begin{align}
   h(y ; x, z, c, \theta) & = \sum_{k = 1}^K \pi(k ; c, \alpha) f(y ;
   g_1^{-1}(x^{\top}\beta_k), g_2^{-1}(z^{\top}\gamma_k)),
-\end{align*}
+\end{align}
 where $h(\cdot ; \cdot)$ is the mixture density and $f(y ; \mu, \phi)$
 is the density of the beta distribution using the mean-precision
 parameterization shown in \eqref{eq:density}. Furthermore the
 component weights $\pi(k ; \cdot)$ are nonnegative for all $k$ and sum
 to one. In what follows the component weights are assumed to be
 determined from a vector of covariates $c$ by
-\begin{align*}
+\begin{align}
   \pi(k ; c, \alpha) &= \frac{\textrm{exp}\{c^{\top}\alpha_k\}}
   {\sum_{u=1}^K\textrm{exp}\{c^{\top}\alpha_u\}}
-\end{align*}
+\end{align}
 with $\alpha_1 \equiv 0$. Without covariates and just a constant ($c = 1$),
 this reduces to prior probabilities that are fixed across all observations.
 
@@ -749,6 +751,15 @@ betamix(formula, data, k, fixed, subset, na.action,
 \item Arguments \code{cluster}, \code{FLXconcomitant} and
   \code{FLXcontrol} are the same as for function \fct{flexmix}
   (in the latter two cases without prefix \code{FLX}).
+  
+  Currently functionality to fit a multinomal logit model for the
+  concomitant variable model is provided by \code{FLXPmultinom()} with
+  a formula interface for specifying the concomitant variables.  To
+  fit a multinomial logit model for the variables \code{w1} and
+  \code{w2} for the concomitant variable model use:
+  \begin{Code}
+    FLXconcomitant = FLXPmultinom(~ w1 + w2)
+  \end{Code}
 \item Argument
   \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
   specify the repeated runs of the EM algorithm using function
@@ -1036,11 +1047,20 @@ The returned object is of class \code{"\Sexpr{class(rs_tree)}"} which
 contains an object of class
 \code{"\Sexpr{class(rs_tree[["mob"]])}"}. All methods for
 \code{"\Sexpr{class(rs_tree[["mob"]])}"} can be reused, e.g., the
-\fct{plot} method (see Figure~\ref{fig:betatree}).
+\fct{print} method and the \fct{plot} method (see
+Figure~\ref{fig:betatree}).
 %
 <<ReadingSkills-tree3, echo=TRUE>>=
+rs_tree
 plot(rs_tree)
 @
+
+The printed object indicates after the number of the node, which part
+of the data according to the split is contained (e.g., \code{dyslexia
+  == \{no\}}) or the weights of the observations in the terminal nodes
+indicated by stars. In the terminal nodes also the estimated
+coefficients of the beta regression models are provided.
+
 %
 \begin{figure}[t!]
 \centering
@@ -1277,7 +1297,7 @@ classical ML inference when fitting beta regression models. Bias
 correction and bias reduction of the ML estimates can be useful
 alternatives when the maximum likelihood inferences turn out to be
 unreliable, and actually their ready availability in the package
-allows to check how sensitive inferences (standard errors, confidence
+allows users to check how sensitive inferences (standard errors, confidence
 intervals and Wald tests, in particular) can be to the bias of the
 maximum likelihood estimator. Recursive partitioning methods and
 finite mixture models enable the user to investigate heterogeneity --

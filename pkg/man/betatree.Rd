@@ -124,6 +124,20 @@ coef(bt)
 sctest(bt)
 summary(bt, node = 2)
 summary(bt, node = 3)
+
+## add a numerical variable with relevant information for splitting
+ReadingSkills$x4 <- rnorm(nrow(ReadingSkills), c(-5, 5)[as.integer(ReadingSkills$dyslexia)])
+
+bt2 <- betatree(accuracy ~ iq | iq, ~ x1 + x2 + x3 + x4,
+  data = ReadingSkills, minsplit = 10)
+plot(bt2)
+
+## inspect result
+coef(bt2)
+sctest(bt2)
+summary(bt2, node = 2)
+summary(bt2, node = 3)
+
 }
 
 \keyword{tree}

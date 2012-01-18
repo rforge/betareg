@@ -1,0 +1,161 @@
+
+%------------------------------------------------------------------------
+
+Reviewer 1:
+
+The paper:
+
+1. It isn't clear to me what the phrase "double index" means (on
+   pg. 2, "The double index beta regression model is ...")
+
+Reply: We rephrased this sentence and now clearly spell out what the
+"double index" refers to.
+
+2. On pg. 5, the two occurrences of "gives that" are not grammatically
+   correct and should be replaced with "reveals that".
+
+Reply: Changed.
+
+3. On pp. 8 and 9, I would recommend that the equations be given
+   numbers, i.e., continuing the numbering on from (13).
+
+Reply: Done.
+
+4. For those users not familiar with betareg or flexmix, it would be
+   helpful if the text on pg. 10 included an explanation of how
+   covariates that determine the component weights can be entered into
+   the model via the FLXconcomitant argument.
+
+Reply: We added this explanation.
+
+5. On pg. 15 (in the betatree example) it would be helpful to mention
+   the print() function to users. It provides a nice summary of the
+   partitioning and its associated statistics.
+
+Reply: Added.
+
+6. On pg. 19 (4th line of the Conclusions section) "allows to" should
+   be "allows users to".
+
+Reply: Done.
+
+The package:
+
+1. It would be nice to have an example for betatree of a quantitative
+   variable that is used for splitting, although this is not essential.
+
+Reply: We added a numerical variable which continues information for a
+split in the example of the documentation for betatree.
+
+2. Pursuant to comment 4 above, the betamix arguments are not entirely
+   consistent with the format of betareg or betatree. The latter
+   allows a 3-part formula with the third part specifying the
+   partitioning variable(s), whereas with betamix the mixture
+   component covariates have to be entered via the FLXconcomitant
+   argument. However, after email correspondence with two of the
+   authors, they have implemented the 3-part formula in betamix as
+   well, and I presume the paper and documentation will be updated
+   accordingly if the next release of CRAN occurs before the paper
+   goes to production.
+
+Reply: The new version has been submitted to CRAN along with
+re-submitting the revised version.
+
+3. That said, it also initially was a mystery to me how one extracts
+   the coefficients and standard errors for the mixture component
+   covariates. For users not familiar with flexmix, describing how to
+   do this via either the coef(betamix_model, which = "concomitant")
+   or summary(betamix_model, which = "concomitant") commands would be
+   helpful.
+
+Reply: We added code in the example where a concomitant variable model
+is fitted using the dyslexia variable and showing the use of these two
+functions for inspecting a fitted concomitant variable model.
+
+%------------------------------------------------------------------------
+
+Reviewer 2:
+
+Minor remarks:
+
+o In the mixture regression, an additional component (as proposed by Smithson et
+  al. 2011) is introduced to model (nearly) perfect scores. From my experience,
+  practitioners do not make such assumptions a priori but rather fit a couple of
+  models with different numbers of mixture components. I have tried this naive
+  approach below and ended up with confusing results.
+    > library("betareg"); data("ReadingSkills")
+    > read3 <- betamix(accuracy~iq, ReadingSkills, k=3, nstarts=1000)
+    > read2 <- betamix(accuracy~iq, ReadingSkills, k=2, nstarts=1000)
+    > read3; read2
+    [...]
+    Cluster sizes:
+     1  2 
+    22 22 
+    [...]
+    Cluster sizes:
+     1  2 
+    10 34 
+    [...]
+    > table(clusters(read3), ReadingSkills$dyslexia)
+        no yes
+      1 21   1
+      2  4  18
+    > table(clusters(read2), ReadingSkills$dyslexia)
+        no yes
+      1  9   1
+      2 16  18
+    > c(logLik(read3), BIC(read3))
+    [1]  44.02645 -61.56358
+    > c(logLik(read2), BIC(read2))
+    [1]  35.38319 -44.27705
+  Both models yield two latent classes (in the case of k=3 presumably because
+  the probability of one classed dropped below the threshold set in flexmix),
+  but with vastly different estimates (k=3 reproduces dyslexia almost perfectly).
+  I tried 1000 random starts to be sure that those are not effects of local
+  maxima, but there seems to be a systematic difference - can you explain why
+  this happens? Is this possibly an artifact of the data, or because of the
+  comparably large number of near-perfect scores?
+
+Reply: Unfortunately the argument for repeated runs of the EM
+algorithm was not specified correctly. The argument is nstart. Partial
+matching works for parts of argment names, but if the plural is
+erroneously specified it goes into the ... argument. 
+
+Nevertheless, obviously in this case a lot of random initializations
+are required for the two component solution when starting with two
+components to end up with the same best model as easily detected when
+initializing with three components and dropping one component during
+the EM algorithm when the component size falls under a certain limit. 
+However, there is no systematic difference. This only indicates that
+in certain situations a lot of random initializations are necessary to
+detect certain local optima in the likelihood.
+
+o Model selection for mixture models is oftentimes based on the BIC (as in Grün
+  and Leisch 2008). Is this also sensible for beta regression models, since the
+  log-likelihood in those is usually positive? 
+  In a model with a negative log-likelihood, greater values indicate better fit
+  and values close to zero are desirable, so -2*logL generates the deviance
+  where higher values indicate worse models. In addition, the number of
+  parameters multiplied by the log of observations (k*log(n)) is added, so that
+  larger models get penalized.
+  If the log-likelihood is positive, higher values are also desirable, but now
+  they should lie above zero. By computing the generic BIC with -2*logL, the
+  values get larger, therefore suggest "better" fit. Additionally, the
+  interpretation is reversed (smaller values are desirable), and - my main
+  concern - adding k*log(n) would be beneficial for larger models. A comment on
+  that and how to deal with it would be fine.
+
+Reply: The higher the likelihood the better fits the model, because
+the observed data is more likely to occur. The same is true for the
+log-likelihood regardless of the sign of the log-likelihood because
+the logarithm is a monotone transformation. After multiplying the
+log-likelihood with -2 smaller values indicate a better fit. A penalty
+which measures the complexity of the model is added and the model is
+selected where the trade-off between model fit (with smaller values
+indicating better fit) and model complexity is best, i.e., where the
+BIC is minimal. 
+
+Because the sign of the log-likehood is irrelevant for the derivation
+of the BIC we would not assume that it makes a difference if the
+log-likelihood is in general positive for a certain model class and
+therefore do not see any problem in using the BIC for model selection.
