@@ -61,7 +61,10 @@ extraComponent(type = c("uniform", "betareg"), coef, delta,
     clusters.}
   \item{FLXconcomitant}{concomitant variable model; object of class
     \code{FLXP}. Default is the object returned by calling
-    \code{\link[flexmix]{FLXPconstant}}.}
+    \code{\link[flexmix]{FLXPconstant}}.
+    The argument \code{FLXconcomitant} can be omitted if \code{formula}
+    is a three-part formula of type \code{y ~ x | z | w}, where \code{w}
+    specificies the concomitant variables.}
   \item{FLXcontrol}{object of class \code{"FLXcontrol"} or a named list;
     controls the EM algorithm and passed in turn to the \code{control}
     argument of \code{\link[flexmix]{flexmix}}.}
@@ -177,6 +180,11 @@ for(i in 1:3)
 w <- rnorm(nrow(ReadingSkills), 
            c(-1, 1)[as.integer(ReadingSkills$dyslexia)])
 
+## The argument FLXconcomitant can be omitted when specifying
+## the model via a three part formula given by
+## accuracy ~ iq | 1 | w
+## The posteriors from the previously fitted model are used
+## for initialization.
 rs_mix2 <- betamix(accuracy ~ iq, data = ReadingSkills,
   extra_components = extraComponent(type = "uniform",
   coef = 0.99, delta = 0.01), cluster = posterior(rs_mix),

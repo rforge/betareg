@@ -114,7 +114,7 @@ through covariates was introduced by
 \cite{betareg:Ferrari+Cribari-Neto:2004} along with the extensions by
 \cite{betareg:Smithson+Verkuilen:2006} and
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. This model is also
-referred to as \emph{ double index regression model} because it
+referred to as \emph{double index regression model} because it
 contains two regression parts: one for the mean and one for the
 precision.  \cite{betareg:Ferrari+Cribari-Neto:2004} employed an
 alternative parametrization of the beta distribution characterizing
@@ -748,6 +748,11 @@ betamix(formula, data, k, fixed, subset, na.action,
 \item Arguments \code{formula}, \code{data}, \code{subset},
   \code{na.action}, \code{link}, \code{link.phi} and \code{control}
   are the same as for \fct{betareg}.
+  
+  Additionally the formula can also consist of three parts on the
+  left-had side when specifying a concomitant variable model (see
+  below for the \code{FLXconcomitant} argument).
+  
 \item Arguments \code{cluster}, \code{FLXconcomitant} and
   \code{FLXcontrol} are the same as for function \fct{flexmix}
   (in the latter two cases without prefix \code{FLX}).
@@ -755,11 +760,12 @@ betamix(formula, data, k, fixed, subset, na.action,
   Currently functionality to fit a multinomal logit model for the
   concomitant variable model is provided by \code{FLXPmultinom()} with
   a formula interface for specifying the concomitant variables.  To
-  fit a multinomial logit model for the variables \code{w1} and
-  \code{w2} for the concomitant variable model use:
-  \begin{Code}
-    FLXconcomitant = FLXPmultinom(~ w1 + w2)
-  \end{Code}
+  fit a multinomial logit model for the variables \code{c1} and
+  \code{c2} for the concomitant variable model use
+  \code{FLXconcomitant = FLXPmultinom(~ c1 + c2)}. Alternatively,
+  yielding equivalent output the main model formula can be specified
+  via a three-part formula on the left hand side, e.g., \code{y ~ x |
+    1 | c1 + c2}.
 \item Argument
   \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
   specify the repeated runs of the EM algorithm using function

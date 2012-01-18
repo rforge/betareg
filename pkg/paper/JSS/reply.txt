@@ -8,8 +8,10 @@ The paper:
 1. It isn't clear to me what the phrase "double index" means (on
    pg. 2, "The double index beta regression model is ...")
 
-Reply: We rephrased this sentence and now clearly spell out what the
-"double index" refers to.
+Reply: We rephrased this sentence and now explain that in contrast to
+a single index model there are in a double index model not only one,
+but two linear predictors which are in the case of beta regressions
+for the mean and the precision.
 
 2. On pg. 5, the two occurrences of "gives that" are not grammatically
    correct and should be replaced with "reveals that".
