@@ -169,6 +169,15 @@ Loading required package: vcd
 Loading required package: MASS
 Loading required package: colorspace
 
+> plot(rs_tree)
+
+> plot(rs_tree)
+
+> coef(rs_tree)
+  (Intercept)          iq (phi)_(Intercept)  (phi)_iq
+2   1.6565251  1.46570751          1.272597 2.0478578
+3   0.3809322 -0.08622808          4.807662 0.8260329
+
 > rs_tree
 1) dyslexia == {no}; criterion = 0.999, statistic = 22.687
   2)*  weights = 25 
@@ -188,15 +197,6 @@ betaReg fit with coefficients:
          (phi)_iq  
           0.82603  
 
-
-> plot(rs_tree)
-
-> plot(rs_tree)
-
-> coef(rs_tree)
-  (Intercept)          iq (phi)_(Intercept)  (phi)_iq
-2   1.6565251  1.46570751          1.272597 2.0478578
-3   0.3809322 -0.08622808          4.807662 0.8260329
 
 > sctest(rs_tree)
 $`1`
