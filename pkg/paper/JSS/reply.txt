@@ -126,10 +126,10 @@ ourselves. Obviously this good two-component solution is hard to
 detect using the EM algorithm with random initilization starting with
 two components. That this is a hard problem for the EM algorithm is
 not surprising because there is a subsample of respondents who have
-identical response levels regardless of the values of the explanatory
-variable IQ. However, repeated runs of the EM algorithm will also
-detect this good two-component solution when randomly initialized with
-two components, e.g., see for example
+identical response levels regardless of the explanatory variable
+IQ. However, repeated runs of the EM algorithm will also detect this
+good two-component solution when randomly initialized with two
+components, e.g., see for example
 
 library("betareg"); data("ReadingSkills")
 set.seed(17)
@@ -142,11 +142,11 @@ repeated runs of the EM algorithm is nstart and not nstarts.
 By chance starting with tree components easily detects this good
 two-component solution when dropping one component which becomes too
 small. However, if the minimum size of the components is set to zero
-(i.e., no components are dropped), in most cases an error occurs because
-the EM algorithm converges against the degenerate solution where the
-respondents with the perfect scores are assigned to the same component
-which then has infinite precision. The model as proposed in the
-manuscript fits this three-component solution where a special
+(i.e., no components are dropped), in most cases an error occurs
+because the EM algorithm converges against the degenerate solution
+where the respondents with the perfect scores are assigned to the same
+component which then has infinite precision. The model presented in
+the manuscript fits this three-component solution where a special
 component absorbs the respondents with perfect reading accuracy
 scores.
 

@@ -114,7 +114,7 @@ through covariates was introduced by
 \cite{betareg:Ferrari+Cribari-Neto:2004} along with the extensions by
 \cite{betareg:Smithson+Verkuilen:2006} and
 \cite{betareg:Simas+Barreto-Souza+Rocha:2010}. This model is also
-referred to as \emph{double index regression model} because it
+referred to as ``double index regression model'' because it
 contains two regression parts: one for the mean and one for the
 precision.  \cite{betareg:Ferrari+Cribari-Neto:2004} employed an
 alternative parametrization of the beta distribution characterizing
@@ -234,7 +234,7 @@ partitioning of beta regressions leveraging tools from the \pkg{party}
 package \citep{betareg:Hothorn+Hornik+Strobl:2011}, and the function
 \fct{betamix} provides beta regression mixture models (or latent class
 beta regression) reusing the generic functionality from the
-\pkg{flexmix} package \citep{betareg:Leisch+Gruen:2011}.
+\pkg{flexmix} package \citep{betareg:Leisch+Gruen:2012}.
 
 
 \section{Bias correction and reduction in beta regressions} \label{sec:bias}
@@ -590,7 +590,7 @@ holds. Under the usual regularity conditions, the latter requirement
 is valid for beta regressions. The main building blocks that the MOB
 algorithm requires are the contributions to the additive objective
 function (in steps 1 and 3) and to the associated score function (in
-step 2). For Beta regressions, the objective is the log-likelihood
+step 2). For beta regressions, the objective is the log-likelihood
 $\ell(\theta)$ and its contributions $\ell_i(\theta)$ are given in
 \eqref{eq:loglik}. By \eqref{eq:scores} and using the notation in
 Section \ref{sec:bias}, the corresponding score (or gradient)
@@ -679,7 +679,7 @@ assumed to differ in their mean and/or in their
 precision. Furthermore, the group sizes can depend on further
 covariates.
 
-The mixture model with $K$ components which corresponds to $K$
+The mixture model with $K$ components which correspond to $K$
 groups is given by
 \begin{align}
   h(y ; x, z, c, \theta) & = \sum_{k = 1}^K \pi(k ; c, \alpha) f(y ;
@@ -718,7 +718,7 @@ Package \pkg{flexmix} \citep{betareg:Leisch:2004,
   betareg:Gruen+Leisch:2008} implements a general framework for
 estimating finite mixture models using the EM algorithm. The EM
 algorithm is an iterative method for ML estimation in a missing data
-setting. The missing data for mixture models is the information on to
+setting. The missing data for mixture models is the information to
 which component an observation belongs. The EM algorithm exploits the
 fact that the complete-data log-likelihood for the data and the
 missing information is easier to maximize.  In general for mixture
@@ -764,7 +764,8 @@ betamix(formula, data, k, fixed, subset, na.action,
   \code{c2} use \code{FLXconcomitant = FLXPmultinom(~ c1 +
     c2)}. Alternatively, yielding equivalent output, the main model
   formula can be specified via a three-part formula on the right hand
-  side, e.g., \code{y ~ x | 1 | c1 + c2}.
+  side, e.g., \code{y ~ x | 1 | c1 + c2} (if there are no covariates
+  for the precision model).
 \item Argument
   \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
   specify the repeated runs of the EM algorithm using function
@@ -773,8 +774,8 @@ betamix(formula, data, k, fixed, subset, na.action,
   used, and \code{which} determines which number of components is
   kept if \code{k} is a vector.
 \item Because the formula for specifying the beta regression model is
-  already a two-part formula, a potential grouping variable can be specified via
-  argument \code{ID}.
+  already a two-part formula, a potential grouping variable is specified via
+  argument \code{ID} as opposed to when using \fct{flexmix}.
 \item Further arguments for the component specific model are
   \code{fixed} and \code{extra_components}. The argument \code{fixed}
   can be used to specify the covariates for which parameters are the
@@ -923,7 +924,7 @@ writeLines(apply(cfse, 1, paste, collapse = " & "))
 
 \end{tabular}
 \caption{\label{tab:ReadingSkills-bias} Comparison of coefficients and
-  standard errors (in parentheses) in interaction model for reading
+  standard errors (in parentheses) in the interaction model for reading
   skills. The ML estimator from \texttt{rs\_ml}, the BC estimator from
   \texttt{rs\_bc}, and the BR estimator from \texttt{rs\_br} all give
   very similar results for the mean submodel. In the precision
@@ -1056,17 +1057,9 @@ contains an object of class
 Figure~\ref{fig:betatree}).
 %
 <<ReadingSkills-tree3, echo=TRUE>>=
-rs_tree
 plot(rs_tree)
 @
 
-The printed object indicates after the number of the node, which part
-of the data according to the split is contained (e.g., \code{dyslexia
-  == \{no\}}) or the weights of the observations in the terminal nodes
-indicated by stars. In the terminal nodes also the estimated
-parameters of the beta regression models are provided.
-
-%
 \begin{figure}[t!]
 \centering
 \setkeys{Gin}{width=\textwidth}
@@ -1095,7 +1088,18 @@ default in the terminal nodes (nodes~2 and 3).
 <<ReadingSkills-tree-coef>>=
 coef(rs_tree)
 @
+
+If the fitted object is printed the output indicates after the number
+of the node, which part of the data according to the split is
+contained (e.g., \code{dyslexia == \{no\}}) or the weights of the
+observations in the terminal nodes indicated by stars. In the terminal
+nodes also the estimated parameters of the beta regression models are
+provided.
 %
+<<ReadingSkills-tree3, echo=TRUE>>=
+rs_tree
+@
+
 The output above confirms that in the nondyslexic group there is a
 positive association of both mean accuracy and the precision with IQ
 score.  In the dyslexic group, the mean accuracy is generally lower
@@ -1300,11 +1304,11 @@ irrespective of the IQ score.
 The new extensions of the package \pkg{betareg} allow to move beyond
 classical ML inference when fitting beta regression models. Bias
 correction and bias reduction of the ML estimates can be useful
-alternatives when the maximum likelihood inferences turn out to be
+alternatives when the ML inferences turn out to be
 unreliable, and actually their ready availability in the package
 allows users to check how sensitive inferences (standard errors, confidence
 intervals and Wald tests, in particular) can be to the bias of the
-maximum likelihood estimator. Recursive partitioning methods and
+ML estimator. Recursive partitioning methods and
 finite mixture models enable the user to investigate heterogeneity --
 both observed and unobserved -- in the regression model fitted to the
 whole sample.
