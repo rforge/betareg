@@ -1064,7 +1064,7 @@ The printed object indicates after the number of the node, which part
 of the data according to the split is contained (e.g., \code{dyslexia
   == \{no\}}) or the weights of the observations in the terminal nodes
 indicated by stars. In the terminal nodes also the estimated
-coefficients of the beta regression models are provided.
+parameters of the beta regression models are provided.
 
 %
 \begin{figure}[t!]
