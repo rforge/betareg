@@ -41,7 +41,7 @@
   offering lemon-based drinks: shaken and stirred (bias correction and
   reduction), mixed (finite mixture model), or partitioned (tree
   model). All three extensions are provided in the \proglang{R}
-  package \pkg{betareg} (at least 2.4.0), building on generic
+  package \pkg{betareg} (at least 2.4-0), building on generic
   algorithms and implementations for bias correction/reduction,
   model-based recursive partioning, and finite mixture models,
   respectively. Specifically, the new functions \fct{betatree} and

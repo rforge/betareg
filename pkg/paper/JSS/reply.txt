@@ -118,18 +118,34 @@ o In the mixture regression, an additional component (as proposed by Smithson et
   this happens? Is this possibly an artifact of the data, or because of the
   comparably large number of near-perfect scores?
 
-Reply: Unfortunately the argument for repeated runs of the EM
-algorithm was not specified correctly. The argument is nstart. Partial
-matching works for parts of argument names, but if the plural is
-erroneously specified it goes into the ... argument. 
+Reply: This is an interesting phenomenon, we did not realize
+ourselves. Obviously this good two-component solution is hard to
+detect using the EM algorithm with random initilization starting with
+two components. That this is a hard problem for the EM algorithm is
+not surprising because there is a subsample of respondents who have
+identical response levels regardless of the values of the explanatory
+variable IQ. However, repeated runs of the EM algorithm will also
+detect this good two-component solution when randomly initialized with
+two components, e.g., see for example
 
-Nevertheless, obviously in this case a lot of random initializations
-are required when starting with two components to end up with the same
-best model which easily detected when initializing with three
-components and dropping one component during the EM algorithm.
-However, there is no systematic difference. This only indicates that
-in certain situations a lot of random initializations are necessary to
-detect certain local optima in the likelihood.
+library("betareg"); data("ReadingSkills")
+set.seed(17)
+read2 <- betamix(accuracy~iq, ReadingSkills, k=2, nstart=100)
+read3 <- betamix(accuracy~iq, ReadingSkills, k=3, nstart=3)
+
+Please note that the correct specification of the argument for
+repeated runs of the EM algorithm is nstart and not nstarts.
+
+By chance starting with tree components easily detects this good
+two-component solution when dropping one component which becomes too
+small. However, if the minimum size of the components is set to zero
+(i.e., no components are dropped), in most cases an error occurs because
+the EM algorithm converges against the degenerate solution where the
+respondents with the perfect scores are assigned to the same component
+which then has infinite precision. The model as proposed in the
+manuscript fits this three-component solution where a special
+component absorbs the respondents with perfect reading accuracy
+scores.
 
 o Model selection for mixture models is oftentimes based on the BIC (as in Grün
   and Leisch 2008). Is this also sensible for beta regression models, since the
@@ -146,17 +162,8 @@ o Model selection for mixture models is oftentimes based on the BIC (as in Grün
   concern - adding k*log(n) would be beneficial for larger models. A comment on
   that and how to deal with it would be fine.
 
-Reply: The higher the likelihood the better fits the model, because
-the observed data is more likely to occur. The same is true for the
-log-likelihood regardless of the sign of the log-likelihood because
-the logarithm is a monotone transformation. After multiplying the
-log-likelihood with -2 smaller values indicate a better fit. A penalty
-which measures the complexity of the model is added and the model is
-selected where the trade-off between model fit (with smaller values
-indicating better fit) and model complexity is best, i.e., where the
-BIC is minimal. 
+Reply: To the best of our knowledge BIC works in general when fitting
+and comparing statistical models (given the usual regularity
+conditions). The log-likelihood is always maximized and hence -2 times
+the log-likelihood minimzed.
 
-Because the sign of the log-likelihood is irrelevant for the derivation
-of the BIC we would not assume that it makes a difference if the
-log-likelihood is in general positive for a certain model class and
-therefore do not see any problem in using the BIC for model selection.
