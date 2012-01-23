@@ -1,3 +1,5 @@
+We would like to thank the reviewers for their feedback. Please find
+below our detailed reply to each of the points raised by them. 
 
 %------------------------------------------------------------------------
 
@@ -71,8 +73,9 @@ re-submitting the revised version.
    helpful.
 
 Reply: We added code in the example where a concomitant variable model
-is fitted using the dyslexia variable and showing the use of these two
-functions for inspecting a fitted concomitant variable model.
+is fitted using a variable based on dyslexia and showing the use of
+these two functions for inspecting a fitted concomitant variable
+model.
 
 %------------------------------------------------------------------------
 
@@ -165,5 +168,5 @@ o Model selection for mixture models is oftentimes based on the BIC (as in Grün
 Reply: To the best of our knowledge BIC works in general when fitting
 and comparing statistical models (given the usual regularity
 conditions). The log-likelihood is always maximized and hence -2 times
-the log-likelihood minimzed.
+the log-likelihood minimized.
 

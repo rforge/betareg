@@ -638,11 +638,11 @@ Beta regression trees are implemented in the \pkg{betareg} package in function
 \end{Code}
 %
 Essentially, almost all arguments work as for the basic \fct{betareg} function.
-The main difference is that a \code{partition} formula (without left-hand side),
+The main difference is that a \code{partition} formula (without left hand side),
 such as \code{~ c1 + c2 + c3} has to be provided to specify the vector of partitioning variables
 $c_i = (c_{i1}, \dots, c_{il})^\top$.
 As an alternative, \code{partition} may be omitted when \code{formula} has three parts
-on the right-hand side, such as \code{y ~ x1 + x2 | z1 | c1 + c2 + c3}, specifying
+on the right hand side, such as \code{y ~ x1 + x2 | z1 | c1 + c2 + c3}, specifying
 mean regressors $x_i$, presicion regressors $z_i$, and partitioning variables $c_i$,
 respectively.
 
@@ -750,7 +750,7 @@ betamix(formula, data, k, fixed, subset, na.action,
   are the same as for \fct{betareg}.
   
   Additionally the formula can also consist of three parts on the
-  left-had side when specifying a concomitant variable model (see
+  right hand side when specifying a concomitant variable model (see
   below for the \code{FLXconcomitant} argument).
   
 \item Arguments \code{cluster}, \code{FLXconcomitant} and
@@ -761,11 +761,10 @@ betamix(formula, data, k, fixed, subset, na.action,
   concomitant variable model is provided by \code{FLXPmultinom()} with
   a formula interface for specifying the concomitant variables.  To
   fit a multinomial logit model for the variables \code{c1} and
-  \code{c2} for the concomitant variable model use
-  \code{FLXconcomitant = FLXPmultinom(~ c1 + c2)}. Alternatively,
-  yielding equivalent output the main model formula can be specified
-  via a three-part formula on the left hand side, e.g., \code{y ~ x |
-    1 | c1 + c2}.
+  \code{c2} use \code{FLXconcomitant = FLXPmultinom(~ c1 +
+    c2)}. Alternatively, yielding equivalent output, the main model
+  formula can be specified via a three-part formula on the right hand
+  side, e.g., \code{y ~ x | 1 | c1 + c2}.
 \item Argument
   \code{k}, \code{verbose}, \code{nstart} and \code{which} are used to
   specify the repeated runs of the EM algorithm using function
