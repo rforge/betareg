@@ -12,7 +12,7 @@ The paper:
 
 Reply: We rephrased this sentence and now explain that in contrast to
 a single index model there are in a double index model not only one,
-but two linear predictors which are in the case of beta regressions
+but two linear predictors as in the case of beta regressions
 for the mean and the precision.
 
 2. On pg. 5, the two occurrences of "gives that" are not grammatically
@@ -48,8 +48,8 @@ The package:
 1. It would be nice to have an example for betatree of a quantitative
    variable that is used for splitting, although this is not essential.
 
-Reply: We added a numerical variable which contains information for a
-split in the example of the documentation for betatree.
+Reply: We added an artificial numerical variable containing information
+for a split in example("betatree").
 
 2. Pursuant to comment 4 above, the betamix arguments are not entirely
    consistent with the format of betareg or betatree. The latter
@@ -62,8 +62,8 @@ split in the example of the documentation for betatree.
    accordingly if the next release of CRAN occurs before the paper
    goes to production.
 
-Reply: The new version has been submitted to CRAN along with
-re-submitting the revised version.
+Reply: The new version of the software has been submitted to CRAN along
+with re-submitting the revised version of the manuscript.
 
 3. That said, it also initially was a mystery to me how one extracts
    the coefficients and standard errors for the mixture component
@@ -76,6 +76,7 @@ Reply: We added code in the example where a concomitant variable model
 is fitted using a variable based on dyslexia and showing the use of
 these two functions for inspecting a fitted concomitant variable
 model.
+
 
 %------------------------------------------------------------------------
 
@@ -121,25 +122,25 @@ o In the mixture regression, an additional component (as proposed by Smithson et
   this happens? Is this possibly an artifact of the data, or because of the
   comparably large number of near-perfect scores?
 
-Reply: This is an interesting phenomenon, we did not realize
-ourselves. Obviously this good two-component solution is hard to
-detect using the EM algorithm with random initilization starting with
-two components. That this is a hard problem for the EM algorithm is
-not surprising because there is a subsample of respondents who have
-identical response levels regardless of the explanatory variable
-IQ. However, repeated runs of the EM algorithm will also detect this
-good two-component solution when randomly initialized with two
-components, e.g., see for example
+Reply: This is an interesting phenomenon, which we did not notice before
+ourselves. Obviously this "good" two-component solution is hard to detect using
+the EM algorithm with random initilization starting with two components. That
+this is a hard problem for the EM algorithm is not surprising because there is
+a subsample of respondents who have identical response levels regardless of the
+explanatory variable IQ. However, a sufficiently large number of repeated runs
+of the EM algorithm will also detect this good two-component solution when
+randomly initialized with two components, e.g., see for example
 
-library("betareg"); data("ReadingSkills")
+library("betareg")
+data("ReadingSkills")
 set.seed(17)
-read2 <- betamix(accuracy~iq, ReadingSkills, k=2, nstart=100)
-read3 <- betamix(accuracy~iq, ReadingSkills, k=3, nstart=3)
+read2 <- betamix(accuracy ~ iq, ReadingSkills, k = 2, nstart = 100)
+read3 <- betamix(accuracy ~ iq, ReadingSkills, k = 3, nstart = 3)
 
 Please note that the correct specification of the argument for
 repeated runs of the EM algorithm is nstart and not nstarts.
 
-By chance starting with tree components easily detects this good
+By chance, starting with tree components easily detects this good
 two-component solution when dropping one component which becomes too
 small. However, if the minimum size of the components is set to zero
 (i.e., no components are dropped), in most cases an error occurs
@@ -166,7 +167,7 @@ o Model selection for mixture models is oftentimes based on the BIC (as in Grün
   that and how to deal with it would be fine.
 
 Reply: To the best of our knowledge BIC works in general when fitting
-and comparing statistical models (given the usual regularity
+and comparing maximum likelihood models (given the usual regularity
 conditions). The log-likelihood is always maximized and hence -2 times
 the log-likelihood minimized.
 
