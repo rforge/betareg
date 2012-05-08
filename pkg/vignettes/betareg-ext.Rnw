@@ -26,7 +26,12 @@
 \Keywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, \proglang{R}}
 \Plainkeywords{beta regression, bias correction, bias reduction, recursive partitioning, finite mixture, R}
 
-\Abstract{Beta regression -- an increasingly popular approach for
+\Abstract{
+  This introduction to the extended features of the \proglang{R} package
+  \pkg{betareg} is a (slightly) modified version of \cite{betareg:Gruen+Kosmidis+Zeileis:2012},
+  published in the \emph{Journal of Statistical Software}.
+
+  Beta regression -- an increasingly popular approach for
   modeling rates and proportions -- is extended in various directions:
   (a)~bias correction/reduction of the maximum likelihood estimator,
   (b)~beta regression tree models by means of recursive partitioning,
