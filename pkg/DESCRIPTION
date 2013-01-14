@@ -13,6 +13,6 @@ Description: Beta regression for modeling beta-distributed dependent variables, 
   response), bias-corrected and bias-reduced estimation as well as finite mixture models and
   recursive partitioning for beta regressions are provided.
 Depends: R (>= 2.10.0), stats, Formula
-Imports: graphics, methods, flexmix, lmtest, modeltools, sandwich
+Imports: graphics, methods, flexmix, Formula, lmtest, modeltools, sandwich
 Suggests: car, flexmix, lattice, lmtest, modeltools, party, sandwich, strucchange
 License: GPL-2
