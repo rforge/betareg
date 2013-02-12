@@ -1,5 +1,5 @@
 
-R version 2.15.1 (2012-06-22) -- "Roasted Marshmallows"
+R version 2.15.2 (2012-10-26) -- "Trick or Treat"
 Copyright (C) 2012 The R Foundation for Statistical Computing
 ISBN 3-900051-07-0
 Platform: x86_64-pc-linux-gnu (64-bit)
@@ -1079,7 +1079,7 @@ Loading required package: colorspace
 > sctest(bt)
 $`1`
               dyslexia        x1       x2        x3
-statistic 2.268741e+01 8.5250961 5.569861 1.0567635
+statistic 2.268741e+01 8.5250962 5.569861 1.0567635
 p.value   5.847856e-04 0.9094631 0.998710 0.9999042
 
 $`2`
@@ -1158,7 +1158,7 @@ Number of iterations: 19 (BFGS) + 8 (Fisher scoring)
 > sctest(bt2)
 $`1`
                  x1       x2        x3          x4
-statistic 8.5250961 5.569861 1.0567635 19.94405058
+statistic 8.5250962 5.569861 1.0567635 19.94405064
 p.value   0.9094631 0.998710 0.9999042  0.03531254
 
 $`2`
@@ -1195,7 +1195,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 Type of estimator: ML (maximum likelihood)
 Log-likelihood: 38.62 on 4 Df
 Pseudo R-squared: 0.3292
-Number of iterations: 17 (BFGS) + 1 (Fisher scoring) 
+Number of iterations: 17 (BFGS) + 2 (Fisher scoring) 
 > summary(bt2, node = 3)
 
 Call:
@@ -1541,7 +1541,7 @@ Number of iterations: 33 (BFGS) + 28 (Fisher scoring)
 > ### * <FOOTER>
 > ###
 > cat("Time elapsed: ", proc.time() - get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  48.719 0.224 49.139 0 0 
+Time elapsed:  47.33 0.196 47.773 0 0 
 > grDevices::dev.off()
 null device 
           1 
