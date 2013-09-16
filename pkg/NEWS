@@ -1,3 +1,8 @@
+Changes in Version 3.0-5
+
+  o The "Formula" package is now only in Imports but not Depends (see below).
+
+
 Changes in Version 3.0-4
 
   o For some datasets betareg() would just "hang" because dbeta() "hangs"
