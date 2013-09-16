@@ -1,3 +1,13 @@
+Changes in Version 3.0-4
+
+  o For some datasets betareg() would just "hang" because dbeta() "hangs"
+    for certain extreme parameter combinations (in current R versions).
+    betareg() now tries to catches these cases in order to avoid the problem.
+    
+  o Depends/Imports/Suggests have been rearranged to conform with current
+    CRAN check policies.
+
+
 Changes in Version 3.0-3
 
   o The predict() method gained support for type = "quantile", so that
