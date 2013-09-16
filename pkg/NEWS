@@ -5,7 +5,9 @@ Changes in Version 3.0-4
     betareg() now tries to catches these cases in order to avoid the problem.
     
   o Depends/Imports/Suggests have been rearranged to conform with current
-    CRAN check policies.
+    CRAN check policies. This is the last version of "betareg" to have the
+    "Formula" package in Depends - from the next version onwards it will
+    only be in Imports.
 
 
 Changes in Version 3.0-3
