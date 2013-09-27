@@ -6,8 +6,6 @@ betamix <- function(formula, data, k, subset, na.action,
                     verbose = FALSE, nstart = if (is.null(cluster)) 3 else 1, which = "BIC", 
                     ID, fixed, extra_components, ...)
 {
-  ## beta regression mixtures rely on flexmix package
-  stopifnot(requireNamespace("flexmix"))
   ## Determine model.frame similar to betareg
 
   if (!missing(extra_components) & !missing(fixed))
