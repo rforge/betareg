@@ -90,7 +90,7 @@ betamix <- function(formula, data, k, subset, na.action,
                          concomitant = FLXconcomitant, control = FLXcontrol,
                          cluster = cluster, verbose = verbose)
   }
-  if (is(rval, "stepFlexmix")) rval <- getModel(rval, which = which)
+  if (is(rval, "stepFlexmix")) rval <- modeltools::getModel(rval, which = which)
   structure(list(flexmix = rval, call = cl), class = "betamix")
 }
 
