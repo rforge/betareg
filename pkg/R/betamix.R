@@ -214,6 +214,8 @@ function(model, data, formula, lhs=TRUE, ...) {
   model_precision <- model
   model_precision@formula <- . ~ .
   model_precision@terms <- NULL
+  model_precision@contrasts <- NULL
+  model_precision@xlevels <- NULL
   model_precision <- callNextMethod(model_precision, data, model@precision, lhs = FALSE, ...)
   model@z <- model_precision@x
   model@terms_precision <- model_precision@terms
