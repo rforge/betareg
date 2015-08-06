@@ -68,8 +68,6 @@ export(
   
   ## beta regression trees
   "betatree",
-  "betaReg",
-  "reweight.betaReg",
   "sctest.betatree",
 
   ## beta mixture models
@@ -98,18 +96,10 @@ S3method("print", "summary.betareg")
 S3method("update", "betareg")
 S3method("vcov", "betareg")
 
-## methods for class betaReg
-S3method("estfun", "betaReg")
-S3method("print", "betaReg")
-S3method("summary", "betaReg")
-
 ## methods for class betatree
-S3method("coef", "betatree")
-S3method("logLik", "betatree")
 S3method("plot", "betatree")
 S3method("print", "betatree")
-S3method("summary", "betatree")
-S3method("weights", "betatree")
+S3method("predict", "betatree")
 
 ## methods for class betamix
 S3method("coef", "betamix")

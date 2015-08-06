@@ -23,7 +23,6 @@
 library("betareg")
 library("lmtest")
 library("flexmix")
-library("party")
 set.seed(1071)
 @
 
@@ -44,7 +43,7 @@ set.seed(1071)
   \item Shaken or stirred: Single or double index
   	beta regression for mean and/or precision in \pkg{betareg}
   \item Mixed: Latent class beta regression via \pkg{flexmix}
-  \item Partitioned: Beta regression trees via \pkg{party}
+  \item Partitioned: Beta regression trees via \pkg{partykit}
   \item Summary
 \end{itemize}
 
@@ -305,7 +304,7 @@ legend("topleft", c("control", "dyslexic", "betareg", "lm"),
 
 \medskip
 
-\textbf{Model-based recursive partitioning:} Package \pkg{party}.
+\textbf{Model-based recursive partitioning:} Package \pkg{partykit}.
     \begin{itemize}
       \item Idea: Recursively split sample with respect to available variables.
       \item Aim: Maximize partitioned likelihood.
@@ -493,13 +492,13 @@ for(i in 1:2) lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2, col = col3[i]
 
 \textbf{Model-based recursive partitioning:}
     \begin{itemize}
-      \item \pkg{party} provides the recursive partitioning.
+      \item \pkg{partykit} provides the recursive partitioning.
       \item \pkg{betareg} provides the models in each node.
       \begin{itemize}
         \item Model-fitting function: \fct{betareg.fit} (conveniently without formula processing).
         \item Extractor for empirical estimating functions (aka scores
             or case-wise gradient contributions): \fct{estfun} method.
-        \item Some additional (and somewhat technical) S4 glue\dots
+        \item Some additional convenience interfaces\dots
       \end{itemize}
     \end{itemize}
 

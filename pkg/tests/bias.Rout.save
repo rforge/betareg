@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2014-09-24 r66673) -- "Unsuffered Consequences"
-Copyright (C) 2014 The R Foundation for Statistical Computing
-Platform: x86_64-unknown-linux-gnu (64-bit)
+R version 3.2.0 (2015-04-16) -- "Full of Ingredients"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -131,4 +131,4 @@ temp              0.0004361696 0.0005247197 0.0005414828
 > 
 > proc.time()
    user  system elapsed 
-  3.756   0.304   4.059 
+  3.032   0.072   3.108 

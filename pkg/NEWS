@@ -1,4 +1,10 @@
-Changes in Version 3.0-6
+Changes in Version 3.1-0
+
+  o The betatree() function now uses the new mob() implementation from the
+    "partykit" package (instead of the old "party" package). The user interface
+    essentially changed the same but now many more options are available through
+    the new mob() function. The returned model object is now inheriting from
+    "modelparty"/"party".
 
   o Included "grDevices" in Imports.
   

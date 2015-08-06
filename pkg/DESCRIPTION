@@ -1,5 +1,5 @@
 Package: betareg
-Version: 3.0-6
+Version: 3.1-0
 Date: 2015-08-06
 Title: Beta Regression
 Authors@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
@@ -14,5 +14,5 @@ Description: Beta regression for modeling beta-distributed dependent variables, 
   recursive partitioning for beta regressions are provided.
 Depends: R (>= 2.10.0)
 Imports: graphics, grDevices, methods, stats, flexmix, Formula, lmtest, modeltools, sandwich
-Suggests: car, lattice, party, strucchange
+Suggests: car, lattice, partykit, strucchange
 License: GPL-2 | GPL-3

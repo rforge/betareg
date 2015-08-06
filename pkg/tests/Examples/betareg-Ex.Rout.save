@@ -1,7 +1,7 @@
 
-R Under development (unstable) (2014-09-24 r66673) -- "Unsuffered Consequences"
-Copyright (C) 2014 The R Foundation for Statistical Computing
-Platform: x86_64-unknown-linux-gnu (64-bit)
+R version 3.2.0 (2015-04-16) -- "Full of Ingredients"
+Copyright (C) 2015 The R Foundation for Statistical Computing
+Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
 You are welcome to redistribute it under certain conditions.
@@ -989,9 +989,8 @@ Number of iterations: 51 (BFGS) + 3 (Fisher scoring)
 > 
 > ### Name: betatree
 > ### Title: Beta Regression Trees
-> ### Aliases: betatree coef.betatree logLik.betatree plot.betatree
-> ###   print.betatree sctest.betatree summary.betatree weights.betatree
-> ###   betaReg print.betaReg reweight.betaReg summary.betaReg estfun.betaReg
+> ### Aliases: betatree plot.betatree print.betatree predict.betatree
+> ###   sctest.betatree
 > ### Keywords: tree
 > 
 > ### ** Examples
@@ -1010,51 +1009,21 @@ Number of iterations: 51 (BFGS) + 3 (Fisher scoring)
 > ## only dyslexi is correctly selected for splitting
 > bt <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
 +   data = ReadingSkills, minsplit = 10)
-Loading required package: party
-Loading required package: grid
-Loading required package: zoo
-
-Attaching package: 'zoo'
-
-The following objects are masked from 'package:base':
-
-    as.Date, as.Date.numeric
-
-Loading required package: sandwich
-Loading required package: strucchange
-Loading required package: modeltools
-Loading required package: stats4
 > plot(bt)
 > 
 > ## inspect result
 > coef(bt)
   (Intercept)          iq (phi)_(Intercept)  (phi)_iq
-2   1.6565251  1.46570751          1.272597 2.0478578
+2   1.6565251  1.46570750          1.272597 2.0478577
 3   0.3809322 -0.08622808          4.807662 0.8260329
-> sctest(bt)
-$`1`
-              dyslexia        x1       x2        x3
-statistic 2.268741e+01 8.5250961 5.569861 1.0567635
-p.value   5.847856e-04 0.9094631 0.998710 0.9999042
-
-$`2`
-          dyslexia        x1        x2        x3
-statistic        0 6.4116324 4.5170190 4.2308113
-p.value         NA 0.8412097 0.9751644 0.7566428
-
-$`3`
-          [,1]
-statistic    0
-p.value      1
-
 > summary(bt, node = 2)
 
 Call:
-NULL
+betatree(formula = accuracy ~ iq | iq, data = ReadingSkills)
 
-Raw response residuals:
+Standardized weighted residuals 2:
     Min      1Q  Median      3Q     Max 
--0.3975 -0.1247  0.0043  0.1149  0.4114 
+-1.8205 -0.5211  0.0615  0.8490  1.0627 
 
 Coefficients (mean model with logit link):
             Estimate Std. Error z value Pr(>|z|)    
@@ -1070,16 +1039,16 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Type of estimator: ML (maximum likelihood)
 Log-likelihood: 39.41 on 4 Df
-Pseudo R-squared: 0.3292
+Pseudo R-squared: 0.1487
 Number of iterations: 17 (BFGS) + 1 (Fisher scoring) 
 > summary(bt, node = 3)
 
 Call:
-NULL
+betatree(formula = accuracy ~ iq | iq, data = ReadingSkills)
 
-Raw response residuals:
+Standardized weighted residuals 2:
     Min      1Q  Median      3Q     Max 
--0.1512  0.0170  0.1032  0.3925  0.4350 
+-2.4554 -0.6593 -0.0787  0.8127  1.6104 
 
 Coefficients (mean model with logit link):
             Estimate Std. Error z value Pr(>|z|)    
@@ -1095,8 +1064,32 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 Type of estimator: ML (maximum likelihood)
 Log-likelihood: 27.33 on 4 Df
-Pseudo R-squared: 0.3292
-Number of iterations: 19 (BFGS) + 8 (Fisher scoring) 
+Pseudo R-squared: 0.03907
+Number of iterations: 16 (BFGS) + 2 (Fisher scoring) 
+> library("strucchange")
+Loading required package: zoo
+
+Attaching package: 'zoo'
+
+The following objects are masked from 'package:base':
+
+    as.Date, as.Date.numeric
+
+Loading required package: sandwich
+> sctest(bt)
+$`1`
+              dyslexia        x1       x2        x3
+statistic 2.268741e+01 8.5250963 5.569861 1.0567635
+p.value   5.847856e-04 0.9094631 0.998710 0.9999042
+
+$`2`
+          dyslexia        x1        x2        x3
+statistic        0 6.4116323 4.5170190 4.2308113
+p.value         NA 0.8412097 0.9751644 0.7566428
+
+$`3`
+NULL
+
 > 
 > ## add a numerical variable with relevant information for splitting
 > ReadingSkills$x4 <- rnorm(nrow(ReadingSkills), c(-1.5, 1.5)[ReadingSkills$dyslexia])
@@ -1107,84 +1100,79 @@ Number of iterations: 19 (BFGS) + 8 (Fisher scoring)
 > 
 > ## inspect result
 > coef(bt2)
-  (Intercept)         iq (phi)_(Intercept)   (phi)_iq
-2   1.7060360 1.47402394          1.293303  2.0840962
-3   0.5047507 0.03390671          3.131115 -0.7683503
+  (Intercept)        iq (phi)_(Intercept)   (phi)_iq
+2    1.459816 1.7332353         0.6222202  2.8364701
+3    1.126960 0.3416059         1.4104183 -0.3734568
 > sctest(bt2)
 $`1`
                  x1       x2        x3          x4
-statistic 8.5250961 5.569861 1.0567635 19.94405056
-p.value   0.9094631 0.998710 0.9999042  0.03531255
+statistic 8.5250963 5.569861 1.0567635 19.94405073
+p.value   0.9094631 0.998710 0.9999042  0.03484767
 
 $`2`
-                 x1       x2       x3        x4
-statistic 8.9466724 3.588752 3.567712 4.7049445
-p.value   0.5964143 0.998549 0.919691 0.9848264
+NULL
 
 $`3`
-          x1 x2        x3 x4
-statistic  0  0 4.8649075  0
-p.value   NA NA 0.3014418 NA
+                 x1        x2        x3          x4
+statistic 6.4811105 6.6100333 1.9526408 17.63628999
+p.value   0.9677992 0.9625077 0.9957364  0.05837023
 
 > summary(bt2, node = 2)
 
 Call:
-NULL
+betatree(formula = accuracy ~ iq | iq, data = ReadingSkills)
 
-Raw response residuals:
+Standardized weighted residuals 2:
     Min      1Q  Median      3Q     Max 
--0.3995 -0.1325  0.0034  0.1058  0.4013 
+-1.7180 -0.4819 -0.0344  0.8848  0.9436 
 
 Coefficients (mean model with logit link):
             Estimate Std. Error z value Pr(>|z|)    
-(Intercept)   1.7060     0.2916   5.850 4.92e-09 ***
-iq            1.4740     0.2478   5.948 2.72e-09 ***
+(Intercept)   1.4598     0.4859   3.004  0.00266 ** 
+iq            1.7332     0.3695   4.691 2.72e-06 ***
 
 Phi coefficients (precision model with log link):
             Estimate Std. Error z value Pr(>|z|)    
-(Intercept)   1.2933     0.3120   4.145 3.40e-05 ***
-iq            2.0841     0.3333   6.253 4.03e-10 ***
+(Intercept)   0.6222     0.5065   1.229    0.219    
+iq            2.8365     0.5029   5.640  1.7e-08 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
 
 Type of estimator: ML (maximum likelihood)
-Log-likelihood: 38.62 on 4 Df
-Pseudo R-squared: 0.3292
-Number of iterations: 17 (BFGS) + 1 (Fisher scoring) 
+Log-likelihood: 23.46 on 4 Df
+Pseudo R-squared: 0.3482
+Number of iterations: 16 (BFGS) + 1 (Fisher scoring) 
 > summary(bt2, node = 3)
 
 Call:
-NULL
+betatree(formula = accuracy ~ iq | iq, data = ReadingSkills)
 
-Raw response residuals:
+Standardized weighted residuals 2:
     Min      1Q  Median      3Q     Max 
--0.1579  0.0057  0.0904  0.3525  0.3737 
+-1.1731 -0.6224 -0.4061  0.1411  3.6191 
 
 Coefficients (mean model with logit link):
             Estimate Std. Error z value Pr(>|z|)    
-(Intercept)  0.50475    0.12449   4.054 5.02e-05 ***
-iq           0.03391    0.09980   0.340    0.734    
+(Intercept)   1.1270     0.2092   5.387 7.16e-08 ***
+iq            0.3416     0.1976   1.729   0.0839 .  
 
 Phi coefficients (precision model with log link):
             Estimate Std. Error z value Pr(>|z|)    
-(Intercept)   3.1311     0.3704   8.454   <2e-16 ***
-iq           -0.7684     0.3591  -2.140   0.0324 *  
+(Intercept)   1.4104     0.2621   5.382 7.38e-08 ***
+iq           -0.3735     0.2636  -1.417    0.157    
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1 
 
 Type of estimator: ML (maximum likelihood)
-Log-likelihood: 22.38 on 4 Df
-Pseudo R-squared: 0.3292
-Number of iterations: 18 (BFGS) + 2 (Fisher scoring) 
-> 
+Log-likelihood: 15.67 on 4 Df
+Pseudo R-squared: 0.1609
+Number of iterations: 16 (BFGS) + 1 (Fisher scoring) 
 > 
 > 
 > 
 > cleanEx()
 
-detaching 'package:party', 'package:modeltools', 'package:stats4',
-  'package:strucchange', 'package:sandwich', 'package:zoo',
-  'package:grid'
+detaching 'package:strucchange', 'package:sandwich', 'package:zoo'
 
 > nameEx("gleverage")
 > ### * gleverage
@@ -1529,7 +1517,7 @@ Number of iterations: 33 (BFGS) + 28 (Fisher scoring)
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  43.44 1.284 44.808 0 0 
+Time elapsed:  41.916 0.252 42.692 0 0 
 > grDevices::dev.off()
 null device 
           1 
