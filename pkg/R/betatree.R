@@ -8,7 +8,7 @@ betatree <- function(formula, partition, data, subset = NULL, na.action = na.omi
  		    control = betareg.control(), ...)
 {
   ## beta regression trees rely on party package
-  stopifnot(require("party"))
+  stopifnot(requireNamespace("party"))
 
   ## transform formula
   formula <- Formula(formula)

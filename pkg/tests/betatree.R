@@ -14,6 +14,7 @@ rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
   data = ReadingSkills, minsplit = 10)
 
 ## methods
+library("party")
 print(rs_tree)
 summary(rs_tree)
 coef(rs_tree)

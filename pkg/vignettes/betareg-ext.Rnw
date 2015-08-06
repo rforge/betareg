@@ -1125,6 +1125,7 @@ parameter instability tests were insignificant (see node~2) or because
 the node size is too small for a further split (see node~3).
 %
 <<ReadingSkills-tree-sctest>>=
+library("party")
 sctest(rs_tree)
 @
 %

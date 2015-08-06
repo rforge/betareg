@@ -119,6 +119,7 @@ bt <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
 plot(bt)
 
 ## inspect result
+library("party")
 coef(bt)
 sctest(bt)
 summary(bt, node = 2)
