@@ -875,9 +875,8 @@ terms.betareg <- function(x, model = c("mean", "precision"), ...) {
 
 model.frame.betareg <- function(formula, ...) {
   if(!is.null(formula$model)) return(formula$model)
-  if(is.Formula(formula$formula)) formula$call$formula <- formula$formula <-
-    formula(formula$formula, collapse = TRUE)
   formula$terms <- formula$terms$full
+  formula$call$formula <- formula$formula <- formula(formula$terms)
   NextMethod()
 }
 
