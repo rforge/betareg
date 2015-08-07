@@ -15,6 +15,8 @@ Type 'demo()' for some demos, 'help()' for on-line help, or
 'help.start()' for an HTML browser interface to help.
 Type 'q()' to quit R.
 
+> options(digits = 4)
+> 
 > ## package and data
 > library("betareg")
 > data("ReadingSkills", package = "betareg")
@@ -41,30 +43,30 @@ convergence after 43 iterations
 > summary(rs_mix)
 $Comp.1
 $Comp.1$mean
-            Estimate Std. Error z value  Pr(>|z|)    
-(Intercept)  1.40342    0.26332  5.3296 9.842e-08 ***
-iq           0.82502    0.21630  3.8142 0.0001366 ***
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)    1.403      0.263    5.33  9.8e-08 ***
+iq             0.825      0.216    3.81  0.00014 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 $Comp.1$precision
-            Estimate Std. Error z value  Pr(>|z|)    
-(Intercept)  2.68508    0.45435  5.9097 3.428e-09 ***
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)    2.685      0.454    5.91  3.4e-09 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 
 $Comp.2
 $Comp.2$mean
-             Estimate Std. Error z value  Pr(>|z|)    
-(Intercept)  0.502523   0.082476  6.0930 1.108e-09 ***
-iq          -0.048414   0.112923 -0.4287    0.6681    
+            Estimate Std. Error z value Pr(>|z|)    
+(Intercept)   0.5025     0.0825    6.09  1.1e-09 ***
+iq           -0.0484     0.1129   -0.43     0.67    
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 $Comp.2$precision
             Estimate Std. Error z value Pr(>|z|)    
-(Intercept)  4.25160    0.74737  5.6888 1.28e-08 ***
+(Intercept)    4.252      0.747    5.69  1.3e-08 ***
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
@@ -126,4 +128,4 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 > 
 > proc.time()
    user  system elapsed 
- 18.712   0.152  19.787 
+ 15.520   0.056  15.599 

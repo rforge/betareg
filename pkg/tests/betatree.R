@@ -1,3 +1,5 @@
+options(digits = 4)
+
 ## package and data
 library("betareg")
 data("ReadingSkills", package = "betareg")
@@ -11,7 +13,7 @@ ReadingSkills$x3 <- factor(sample(0:1, n, replace = TRUE))
 
 ## fit beta regression tree
 rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 
 ## methods
 print(rs_tree)

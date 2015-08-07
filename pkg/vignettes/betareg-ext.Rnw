@@ -1025,11 +1025,11 @@ for the symbolic description of the partitioning variables and both
 formulas are evaluated using \code{data}. Additional control arguments
 for the recursive partitioning method used in \fct{mob\_control} can
 be specified via the \code{\dots} argument. In this case the minimum
-number of observations in a node is given by \code{minsplit = 10}.
+number of observations in a node is given by \code{minsize = 10}.
 %
 <<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
 rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 @
 %
 <<ReadingSkills-tree0, echo=FALSE, results=hide>>=
@@ -1051,7 +1051,7 @@ variables.
 %
 <<ReadingSkills-tree2, echo=TRUE, eval=FALSE>>=
 rs_tree <- betatree(accuracy ~ iq | iq | dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 @
 %
 The returned object is of class \code{"\Sexpr{class(rs_tree)[1]}"} which
@@ -1132,7 +1132,7 @@ In node~1 only dyslexia shows significant instability while the noise
 variables are all insignificant. In node~2, dyslexia cannot be used
 for splitting anymore and all other variables are still
 insignificant and thus the partitioning stops.  With only 19~observations,
-node~3 is considered too small to warrant further splitting given that \code{minsplit = 10}
+node~3 is considered too small to warrant further splitting given that \code{minsize = 10}
 requires that each node contains at least 10 observations and hence no
 tests are carried out.
 

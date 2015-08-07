@@ -343,7 +343,7 @@ partitioning is done by \code{dyslexia} and the noise variables \code{x1}, \code
 <<ReadingSkills-tree, echo=TRUE, eval=FALSE>>=
 rs_tree <- betatree(accuracy ~ iq | iq,
   ~ dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 plot(rs_tree)
 @
 
@@ -354,7 +354,7 @@ plot(rs_tree)
 <<ReadingSkills-tree2, echo=FALSE>>=
 if(file.exists("slides-betatree.rda")) load("slides-betatree.rda") else {
 rs_tree <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 save(rs_tree, file = "slides-betatree.rda")
 }
 @

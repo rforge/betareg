@@ -79,6 +79,8 @@ Zeileis, A., Hothorn, T., and Hornik K. (2008).
 \seealso{\code{\link{betareg}}, \code{\link{betareg.fit}}, \code{\link[partykit]{mob}}}
 
 \examples{
+options(digits = 4)
+
 ## data with two groups of dyslexic and non-dyslexic children
 data("ReadingSkills", package = "betareg")
 ## additional random noise (not associated with reading scores)
@@ -90,9 +92,9 @@ ReadingSkills$x3 <- factor(rnorm(nrow(ReadingSkills)) > 0)
 ## fit beta regression tree: in each node
 ##   - accurcay's mean and precision depends on iq
 ##   - partitioning is done by dyslexia and the noise variables x1, x2, x3
-## only dyslexi is correctly selected for splitting
+## only dyslexia is correctly selected for splitting
 bt <- betatree(accuracy ~ iq | iq, ~ dyslexia + x1 + x2 + x3,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 plot(bt)
 
 ## inspect result
@@ -106,7 +108,7 @@ sctest(bt)
 ReadingSkills$x4 <- rnorm(nrow(ReadingSkills), c(-1.5, 1.5)[ReadingSkills$dyslexia])
 
 bt2 <- betatree(accuracy ~ iq | iq, ~ x1 + x2 + x3 + x4,
-  data = ReadingSkills, minsplit = 10)
+  data = ReadingSkills, minsize = 10)
 plot(bt2)
 
 ## inspect result

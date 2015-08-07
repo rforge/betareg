@@ -141,6 +141,8 @@ Leisch, F. (2004). FlexMix: A General Framework for Finite Mixture
 }
 
 \examples{
+options(digits = 4)
+
 ## data with two groups of dyslexic and non-dyslexic children
 data("ReadingSkills", package = "betareg")
 

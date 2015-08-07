@@ -425,4 +425,4 @@ Loading required package: sandwich
  *** Run successfully completed ***
 > proc.time()
    user  system elapsed 
-  9.316   0.112  11.166 
+  8.020   0.080   8.103 

@@ -1,3 +1,5 @@
+options(digits = 4)
+
 ## package and data
 library("betareg")
 data("ReadingSkills", package = "betareg")

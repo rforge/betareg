@@ -389,4 +389,4 @@ $\log\phi$ & $ 6.08741$\phantom{)} & (0.24990) & $ 5.71191$\phantom{)} & (0.2498
  *** Run successfully completed ***
 > proc.time()
    user  system elapsed 
- 20.236   0.088  20.702 
+ 17.080   0.112  17.233 
