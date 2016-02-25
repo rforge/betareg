@@ -1,6 +1,6 @@
 Package: betareg
 Version: 3.1-0
-Date: 2015-08-07
+Date: 2016-02-26
 Title: Beta Regression
 Authors@R: c(person(given = "Achim", family = "Zeileis", role = c("aut", "cre"), email = "Achim.Zeileis@R-project.org"),
              person(given = "Francisco", family = "Cribari-Neto", role = "aut", email = "cribari@ufpe.br"),
@@ -12,7 +12,7 @@ Description: Beta regression for modeling beta-distributed dependent variables, 
   In addition to maximum likelihood regression (for both mean and precision of a beta-distributed
   response), bias-corrected and bias-reduced estimation as well as finite mixture models and
   recursive partitioning for beta regressions are provided.
-Depends: R (>= 2.10.0)
+Depends: R (>= 3.0.0)
 Imports: graphics, grDevices, methods, stats, flexmix, Formula, lmtest, modeltools, sandwich
 Suggests: car, lattice, partykit, strucchange
 License: GPL-2 | GPL-3
