@@ -36,7 +36,14 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
   n <- nrow(mf)
   
   ## weights
-  weights <- model.weights(mf)
+  if(!missing(weights)) {
+    wi <- which(names(mf) == "weights")
+    wi <- wi[length(wi)]
+    weights <- mf[[wi]]
+    mf[[wi]] <- NULL
+  } else {
+    weights <- NULL
+  }
   if(!is.null(weights)) {
     if(length(weights) == 1) weights <- rep(weights, n)
     weights <- as.vector(weights)
@@ -47,7 +54,14 @@ betamix <- function(formula, data, k, subset, na.action, weights, offset,
   }
   
   ## offset
-  offset <- model.offset(mf)
+  if(!missing(offset)) {
+    wi <- which(names(mf) == "offset")
+    wi <- wi[length(wi)]
+    offset <- mf[[wi]]
+    mf[[wi]] <- NULL
+  } else {
+    offset <- NULL
+  }
   if(!is.null(offset)) {
     if(length(offset) == 1L) offset <- rep(offset, n)
     offset <- as.vector(offset)
