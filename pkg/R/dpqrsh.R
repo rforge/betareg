@@ -54,25 +54,25 @@ hbetar <- function(x, mu, phi, parameter = c("mu", "phi"), drop = TRUE) {
 
 
 ## ----------------------------------------------------------------------------------
-## scaled (and censored) beta distribution
-## (mean = mu, precision = phi, contamination = nu)
+## (censored) four-parameter beta distribution in regression parametrization
+## (mean = mu, precision = phi, support = (theta1, theta2))
 ## ----------------------------------------------------------------------------------
 
-dsbeta <- function(x, mu, phi, nu, log = FALSE, censored = TRUE) {
-  out <- dbeta((x + nu) / (1 + 2 * nu),
+dbeta4 <- function(x, mu, phi, theta1, theta2 = 1 - theta1, log = FALSE, censored = FALSE) {
+  out <- dbeta((x - theta1) / (theta2 - theta1),
     shape1 = mu * phi, shape2 = (1 - mu) * phi, log = log
   )
-  out <- if(log) out - log(1 + 2 * nu) else out/(1 + 2 * nu)
+  out <- if(log) out - log(theta2 - theta1) else out/(theta2 - theta1)
   if(censored) {
-    out[x <= 0] <- psbeta(0, mu = mu[x <= 0], phi = phi[x <= 0], nu = nu[x <= 0], censored = FALSE, log.p = log)
-    out[x >= 1] <- psbeta(1, mu = mu[x >= 1], phi = phi[x >= 1], nu = nu[x >= 1], censored = FALSE, log.p = log, lower.tail = FALSE)
+    out[x <= 0] <- pbeta4(0, mu = mu[x <= 0], phi = phi[x <= 0], theta1 = theta1[x <= 0], theta2 = theta2[x <= 0], censored = FALSE, log.p = log)
+    out[x >= 1] <- pbeta4(1, mu = mu[x >= 1], phi = phi[x >= 1], theta1 = theta1[x <= 0], theta2 = theta2[x <= 0], censored = FALSE, log.p = log, lower.tail = FALSE)
     out[x < 0 | x > 1] <- if(log) -Inf else 0  
   }
   return(out)
 }
 
-psbeta <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = TRUE) {
-  out <- pbeta((q + nu) / (1 + 2 * nu),
+pbeta4 <- function(q, mu, phi, theta1, theta2 = 1 - theta1, lower.tail = TRUE, log.p = FALSE, censored = FALSE) {
+  out <- pbeta((q - theta1) / (theta2 - theta1),
     shape1 = mu * phi, shape2 = (1 - mu) * phi,
     lower.tail = lower.tail, log.p = log.p
   )
@@ -88,8 +88,19 @@ psbeta <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = 
   return(out)
 }
 
-rsbeta <- function(n, mu, phi, nu, censored = TRUE) {
-  r <- -nu + (1 + 2 * nu) * rbeta(n, shape1 = mu * phi, shape2 = (1 - mu) * phi)
+qbeta4 <- function(p, mu, phi, theta1, theta2 = 1 - theta1, lower.tail = TRUE, log.p = FALSE, censored = FALSE) {
+  q <- qbeta(p, shape1 = mu * phi, shape2 = (1 - mu) * phi,
+    lower.tail = lower.tail, log.p = log.p)
+  q <- q * (theta2 - theta1) + theta1
+  if(censored) {
+    q[q < 0] <- 0
+    q[q > 1] <- 1
+  }
+  return(q)
+}
+
+rbeta4 <- function(n, mu, phi, theta1, theta2 = 1 - theta1, censored = FALSE) {
+  r <- theta1 + (theta2 - theta1) * rbeta(n, shape1 = mu * phi, shape2 = (1 - mu) * phi)
   if(censored) {
     r[r < 0] <- 0
     r[r > 1] <- 1
@@ -99,7 +110,7 @@ rsbeta <- function(n, mu, phi, nu, censored = TRUE) {
 
 
 ## ----------------------------------------------------------------------------------
-## extended (and censored) beta distribution (see IWSM 2015 Proceedings)
+## (censored) exponential mixture beta distribution (see IWSM 2015 Proceedings)
 ## (mean = mu, precision = phi, contamination = nu)
 ## ----------------------------------------------------------------------------------
 
@@ -110,10 +121,14 @@ quadtable <- function(nquad = 20) {
   ), nrow = nquad)
 }
 
-dexbeta <- function(x, mu, phi, nu, log = FALSE, censored = TRUE, nquad = 20) {
+dbetax <- function(x, mu, phi, nu, log = FALSE, censored = FALSE, nquad = 20) {
   ## standard beta distribution
   if(all(nu == 0)) return(dbeta(x, shape1 = mu * phi, shape2 = (1 - mu) * phi, log = log))
 
+  if(!censored && any(x < 0 | x > 1)) {
+    warning("computation of uncensored density outside the unit interval may be numerically unreliable")
+  }
+  
   ## unify lengths of all variables
   n <- max(length(x), length(mu), length(phi), length(nu))
   x <- rep_len(x, n)
@@ -130,8 +145,8 @@ dexbeta <- function(x, mu, phi, nu, log = FALSE, censored = TRUE, nquad = 20) {
 
   ## censoring and log transformation
   if(censored) {
-    out[x <= 0] <- pexbeta(0, mu = mu[x <= 0], phi = phi[x <= 0], nu = nu[x <= 0], censored = FALSE)
-    out[x >= 1] <- pexbeta(1, mu = mu[x >= 1], phi = phi[x >= 1], nu = nu[x >= 1], censored = FALSE, lower.tail = FALSE)
+    out[x <= 0] <- pbetax(0, mu = mu[x <= 0], phi = phi[x <= 0], nu = nu[x <= 0], censored = FALSE)
+    out[x >= 1] <- pbetax(1, mu = mu[x >= 1], phi = phi[x >= 1], nu = nu[x >= 1], censored = FALSE, lower.tail = FALSE)
     out[x < 0 | x > 1] <- 0
   }
   if(log) out <- log(out)
@@ -139,7 +154,7 @@ dexbeta <- function(x, mu, phi, nu, log = FALSE, censored = TRUE, nquad = 20) {
   return(out)
 }
 
-pexbeta <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = TRUE, nquad = 20) {
+pbetax <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = FALSE, nquad = 20) {
   ## standard beta distribution
   if(all(nu == 0)) return(pbeta(q, shape1 = mu * phi, shape2 = (1 - mu) * phi,
     lower.tail = lower.tail, log.p = log.p))
@@ -169,9 +184,9 @@ pexbeta <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored =
   return(out)
 }
 
-rexbeta <- function(n, mu, phi, nu, censored = TRUE) {
+rbetax <- function(n, mu, phi, nu, censored = FALSE) {
   nu <- rexp(n, 1/nu)
-  rsbeta(n, mu = mu, phi = phi, nu = nu, censored = censored)
+  rbeta4(n, mu = mu, phi = phi, theta1 = -nu, theta2 = 1 + nu, censored = censored)
 }
 
 ## ----------------------------------------------------------------------------------
