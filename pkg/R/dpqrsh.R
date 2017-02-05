@@ -73,7 +73,7 @@ dbeta4 <- function(x, mu, phi, theta1, theta2 = 1 - theta1, log = FALSE, censore
     theta2 <- rep_len(theta2, n)
 
     out[x <= 0] <- pbeta4(0, mu = mu[x <= 0], phi = phi[x <= 0], theta1 = theta1[x <= 0], theta2 = theta2[x <= 0], censored = FALSE, log.p = log)
-    out[x >= 1] <- pbeta4(1, mu = mu[x >= 1], phi = phi[x >= 1], theta1 = theta1[x <= 0], theta2 = theta2[x <= 0], censored = FALSE, log.p = log, lower.tail = FALSE)
+    out[x >= 1] <- pbeta4(1, mu = mu[x >= 1], phi = phi[x >= 1], theta1 = theta1[x >= 1], theta2 = theta2[x >= 1], censored = FALSE, log.p = log, lower.tail = FALSE)
     out[x < 0 | x > 1] <- if(log) -Inf else 0  
   }
   return(out)
