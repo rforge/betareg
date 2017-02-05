@@ -1,6 +1,7 @@
 betareg <- function(formula, data, subset, na.action, weights, offset,
                     link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
                     link.phi = NULL, type = c("ML", "BC", "BR"),
+		    dist = c("beta", "cbeta4", "cbetax"), nu = NULL,
                     control = betareg.control(...),
                     model = TRUE, y = TRUE, x = FALSE, ...)
 {
@@ -20,7 +21,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
     simple_formula <- TRUE
   } else {
     if(length(formula)[2L] > 2L) {
-      formula <- Formula(formula(formula, rhs = 1:2))
+      formula <- Formula(formula(formula, rhs = 1L:2L))
       warning("formula must not have more than two RHS parts")
     }
     simple_formula <- FALSE
@@ -41,13 +42,35 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
   ## sanity checks
   if(length(Y) < 1) stop("empty model")
-  if(!(min(Y) > 0 & max(Y) < 1)) stop("invalid dependent variable, all observations must be in (0, 1)")
-
-  ## convenience variables
+  if(any(Y < 0 | Y > 1)) stop("invalid dependent variable, all observations must be in [0, 1]")
   n <- length(Y)
 
-  ## type of estimator
-  type <- match.arg(type)
+  ## type of estimator and distribution
+  type <- match.arg(type, c("ML", "BC", "BR"))
+  if(!missing(dist)) {  
+    dist <- match.arg(dist, c("beta", "cbeta4", "cbetax"))
+    if(dist == "beta") {
+      if(any(Y <= 0 | Y >= 1)) stop("invalid dependent variable, all observations must be in (0, 1)")
+    }
+    if(dist == "cbeta4" & is.null(nu)) {
+      warning(sprintf("estimation of 'nu' with 'cbeta4' is not feasible, using '%s' instead",
+        dist <- if(any(Y <= 0 | Y >= 1)) "cbetax" else "beta"))
+    }
+  } else {
+    if(is.null(nu)) {
+      dist <- if(all(Y > 0 & Y < 1)) {
+        "beta"
+      } else {
+        "cbetax"
+      }
+    } else {
+      dist <- "cbeta4"
+    }
+  }
+  if(dist != "beta" && type != "ML") {
+    warning(sprintf("only 'ML' estimation is available for '%s' distribution", dist))
+    type <- "ML"
+  }
 
   ## links
   if(is.character(link)) link <- match.arg(link)
@@ -74,23 +97,37 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
   ## in offset argument (used for mean)
   if(!is.null(cl$offset)) offsetX <- offsetX + expand_offset(mf[, "(offset)"])
   ## collect
-  offset <- list(mean = offsetX, precision = offsetZ)
+  offset <- list(mu = offsetX, phi = offsetZ)
 
   ## call the actual workhorse: betareg.fit()
-  rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control)
+  rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control, dist, nu)
 
   ## further model information
   rval$call <- cl
   rval$formula <- oformula
-  rval$terms <- list(mean = mtX, precision = mtZ, full = mt)
-  rval$levels <- list(mean = .getXlevels(mtX, mf), precision = .getXlevels(mtZ, mf), full = .getXlevels(mt, mf))
-  rval$contrasts <- list(mean = attr(X, "contrasts"), precision = attr(Z, "contrasts"))
+  rval$terms <- list(mu = mtX, phi = mtZ, full = mt)
+  rval$levels <- list(mu = .getXlevels(mtX, mf), phi = .getXlevels(mtZ, mf), full = .getXlevels(mt, mf))
+  rval$contrasts <- list(mu = attr(X, "contrasts"), phi = attr(Z, "contrasts"))
   if(model) rval$model <- mf
   if(y) rval$y <- Y
-  if(x) rval$x <- list(mean = X, precision = Z)
-
+  if(x) rval$x <- list(mu = X, phi = Z)
+  if(rval$dist == "beta") {
+    for(n in names(rval)[names(rval) %in% fix_names_mu_phi]) names(rval[[n]])[1L:2L] <- c("mean", "precision")
+  }
   class(rval) <- "betareg"
   return(rval)
+}
+
+## internal tools for canonicalizing mean vs. mu and precision vs. phi
+fix_names_mu_phi <- c("coefficients", "offset", "link", "terms", "levels", "contrasts", "x")
+fix_model_mu_phi <- function(model) {
+  model <- sapply(model, function(m) {
+    if(m %in% c("mu", "phi", "nu")) return(m)
+    match.arg(m, c("mean", "precision", "full"))
+  })
+  model[model == "mean"] <- "mu"
+  model[model == "precision"] <- "phi"
+  return(as.vector(model))
 }
 
 betareg.control <- function(phi = TRUE,
@@ -107,15 +144,25 @@ betareg.control <- function(phi = TRUE,
 }
 
 betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
-  link = "logit", link.phi = "log", type = "ML", control = betareg.control())
+  link = "logit", link.phi = "log", type = "ML", control = betareg.control(),
+  dist = "beta", nu = NULL)
 {
+  ## estimation type and distribution:
+  ## only plain ML supported for censored distributions
+  if(dist != "beta") {
+    if(type != "ML") stop(sprintf("only 'ML' estimation implemented for '%s'", dist))
+    control$hessian <- TRUE
+    control$fsmaxit <- 0  
+  }
+  estnu <- if(dist != "beta" & is.null(nu)) TRUE else FALSE
+
   ## response and regressor matrix
   n <- NROW(x)
   k <- NCOL(x)
   if(is.null(weights)) weights <- rep.int(1, n)
   nobs <- sum(weights > 0)
   if(is.null(offset)) offset <- rep.int(0, n)
-  if(!is.list(offset)) offset <- list(mean = offset, precision = rep.int(0, n))
+  if(!is.list(offset)) offset <- list(mu = offset, phi = rep.int(0, n))
   if(is.null(z)) {
     m <- 1L
     z <- matrix(1, ncol = m, nrow = n)
@@ -133,8 +180,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     linkstr <- link
     if(linkstr != "loglog") {
       linkobj <- make.link(linkstr)
-      ## add dmu.deta potentially needed for BC/BR
-      linkobj$dmu.deta <- make.dmu.deta(linkstr)
+      ## add d2mu.deta potentially needed for BC/BR
+      linkobj$d2mu.deta <- make.d2mu.deta(linkstr)
     } else {
       linkobj <- structure(list(
         linkfun = function(mu) -log(-log(mu)),
@@ -143,7 +190,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
           eta <- pmin(eta, 700)
           pmax(exp(-eta - exp(-eta)), .Machine$double.eps)
         },
-        dmu.deta = function(eta) pmax(exp(-exp(-eta) - eta) * expm1(-eta), .Machine$double.eps),
+        d2mu.deta = function(eta) pmax(exp(-exp(-eta) - eta) * expm1(-eta), .Machine$double.eps),
         valideta = function(eta) TRUE,
         name = "loglog"
       ), class = "link-glm")
@@ -151,25 +198,37 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   } else {
     linkobj <- link
     linkstr <- link$name
-    if(type != "ML" && is.null(linkobj$dmu.deta)) warning("link needs to provide dmu.deta component for BC/BR")
+    if(type != "ML") {
+      if(is.null(linkobj$dmu.deta) & is.null(linkobj$d2mu.deta)) {
+        warning("link needs to provide d2mu.deta component for BC/BR")
+      } else {
+        if(is.null(linkobj$d2mu.deta)) linkobj$d2mu.deta <- linkobj$dmu.deta
+      }
+    }
   }
   linkfun <- linkobj$linkfun
   linkinv <- linkobj$linkinv
   mu.eta <- linkobj$mu.eta
-  dmu.deta <- linkobj$dmu.deta
+  d2mu.deta <- linkobj$d2mu.deta
   if(is.character(link.phi)) {
     phi_linkstr <- link.phi
     phi_linkobj <- make.link(phi_linkstr)
-    phi_linkobj$dmu.deta <- make.dmu.deta(phi_linkstr)
+    phi_linkobj$d2mu.deta <- make.d2mu.deta(phi_linkstr)
   } else {
     phi_linkobj <- link.phi
     phi_linkstr <- link.phi$name
-    if(type != "ML" && is.null(phi_linkobj$dmu.deta)) warning("link.phi needs to provide dmu.deta component for BC/BR")
+    if(type != "ML") {
+      if(is.null(phi_linkobj$dmu.deta) & is.null(phi_linkobj$d2mu.deta)) {
+        warning("link.phi needs to provide d2mu.deta component for BC/BR")
+      } else {
+        if(is.null(phi_linkobj$d2mu.deta)) phi_linkobj$d2mu.deta <- phi_linkobj$dmu.deta
+      }
+    }
   }
   phi_linkfun <- phi_linkobj$linkfun
   phi_linkinv <- phi_linkobj$linkinv
   phi_mu.eta <- phi_linkobj$mu.eta
-  phi_dmu.deta <- phi_linkobj$dmu.deta
+  phi_d2mu.deta <- phi_linkobj$d2mu.deta
   ## y* transformation
   ystar <- qlogis(y)
 
@@ -185,7 +244,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
   ## starting values
   if(is.null(start)) {
-    auxreg <- lm.wfit(x, linkfun(y), weights, offset = offset[[1L]])
+    auxreg <- lm.wfit(x, if(dist == "beta") linkfun(y) else linkfun((y * (n - 1) + 0.5)/n), weights, offset = offset[[1L]])
     beta <- auxreg$coefficients
     yhat <- linkinv(auxreg$fitted.values)
     dlink <- 1/mu.eta(linkfun(yhat))
@@ -206,7 +265,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       warning("no valid starting value for precision parameter found, using 1 instead")
       phi[1L] <- 1
     }
-    start <- list(mean = beta, precision = phi)
+    start <- list(mu = beta, phi = phi)
+    if(estnu) start$nu <- log(mean(y <= 0 | y >= 1))
   }
   if(is.list(start)) start <- do.call("c", start)
 
@@ -312,8 +372,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi_eta <- fit$phi_eta
     D1 <- mu.eta(eta)
     D2 <- phi_mu.eta(phi_eta)
-    D1dash <- dmu.deta(eta)
-    D2dash <- phi_dmu.deta(phi_eta)
+    D1dash <- d2mu.deta(eta)
+    D2dash <- phi_d2mu.deta(phi_eta)
     Psi2 <- fit$psi2
     dPsi1 <-  psigamma(mu * phi, 2)       ## potentially move to fitfun() when we add support for
     dPsi2 <-  psigamma((1 - mu) * phi, 2) ## observed information (as opposed to expected)
@@ -367,6 +427,28 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     list(bias = bias, adjustment = adjustment)
   }
 
+  if(dist != "beta") {
+    ## distribution d/p functions
+    dfun <- if(dist == "cbeta4") {
+      function(x, mu, phi, nu, ...) dbeta4(x, mu = mu, phi = phi, theta1 = -nu, ...)
+    } else {
+      dbetax
+    }
+    
+    ## set up (censored) log-likelihood
+    loglikfun <- function(par, fit = NULL) {
+      mu <- linkinv(x %*% par[1:k] + offset[[1L]])
+      phi <- phi_linkinv(z %*% par[(k + 1):(k + m)] + offset[[2L]])
+      nu <- if(estnu) exp(par[k + m + 1]) else nu
+      rval <- dfun(y, mu = mu, phi = phi, nu = nu, log = TRUE, censored = TRUE)
+      sum(weights * rval)
+    }
+
+    ## no gradients at the moment
+    gradfun <- NULL
+    ## after optimization one could do:
+    ## grad = numDeriv::grad(nll, opt$par)
+  }
 
   ## optimize likelihood
   opt <- optim(par = start, fn = loglikfun, gr = gradfun,
@@ -408,7 +490,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ## modified the condition a bit... optim might fail to converge but
   ## if additional iteration are requested Fisher scoring might get
   ## there
-  if((fsmaxit == 0 & opt$convergence > 0) | iter >= fsmaxit) {
+  if((fsmaxit == 0 & opt$convergence > 0) | (iter >= fsmaxit & fsmaxit > 0)) {
     converged <- FALSE
     warning("optimization failed to converge")
   } else {
@@ -422,7 +504,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     par <- par - bias
   }
   else {
-    bias <- rep.int(NA_real_, k + m)
+    bias <- rep.int(NA_real_, k + m + estnu)
   }
 
   ## extract fitted values/parameters
@@ -432,6 +514,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   eta <- fit$eta
   mu <- fit$mu
   phi <- fit$phi
+  nu <- if(!estnu) nu else as.vector(exp(par[k + m + 1]))
 
   ## log-likelihood/gradients/covariance matrix at optimized parameters
   ll <- loglikfun(par, fit = fit)
@@ -440,62 +523,82 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
 
   ## R-squared
-  pseudor2 <- if(var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
+  pseudor2 <- if(dist != "beta" || var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
 
   ## names
   names(beta) <- colnames(x)
   names(gamma) <- if(phi_const & phi_linkstr == "identity") "(phi)" else colnames(z)
   rownames(vcov) <- colnames(vcov) <- names(bias) <- c(colnames(x),
-    if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"))
+    if(phi_const & phi_linkstr == "identity") "(phi)" else paste("(phi)", colnames(z), sep = "_"),
+    if(estnu) "Log(nu)" else NULL)
 
   ## set up return value
   rval <- list(
-    coefficients = list(mean = beta, precision = gamma),
-    residuals = y - mu,
-    fitted.values = structure(mu, .Names = names(y)),
+    coefficients = list(mu = beta, phi = gamma),
+    residuals = y - mu, ## FIXME mean instead of mu for cbeta4/x
+    fitted.values = structure(mu, .Names = names(y)), ## FIXME mean vs. mu
     type = type,
+    dist = dist,
     optim = opt,
     method = method,
     control = ocontrol,
     scoring = iter,
     start = start,
     weights = if(identical(as.vector(weights), rep.int(1, n))) NULL else weights,
-    offset = list(mean = if(identical(offset[[1L]], rep.int(0, n))) NULL else offset[[1L]],
-      precision = if(identical(offset[[2L]], rep.int(0, n))) NULL else offset[[2L]]),
+    offset = list(mu = if(identical(offset[[1L]], rep.int(0, n))) NULL else offset[[1L]],
+      phi = if(identical(offset[[2L]], rep.int(0, n))) NULL else offset[[2L]]),
     n = n,
     nobs = nobs,
-    df.null = nobs - 2,
-    df.residual = nobs - k - m,
+    df.null = nobs - 2 - estnu,
+    df.residual = nobs - k - m - estnu,
     phi = phi_full,
+    nu = nu,
     loglik = ll,
     vcov = vcov,
     bias = bias,
     pseudo.r.squared = pseudor2,
-    link = list(mean = linkobj, precision = phi_linkobj),
+    link = list(mu = linkobj, phi = phi_linkobj),
     converged = converged
   )
+  if(estnu) rval$coefficients$nu <- c("Log(nu)" = log(nu))
+  if(dist == "beta") {
+    for(n in names(rval)[names(rval) %in% fix_names_mu_phi]) names(rval[[n]])[1L:2L] <- c("mean", "precision")
+  }
   return(rval)
 }
 
 print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
 {
+  ## unify list component names
+  if(x$dist == "beta") {
+    for(n in names(x)[names(x) %in% fix_names_mu_phi]) names(x[[n]])[1L:2L] <- c("mu", "phi")
+    mp <- c("mean", "precision")
+  } else {
+    mp <- c("mu", "phi")
+  }
+
   cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.85)), "", sep = "\n")
 
   if(!x$converged) {
     cat("model did not converge\n")
   } else {
-    if(length(x$coefficients$mean)) {
-      cat(paste("Coefficients (mean model with ", x$link$mean$name, " link):\n", sep = ""))
-      print.default(format(x$coefficients$mean, digits = digits), print.gap = 2, quote = FALSE)
+    if(length(x$coefficients$mu)) {
+      cat(sprintf("Coefficients (%s model with %s link):\n", mp[1L], x$link$mu$name))
+      print.default(format(x$coefficients$mu, digits = digits), print.gap = 2, quote = FALSE)
       cat("\n")
-    } else cat("No coefficients (in mean model)\n\n")
+    } else cat(sprintf("No coefficients (in %s model)\n\n", mp[1L]))
     if(x$phi) {
-      if(length(x$coefficients$precision)) {
-        cat(paste("Phi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
-        print.default(format(x$coefficients$precision, digits = digits), print.gap = 2, quote = FALSE)
+      if(length(x$coefficients$phi)) {
+        cat(sprintf("Phi coefficients (%s model with %s link):\n", mp[2L], x$link$phi$name))
+        print.default(format(x$coefficients$phi, digits = digits), print.gap = 2, quote = FALSE)
         cat("\n")
-      } else cat("No coefficients (in precision model)\n\n")
+      } else cat(sprintf("No coefficients (in %s model)\n\n", mp[2L]))
     }
+  }
+  if(x$dist != "beta") {
+    cat(sprintf("Distribution: %s\nNu: %s\n\n",
+      if(x$dist == "cbeta4") "censored constrained 4-parameter beta (cbeta4)" else "censored exponential mixture beta (cbetax)",
+      round(x$nu, digits = digits)))
   }
 
   invisible(x)
@@ -503,24 +606,35 @@ print.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
 
 summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
 {
+  ## unify list component names
+  if(object$dist == "beta") {
+    for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mu", "phi")
+  }
+
   ## treat phi as full model parameter?
   if(!is.null(phi)) object$phi <- phi
 
   ## residuals
   type <- match.arg(type, c("pearson", "deviance", "response", "weighted", "sweighted", "sweighted2"))
+  if(object$dist != "beta") type <- "response" ## FIXME
   object$residuals <- residuals(object, type = type)
   object$residuals.type <- type
 
   ## extend coefficient table
-  k <- length(object$coefficients$mean)
-  m <- length(object$coefficients$precision)
+  k <- length(object$coefficients$mu)
+  m <- length(object$coefficients$phi)
   cf <- as.vector(do.call("c", object$coefficients))
   se <- sqrt(diag(object$vcov))
   cf <- cbind(cf, se, cf/se, 2 * pnorm(-abs(cf/se)))
   colnames(cf) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
-  cf <- list(mean = cf[seq.int(length.out = k), , drop = FALSE], precision = cf[seq.int(length.out = m) + k, , drop = FALSE])
-  rownames(cf$mean) <- names(object$coefficients$mean)
-  rownames(cf$precision) <- names(object$coefficients$precision)
+  cf <- list(
+    mu = cf[seq.int(length.out = k), , drop = FALSE],
+    phi = cf[seq.int(length.out = m) + k, , drop = FALSE],
+    nu = if("nu" %in% names(object$coefficients)) cf[m + k + 1, , drop = FALSE] else NULL
+  )
+  rownames(cf$mu) <- names(object$coefficients$mu)
+  rownames(cf$phi) <- names(object$coefficients$phi)
+  if(!is.null(cf$nu)) rownames(cf$nu) <- names(object$coefficients$nu)
   object$coefficients <- cf
 
   ## number of iterations
@@ -531,6 +645,11 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
   object$fitted.values <- object$terms <- object$model <- object$y <-
     object$x <- object$levels <- object$contrasts <- object$start <- NULL
 
+  ## restore old list component names for backward compatibility
+  if(object$dist == "beta") {
+    for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mean", "precision")
+  }
+
   ## return
   class(object) <- "summary.betareg"
   object
@@ -538,6 +657,14 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
 
 print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), ...)
 {
+  ## unify list component names
+  if(x$dist == "beta") {
+    for(n in names(x)[names(x) %in% fix_names_mu_phi]) names(x[[n]])[1L:2L] <- c("mu", "phi")
+    mp <- c("mean", "precision")
+  } else {
+    mp <- c("mu", "phi")
+  }
+
   cat("\nCall:", deparse(x$call, width.cutoff = floor(getOption("width") * 0.85)), "", sep = "\n")
 
   if(!x$converged) {
@@ -550,21 +677,32 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
     print(structure(round(as.vector(quantile(x$residuals)), digits = digits),
       .Names = c("Min", "1Q", "Median", "3Q", "Max")))
 
-    if(NROW(x$coefficients$mean)) {
-      cat(paste("\nCoefficients (mean model with ", x$link$mean$name, " link):\n", sep = ""))
-      printCoefmat(x$coefficients$mean, digits = digits, signif.legend = FALSE)
+    if(NROW(x$coefficients$mu)) {
+      cat(sprintf("\nCoefficients (%s model with %s link):\n", mp[1L], x$link$mu$name))
+      printCoefmat(x$coefficients$mu, digits = digits, signif.legend = FALSE)
     } else cat("\nNo coefficients (in mean model)\n")
 
     if(x$phi) {
-      if(NROW(x$coefficients$precision)) {
-        cat(paste("\nPhi coefficients (precision model with ", x$link$precision$name, " link):\n", sep = ""))
-        printCoefmat(x$coefficients$precision, digits = digits, signif.legend = FALSE)
+      if(NROW(x$coefficients$phi)) {
+        cat(sprintf("\nPhi coefficients (%s model with %s link):\n", mp[2L], x$link$phi$name))
+        printCoefmat(x$coefficients$phi, digits = digits, signif.legend = FALSE)
       } else cat("\nNo coefficients (in precision model)\n")
+    }
+    
+    if(!is.null(x$coefficients$nu)) {
+      cat("\nNu parameter:\n")
+      printCoefmat(x$coefficients$nu, digits = digits, signif.legend = FALSE)    
     }
 
     if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[, 4L] < 0.1))
       cat("---\nSignif. codes: ", "0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1", "\n")
 
+
+    if(x$dist != "beta") {
+      cat(sprintf("\nDistribution: %s\nNu: %s",
+        if(x$dist == "cbeta4") "censored constrained 4-parameter beta (cbeta4)" else "censored exponential mixture beta (cbetax)",
+        round(x$nu, digits = digits)))
+    }
     cat("\nType of estimator:", x$type, switch(x$type,
       "ML" = "(maximum likelihood)",
       "BC" = "(bias-corrected)",
@@ -587,6 +725,13 @@ predict.betareg <- function(object, newdata = NULL,
   type = c("response", "link", "precision", "variance", "quantile"),
   na.action = na.pass, at = 0.5, ...)
 {
+  ## unify list component names
+  if(object$dist == "beta") {
+    for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mu", "phi")
+  } else {
+    stop("not implemented yet") ## FIXME
+  }
+
   type <- match.arg(type)
 
   if(type == "quantile") {
@@ -610,27 +755,27 @@ predict.betareg <- function(object, newdata = NULL,
         object$fitted.values
       },
       "link" = {
-        object$link$mean$linkfun(object$fitted.values)
+        object$link$mu$linkfun(object$fitted.values)
       },
       "precision" = {
-        gamma <- object$coefficients$precision
-        z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-        offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
-        object$link$precision$linkinv(drop(z %*% gamma + offset))
+        gamma <- object$coefficients$phi
+        z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
+        offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
+        object$link$phi$linkinv(drop(z %*% gamma + offset))
       },
       "variance" = {
-        gamma <- object$coefficients$precision
-        z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-        offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
-        phi <- object$link$precision$linkinv(drop(z %*% gamma + offset))
+        gamma <- object$coefficients$phi
+        z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
+        offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
+        phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))
         object$fitted.values * (1 - object$fitted.values) / (1 + phi)
       },
       "quantile" = {
         mu <- object$fitted.values
-        gamma <- object$coefficients$precision
-        z <- if(is.null(object$x)) model.matrix(object, model = "precision") else object$x$precision
-        offset <- if(is.null(object$offset$precision)) rep.int(0, NROW(z)) else object$offset$precision
-        phi <- object$link$precision$linkinv(drop(z %*% gamma + offset))
+        gamma <- object$coefficients$phi
+        z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
+        offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
+        phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))
         qfun(at, mu, phi)
       }
     )
@@ -639,48 +784,48 @@ predict.betareg <- function(object, newdata = NULL,
   } else {
 
     tnam <- switch(type,
-      "response" = "mean",
-      "link" = "mean",
-      "precision" = "precision",
+      "response" = "mu",
+      "link" = "mu",
+      "precision" = "phi",
       "variance" = "full",
       "quantile" = "full")
 
     mf <- model.frame(delete.response(object$terms[[tnam]]), newdata, na.action = na.action, xlev = object$levels[[tnam]])
     newdata <- newdata[rownames(mf), , drop = FALSE]
-    offset <- list(mean = rep.int(0, nrow(mf)), precision = rep.int(0, nrow(mf)))
+    offset <- list(mu = rep.int(0, nrow(mf)), phi = rep.int(0, nrow(mf)))
 
     if(type %in% c("response", "link", "variance", "quantile")) {
-      X <- model.matrix(delete.response(object$terms$mean), mf, contrasts = object$contrasts$mean)
+      X <- model.matrix(delete.response(object$terms$mu), mf, contrasts = object$contrasts$mu)
       if(!is.null(object$call$offset)) offset[[1L]] <- offset[[1L]] + eval(object$call$offset, newdata)
-      if(!is.null(off.num <- attr(object$terms$mean, "offset"))) {
-        for(j in off.num) offset[[1L]] <- offset[[1L]] + eval(attr(object$terms$mean, "variables")[[j + 1L]], newdata)
+      if(!is.null(off.num <- attr(object$terms$mu, "offset"))) {
+        for(j in off.num) offset[[1L]] <- offset[[1L]] + eval(attr(object$terms$mu, "variables")[[j + 1L]], newdata)
       }
     }
     if(type %in% c("precision", "variance", "quantile")) {
-      Z <- model.matrix(object$terms$precision, mf, contrasts = object$contrasts$precision)
-      if(!is.null(off.num <- attr(object$terms$precision, "offset"))) {
-        for(j in off.num) offset[[2L]] <- offset[[2L]] + eval(attr(object$terms$precision, "variables")[[j + 1L]], newdata)
+      Z <- model.matrix(object$terms$phi, mf, contrasts = object$contrasts$phi)
+      if(!is.null(off.num <- attr(object$terms$phi, "offset"))) {
+        for(j in off.num) offset[[2L]] <- offset[[2L]] + eval(attr(object$terms$phi, "variables")[[j + 1L]], newdata)
       }
     }
 
     rval <- switch(type,
       "response" = {
-        object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
+        object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
       },
       "link" = {
-        drop(X %*% object$coefficients$mean + offset[[1L]])
+        drop(X %*% object$coefficients$mu + offset[[1L]])
       },
       "precision" = {
-        object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
+        object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
       },
       "variance" = {
-        mu <- object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
-        phi <- object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
+        mu <- object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
+        phi <- object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
         mu * (1 - mu) / (1 + phi)
       },
       "quantile" = {
-        mu <- object$link$mean$linkinv(drop(X %*% object$coefficients$mean + offset[[1L]]))
-        phi <- object$link$precision$linkinv(drop(Z %*% object$coefficients$precision + offset[[2L]]))
+        mu <- object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
+        phi <- object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
         qfun(at, mu, phi)
       }
     )
@@ -689,53 +834,72 @@ predict.betareg <- function(object, newdata = NULL,
   }
 }
 
-coef.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...) {
+coef.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...)
+{
+  ## unify list component names
+  if(object$dist == "beta") {
+    for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mu", "phi")
+  }
+
   cf <- object$coefficients
 
   model <- if(is.null(phi)) {
-    if(missing(model)) ifelse(object$phi, "full", "mean") else match.arg(model)
+    if(missing(model)) ifelse(object$phi, "full", "mu") else fix_model_mu_phi(model)[1L]
   } else {
     if(!missing(model)) warning("only one of 'model' and 'phi' should be specified: 'model' ignored")
-    ifelse(phi, "full", "mean")
+    ifelse(phi, "full", "mu")
   }
 
   switch(model,
-    "mean" = {
-      cf$mean
+    "mu" = {
+      cf$mu
     },
-    "precision" = {
-      cf$precision
+    "phi" = {
+      cf$phi
+    },
+    "nu" = {
+      cf$nu
     },
     "full" = {
-      nam1 <- names(cf$mean)
-      nam2 <- names(cf$precision)
-      cf <- c(cf$mean, cf$precision)
-      names(cf) <- c(nam1, if(identical(nam2, "(phi)")) "(phi)" else paste("(phi)", nam2, sep = "_"))
+      nam1 <- names(cf$mu)
+      nam2 <- names(cf$phi)
+      nam3 <- names(cf$nu)
+      cf <- c(cf$mu, cf$phi, cf$nu)
+      names(cf) <- c(nam1, if(identical(nam2, "(phi)")) "(phi)" else paste("(phi)", nam2, sep = "_"), nam3)
       cf
     }
   )
 }
 
-vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...) {
+vcov.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...)
+{
+  ## unify list component names
+  if(object$dist == "beta") {
+    for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mu", "phi")
+  }
+
   vc <- object$vcov
-  k <- length(object$coefficients$mean)
-  m <- length(object$coefficients$precision)
+  k <- length(object$coefficients$mu)
+  m <- length(object$coefficients$phi)
 
   model <- if(is.null(phi)) {
-    if(missing(model)) ifelse(object$phi, "full", "mean") else match.arg(model)
+    if(missing(model)) ifelse(object$phi, "full", "mu") else fix_model_mu_phi(model)[1L]
   } else {
     if(!missing(model)) warning("only one of 'model' and 'phi' should be specified: 'model' ignored")
-    ifelse(phi, "full", "mean")
+    ifelse(phi, "full", "mu")
   }
 
   switch(model,
-    "mean" = {
+    "mu" = {
       vc[seq.int(length.out = k), seq.int(length.out = k), drop = FALSE]
     },
-    "precision" = {
+    "phi" = {
       vc <- vc[seq.int(length.out = m) + k, seq.int(length.out = m) + k, drop = FALSE]
-      colnames(vc) <- rownames(vc) <- names(object$coefficients$precision)
+      colnames(vc) <- rownames(vc) <- names(object$coefficients$phi)
       vc
+    },
+    "nu" = {
+      vc[m + k + 1, m + k + 1, drop = FALSE]
     },
     "full" = {
       vc
@@ -747,11 +911,19 @@ bread.betareg <- function(x, phi = NULL, ...) {
   vcov(x, phi = phi) * x$nobs
 }
 
-estfun.betareg <- function(x, phi = NULL, ...) {
+estfun.betareg <- function(x, phi = NULL, ...)
+{
+  ## unify list component names
+  if(x$dist == "beta") {
+    for(n in names(x)[names(x) %in% fix_names_mu_phi]) names(x[[n]])[1L:2L] <- c("mu", "phi")
+  } else {
+    stop("not implemented yet")
+  }
+
   ## extract response y and regressors X and Z
   y <- if(is.null(x$y)) model.response(model.frame(x)) else x$y
-  xmat <- if(is.null(x$x)) model.matrix(x, model = "mean") else x$x$mean
-  zmat <- if(is.null(x$x)) model.matrix(x, model = "precision") else x$x$precision
+  xmat <- if(is.null(x$x)) model.matrix(x, model = "mu") else x$x$mu
+  zmat <- if(is.null(x$x)) model.matrix(x, model = "phi") else x$x$phi
   offset <- x$offset
   if(is.null(offset[[1L]])) offset[[1L]] <- rep.int(0, NROW(xmat))
   if(is.null(offset[[2L]])) offset[[2L]] <- rep.int(0, NROW(zmat))
@@ -760,8 +932,8 @@ estfun.betareg <- function(x, phi = NULL, ...) {
   phi_full <- if(is.null(phi)) x$phi else phi
 
   ## extract coefficients
-  beta <- x$coefficients$mean
-  gamma <- x$coefficients$precision
+  beta <- x$coefficients$mu
+  gamma <- x$coefficients$phi
 
   ## compute y*
   ystar <- qlogis(y)
@@ -769,18 +941,18 @@ estfun.betareg <- function(x, phi = NULL, ...) {
   ## compute mu*
   eta <- as.vector(xmat %*% beta + offset[[1L]])
   phi_eta <- as.vector(zmat %*% gamma + offset[[2L]])
-  mu <- x$link$mean$linkinv(eta)
-  phi <- x$link$precision$linkinv(phi_eta)
+  mu <- x$link$mu$linkinv(eta)
+  phi <- x$link$phi$linkinv(phi_eta)
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
 
   ## compute scores of beta
-  rval <- phi * (ystar - mustar) * as.vector(x$link$mean$mu.eta(eta)) * wts * xmat
+  rval <- phi * (ystar - mustar) * as.vector(x$link$mu$mu.eta(eta)) * wts * xmat
 
   ## combine with scores of phi
   if(phi_full) {
     rval <- cbind(rval,
       (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
-      as.vector(x$link$precision$mu.eta(phi_eta)) * wts * zmat)
+      as.vector(x$link$phi$mu.eta(phi_eta)) * wts * zmat)
     colnames(rval) <- names(coef(x, phi = phi_full))
   }
   attr(rval, "assign") <- NULL
@@ -791,10 +963,10 @@ estfun.betareg <- function(x, phi = NULL, ...) {
     k <- ncol(xmat)
     m <- ncol(zmat)
     InfoInv <- x$vcov
-    D1 <- x$link$mean$mu.eta(eta)
-    D2 <- x$link$precision$mu.eta(phi_eta)
-    D1dash <- x$link$mean$dmu.deta(eta)
-    D2dash <- x$link$precision$dmu.deta(phi_eta)
+    D1 <- x$link$mu$mu.eta(eta)
+    D2 <- x$link$phi$mu.eta(phi_eta)
+    D1dash <- x$link$mu$d2mu.deta(eta)
+    D2dash <- x$link$phi$d2mu.deta(phi_eta)
     Psi2 <- psigamma((1 - mu) * phi, 1)
     dPsi1 <-  psigamma(mu * phi, 2)
     dPsi2 <-  psigamma((1 - mu) * phi, 2)
@@ -870,8 +1042,10 @@ logLik.betareg <- function(object, ...) {
   structure(object$loglik, df = sum(sapply(object$coefficients, length)), class = "logLik")
 }
 
-terms.betareg <- function(x, model = c("mean", "precision"), ...) {
-  x$terms[[match.arg(model)]]
+terms.betareg <- function(x, model = c("mean", "precision"), ...)
+{
+  names(x$terms)[1L:2L] <- c("mu", "phi")
+  x$terms[[fix_model_mu_phi(model)[1L]]]
 }
 
 model.frame.betareg <- function(formula, ...) {
@@ -882,7 +1056,8 @@ model.frame.betareg <- function(formula, ...) {
 }
 
 model.matrix.betareg <- function(object, model = c("mean", "precision"), ...) {
-  model <- match.arg(model)
+  model <- fix_model_mu_phi(model)[1L]
+  for(n in names(object)[names(object) %in% c("x", "terms", "contrasts")]) names(object[[n]])[1L:2L] <- c("mu", "phi")
   rval <- if(!is.null(object$x[[model]])) object$x[[model]]
     else model.matrix(object$terms[[model]], model.frame(object), contrasts = object$contrasts[[model]])
   return(rval)
@@ -891,6 +1066,13 @@ model.matrix.betareg <- function(object, model = c("mean", "precision"), ...) {
 residuals.betareg <- function(object,
   type = c("sweighted2", "deviance", "pearson", "response", "weighted", "sweighted"), ...)
 {
+  ## unify list component names
+  if(object$dist == "beta") {
+    for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mu", "phi")
+  } else {
+    type <- "response"
+  }
+
   ## raw response residuals and desired type
   res <- object$residuals
   type <- match.arg(type)
@@ -942,10 +1124,17 @@ residuals.betareg <- function(object,
 
 cooks.distance.betareg <- function(model, ...)
 {
-    h <- hatvalues(model)
-    k <- length(model$coefficients$mean)
-    res <- residuals(model, type = "pearson")
-    h * (res^2)/(k * (1 - h)^2)
+  ## unify list component names
+  if(model$dist == "beta") {
+    for(n in names(model)[names(model) %in% fix_names_mu_phi]) names(model[[n]])[1L:2L] <- c("mu", "phi")
+  } else {
+    stop("not yet implemented")
+  }
+
+  h <- hatvalues(model)
+  k <- length(model$coefficients$mu)
+  res <- residuals(model, type = "pearson")
+  h * (res^2)/(k * (1 - h)^2)
 }
 
 update.betareg <- function (object, formula., ..., evaluate = TRUE)

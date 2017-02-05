@@ -23,11 +23,11 @@ rbetar <- function(n, mu, phi) {
 
 sbetar <- function(x, mu, phi, parameter = c("mu", "phi"), drop = TRUE) {
   parameter <- sapply(parameter, function(x) match.arg(x, c("mu", "phi")))
-  ystar <- qlogis(y)
+  xstar <- qlogis(x)
   mustar <- digamma(mu * phi) - digamma((1 - mu) * phi)
   s <- cbind(
-    if("mu" %in% parameter) phi * (ystar - mustar),
-    if("phi" %in% parameter) (mu * (ystar - mustar) + log(1 - y) - digamma((1 - mu) * phi) + digamma(phi))
+    if("mu" %in% parameter) phi * (xstar - mustar),
+    if("phi" %in% parameter) (mu * (xstar - mustar) + log(1 - x) - digamma((1 - mu) * phi) + digamma(phi))
   )
   colnames(s) <- c("mu", "phi")[c("mu", "phi") %in% parameter]
   if(drop) drop(s) else s
@@ -64,6 +64,14 @@ dbeta4 <- function(x, mu, phi, theta1, theta2 = 1 - theta1, log = FALSE, censore
   )
   out <- if(log) out - log(theta2 - theta1) else out/(theta2 - theta1)
   if(censored) {
+    ## unify lengths of all variables
+    n <- length(out)
+    x <- rep_len(x, n)
+    mu <- rep_len(mu, n)
+    phi <- rep_len(phi, n)
+    theta1 <- rep_len(theta1, n)
+    theta2 <- rep_len(theta2, n)
+
     out[x <= 0] <- pbeta4(0, mu = mu[x <= 0], phi = phi[x <= 0], theta1 = theta1[x <= 0], theta2 = theta2[x <= 0], censored = FALSE, log.p = log)
     out[x >= 1] <- pbeta4(1, mu = mu[x >= 1], phi = phi[x >= 1], theta1 = theta1[x <= 0], theta2 = theta2[x <= 0], censored = FALSE, log.p = log, lower.tail = FALSE)
     out[x < 0 | x > 1] <- if(log) -Inf else 0  

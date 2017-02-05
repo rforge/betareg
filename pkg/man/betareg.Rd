@@ -16,11 +16,13 @@
 betareg(formula, data, subset, na.action, weights, offset,
   link = c("logit", "probit", "cloglog", "cauchit", "log", "loglog"),
   link.phi = NULL, type = c("ML", "BC", "BR"),
+  dist = c("beta", "cbeta4", "cbetax"), nu = NULL,
   control = betareg.control(\dots), model = TRUE,
   y = TRUE, x = FALSE, \dots)
 
 betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
-  link = "logit", link.phi = "log", type = "ML", control = betareg.control())
+  link = "logit", link.phi = "log", type = "ML", control = betareg.control(),
+  dist = "beta", nu = NULL)
 }
 
 \arguments{
@@ -46,6 +48,15 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   \item{type}{character specification of the type of estimator. Currently,
     maximum likelihood (\code{"ML"}), ML with bias correction (\code{"BC"}),
     and ML with bias reduction (\code{"BR"}) are supported.}
+  \item{dist}{character specification of the response distribution.
+    If all response observation are in (0, 1) the default is the standard
+    beta distribution. In the presence of boundary 0/1 observations, a
+    censored constrained four-parameter beta distribution (\code{"cbeta4"})
+    or a censored exponential mixture beta distribution (\code{"cbetax"})
+    can be used.}
+  \item{nu}{numeric. The value of the (fixed) \code{nu} parameter in
+    case a censored \code{dist} is used. The default is to estimate
+    \code{nu} in case of the \code{"cbetax"} distribution.}
   \item{control}{a list of control arguments specified via
     \code{\link{betareg.control}}.}
   \item{model, y, x}{logicals. If \code{TRUE} the corresponding components
@@ -97,9 +108,9 @@ betareg.fit(x, y, z = NULL, weights = NULL, offset = NULL,
   the second derivative of the inverse link function is required for \code{link} and
   \code{link.phi}. If the two links are specified by their names (as done by default
   in \code{betareg}), then the \code{"link-glm"} objects are enhanced automatically
-  by the required additional \code{dmu.deta} function. However, if a \code{"link-glm"}
-  object is supplied directly by the user, it needs to have the \code{dmu.deta}
-  function.)
+  by the required additional \code{d2mu.deta} function. However, if a \code{"link-glm"}
+  object is supplied directly by the user, it needs to have the \code{d2mu.deta}
+  function or, for backward compatibility, \code{dmu.deta}.)
 
   The main parameters of interest are the coefficients in the linear predictor of the mean
   model. The additional parameters in the precision model (phi) can either

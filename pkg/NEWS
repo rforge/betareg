@@ -1,7 +1,13 @@
 Changes in Version 3.2-0
 
-  o Started work on extended beta regression to allow for point masses at 0
-    and 1.
+  o betareg() gained a new "dist" argument in order to fit censored extended
+    beta distributions in case of boundary 0/1 observations. If all response
+    observations are in (0, 1) the default is still the simple "beta"
+    distribution. However, in the presence of boundary 0/1 observations, there
+    is now support for two alternatives: "cbeta4" = censored constrained
+    four-parameter beta distribution which requires specification of a fixed
+    "nu" parameter. "cbetax" = censored exponential mixture beta distribution
+    which allows for estimation of "nu".
 
 
 Changes in Version 3.1-0
