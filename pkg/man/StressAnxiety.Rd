@@ -27,7 +27,7 @@ A data frame containing 166 observations on 2 variables.
 
 \source{
 Example 2 from
-\url{http://psychology3.anu.edu.au/people/smithson/details/betareg/betareg.html}
+\url{http://www.michaelsmithson.online/stats/betareg/betareg.html}
 }
 
 \references{

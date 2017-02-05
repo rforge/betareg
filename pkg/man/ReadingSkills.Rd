@@ -36,7 +36,7 @@ A data frame containing 44 observations on 3 variables.
 
 \source{
 Example 3 from
-\url{http://psychology3.anu.edu.au/people/smithson/details/betareg/betareg.html}
+\url{http://www.michaelsmithson.online/stats/betareg/betareg.html}
 }
 
 \references{
