@@ -627,14 +627,17 @@ summary.betareg <- function(object, phi = NULL, type = "sweighted2", ...)
   se <- sqrt(diag(object$vcov))
   cf <- cbind(cf, se, cf/se, 2 * pnorm(-abs(cf/se)))
   colnames(cf) <- c("Estimate", "Std. Error", "z value", "Pr(>|z|)")
+  nu <- if("nu" %in% names(object$coefficients)) cf[m + k + 1, , drop = FALSE] else NULL
   cf <- list(
     mu = cf[seq.int(length.out = k), , drop = FALSE],
-    phi = cf[seq.int(length.out = m) + k, , drop = FALSE],
-    nu = if("nu" %in% names(object$coefficients)) cf[m + k + 1, , drop = FALSE] else NULL
+    phi = cf[seq.int(length.out = m) + k, , drop = FALSE]
   )
   rownames(cf$mu) <- names(object$coefficients$mu)
   rownames(cf$phi) <- names(object$coefficients$phi)
-  if(!is.null(cf$nu)) rownames(cf$nu) <- names(object$coefficients$nu)
+  if(!is.null(nu)) {
+    cf$nu <- nu
+    rownames(cf$nu) <- names(object$coefficients$nu)
+  }
   object$coefficients <- cf
 
   ## number of iterations
@@ -773,7 +776,7 @@ predict.betareg <- function(object, newdata = NULL,
     )  
   }
 
-  if(missing(newdata)) {
+  if(missing(newdata) || is.null(newdata)) {
 
     pars <- data.frame(mu = object$fitted.values, phi = NA_real_, nu = object$nu)
     if(!(type %in% c("response", "link"))) {
@@ -819,7 +822,7 @@ predict.betareg <- function(object, newdata = NULL,
 
   if(type %in% c("response", "link", "precision", "variance", "parameter")) {
     ## prediction is just a transformation of the parameters
-    rval <- fun(pars)
+    rval <- fun(pars, ...)
     if(is.null(dim(rval))) names(rval) <- rownames(pars)
   } else {
     ## prediction is a list of functions with predicted parameters as default
@@ -850,7 +853,7 @@ predict.betareg <- function(object, newdata = NULL,
 	}
 	return(rv)
       }
-      rval <- if(attype == "function") FUN else FUN(rbind(at))
+      rval <- if(attype == "function") FUN else FUN(rbind(at), ...)
     }
   }
 
@@ -1176,4 +1179,50 @@ update.betareg <- function (object, formula., ..., evaluate = TRUE)
   }
   if(evaluate) eval(call, parent.frame())
   else call
+}
+
+pit.betareg <- function(object, ...)
+{
+  ## observed response
+  y <- if(is.null(object$y)) model.response(model.frame(object)) else object$y
+
+  ## cdf
+  pfun <- predict(object, type = "probability", at = "function")
+  p <- pfun(y)
+
+  ## in case of censoring provide interval
+  if(y01 <- any(y <= 0 | y >= 1)) {
+    p <- cbind(p, p)
+    p[y01, 1L] <- pfun(y - .Machine$double.eps^0.9)[y01]
+  }
+  return(p)
+}
+
+utils::globalVariables("rootogram.default")
+
+rootogram.betareg <- function(object, newdata = NULL, breaks = NULL,
+  max = NULL, xlab = NULL, main = NULL, width = NULL, ...) 
+{
+  ## observed response and weights
+  mt <- terms(object)
+  mf <- if(is.null(newdata)) model.frame(object) else model.frame(mt, newdata, na.action = na.omit)
+  y <- model.response(mf)
+  w <- model.weights(mf)
+  if(is.null(w)) w <- rep.int(1, NROW(y))
+
+  ## breaks
+  if(is.null(breaks)) breaks <- "Sturges"
+  breaks <- hist(y[w > 0], plot = FALSE, breaks = breaks)$breaks
+  obsrvd <- as.vector(xtabs(w ~ cut(y, breaks, include.lowest = TRUE)))
+
+  ## expected frequencies
+  p <- predict(object, newdata, type = "probability", at = breaks)
+  p <- p[, -1L, drop = FALSE] - p[, -ncol(p), drop = FALSE]
+  expctd <- colSums(p * w)
+
+  ## call default method
+  if(is.null(xlab)) xlab <- as.character(attr(mt, "variables"))[2L]
+  if(is.null(main)) main <- deparse(substitute(object))
+  rootogram.default(obsrvd, expctd, breaks = breaks,
+    xlab = xlab, main = main, width = 1, ...)  
 }

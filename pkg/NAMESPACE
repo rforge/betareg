@@ -72,7 +72,11 @@ export(
 
   ## beta mixture models
   "betamix",
-  "extraComponent"
+  "extraComponent",
+  
+  ## goodness-of-fit tools
+  "pit.betareg",
+  "rootogram.betareg"
 )
 
 ## methods for class betareg
