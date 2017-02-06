@@ -722,64 +722,66 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
 }
 
 predict.betareg <- function(object, newdata = NULL,
-  type = c("response", "link", "precision", "variance", "quantile"),
+  type = c("response", "link", "precision", "variance", "parameter", "density", "probability", "quantile"),
   na.action = na.pass, at = 0.5, ...)
 {
   ## unify list component names
   if(object$dist == "beta") {
     for(n in names(object)[names(object) %in% fix_names_mu_phi]) names(object[[n]])[1L:2L] <- c("mu", "phi")
-  } else {
-    stop("not implemented yet") ## FIXME
   }
+  if(is.null(object$nu)) object$nu <- NA_real_
 
+  ## types of predictions
   type <- match.arg(type)
+  attype <- if(is.character(at)) match.arg(at, c("function", "list")) else "numeric"
 
-  if(type == "quantile") {
-    qfun <- function(at, mu, phi) {
-      rval <- sapply(at, function(p) qbeta(p, mu * phi, (1 - mu) * phi))
-      if(length(at) > 1L) {
-        if(NCOL(rval) == 1L) rval <- matrix(rval, ncol = length(at),
-	  dimnames = list(unique(names(rval)), NULL))
-        colnames(rval) <- paste("q_", at, sep = "")
-      } else {
-        rval <- drop(rval)
-      }
-      rval   
-    }
+  ## set up function that computes prediction from model parameters
+  linkfun <- object$link$mu$linkfun
+  fun <- if(object$dist == "beta") {
+    switch(type,
+      "response" = function(pars) pars$mu,
+      "link" = function(pars) linkfun(pars$mu),
+      "precision" = function(pars) pars$phi,
+      "variance" = function(pars) pars$mu * (1 - pars$mu)/(1 + pars$phi),
+      "parameter" = function(pars) pars,
+      "density" = function(x, pars, ...) dbetar(x, mu = pars$mu, phi = pars$phi, ...),
+      "probability" = function(q, pars, ...) pbetar(q, mu = pars$mu, phi = pars$phi, ...),
+      "quantile" = function(p, pars, ...) qbetar(p, mu = pars$mu, phi = pars$phi, ...)
+    )
+  } else if(object$dist == "cbeta4") {
+    switch(type,
+      "response" = function(pars) rep.int(NA_real_, length(pars$mu)),
+      "link" = function(pars) linkfun(pars$mu),
+      "precision" = function(pars) rep.int(NA_real_, length(pars$mu)),
+      "variance" = function(pars) rep.int(NA_real_, length(pars$mu)),
+      "parameter" = function(pars) pars,
+      "density" = function(x, pars, ...) dbeta4(x, mu = pars$mu, phi = pars$phi, theta1 = -pars$nu, censored = TRUE, ...),
+      "probability" = function(q, pars, ...) pbeta4(q, mu = pars$mu, phi = pars$phi, theta1 = -pars$nu, censored = TRUE, ...),
+      "quantile" = function(p, pars, ...) qbeta4(p, mu = pars$mu, phi = pars$phi, theta1 = -pars$nu, censored = TRUE, ...)
+    )  
+  } else if(object$dist == "cbetax") {
+    switch(type,
+      "response" = function(pars) rep.int(NA_real_, length(pars$mu)),
+      "link" = function(pars) linkfun(pars$mu),
+      "precision" = function(pars) rep.int(NA_real_, length(pars$mu)),
+      "variance" = function(pars) rep.int(NA_real_, length(pars$mu)),
+      "parameter" = function(pars) pars,
+      "density" = function(x, pars, ...) dbetax(x, mu = pars$mu, phi = pars$phi, nu = pars$nu, censored = TRUE, ...),
+      "probability" = function(q, pars, ...) pbetax(q, mu = pars$mu, phi = pars$phi, nu = pars$nu, censored = TRUE, ...),
+      "quantile" = function(p, pars, ...) rep.int(NA_real_, length(pars$mu))
+        ## qbetax(p, mu = pars$mu, phi = pars$phi, nu = pars$nu, censored = TRUE, ...)
+    )  
   }
 
   if(missing(newdata)) {
 
-    rval <- switch(type,
-      "response" = {
-        object$fitted.values
-      },
-      "link" = {
-        object$link$mu$linkfun(object$fitted.values)
-      },
-      "precision" = {
-        gamma <- object$coefficients$phi
-        z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
-        offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
-        object$link$phi$linkinv(drop(z %*% gamma + offset))
-      },
-      "variance" = {
-        gamma <- object$coefficients$phi
-        z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
-        offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
-        phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))
-        object$fitted.values * (1 - object$fitted.values) / (1 + phi)
-      },
-      "quantile" = {
-        mu <- object$fitted.values
-        gamma <- object$coefficients$phi
-        z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
-        offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
-        phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))
-        qfun(at, mu, phi)
-      }
-    )
-    return(rval)
+    pars <- data.frame(mu = object$fitted.values, phi = NA_real_, nu = object$nu)
+    if(!(type %in% c("response", "link"))) {
+      gamma <- object$coefficients$phi
+      z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
+      offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
+      pars$phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))    
+    }
 
   } else {
 
@@ -787,51 +789,72 @@ predict.betareg <- function(object, newdata = NULL,
       "response" = "mu",
       "link" = "mu",
       "precision" = "phi",
-      "variance" = "full",
-      "quantile" = "full")
+      "full"
+    )
 
     mf <- model.frame(delete.response(object$terms[[tnam]]), newdata, na.action = na.action, xlev = object$levels[[tnam]])
     newdata <- newdata[rownames(mf), , drop = FALSE]
     offset <- list(mu = rep.int(0, nrow(mf)), phi = rep.int(0, nrow(mf)))
 
-    if(type %in% c("response", "link", "variance", "quantile")) {
+    pars <- data.frame(mu = rep.int(NA_real_, nrow(mf)), phi = NA_real_, nu = object$nu)
+    rownames(pars) <- rownames(mf)
+    
+    if(type != "precision") {
       X <- model.matrix(delete.response(object$terms$mu), mf, contrasts = object$contrasts$mu)
       if(!is.null(object$call$offset)) offset[[1L]] <- offset[[1L]] + eval(object$call$offset, newdata)
       if(!is.null(off.num <- attr(object$terms$mu, "offset"))) {
         for(j in off.num) offset[[1L]] <- offset[[1L]] + eval(attr(object$terms$mu, "variables")[[j + 1L]], newdata)
       }
+      pars$mu <- object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
     }
-    if(type %in% c("precision", "variance", "quantile")) {
+    if(!(type %in% c("response", "link"))) {
       Z <- model.matrix(object$terms$phi, mf, contrasts = object$contrasts$phi)
       if(!is.null(off.num <- attr(object$terms$phi, "offset"))) {
         for(j in off.num) offset[[2L]] <- offset[[2L]] + eval(attr(object$terms$phi, "variables")[[j + 1L]], newdata)
       }
+      pars$phi <- object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
     }
 
-    rval <- switch(type,
-      "response" = {
-        object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
-      },
-      "link" = {
-        drop(X %*% object$coefficients$mu + offset[[1L]])
-      },
-      "precision" = {
-        object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
-      },
-      "variance" = {
-        mu <- object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
-        phi <- object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
-        mu * (1 - mu) / (1 + phi)
-      },
-      "quantile" = {
-        mu <- object$link$mu$linkinv(drop(X %*% object$coefficients$mu + offset[[1L]]))
-        phi <- object$link$phi$linkinv(drop(Z %*% object$coefficients$phi + offset[[2L]]))
-        qfun(at, mu, phi)
-      }
-    )
-    return(rval)
-
   }
+
+  if(type %in% c("response", "link", "precision", "variance", "parameter")) {
+    ## prediction is just a transformation of the parameters
+    rval <- fun(pars)
+    if(is.null(dim(rval))) names(rval) <- rownames(pars)
+  } else {
+    ## prediction is a list of functions with predicted parameters as default
+    if(attype == "list") {
+      rval <- lapply(1L:nrow(pars), function(i) {
+        function(at, mu = pars[i, "mu"], phi = pars[i, "phi"], nu = pars[i, "nu"], ...) {
+	  fun(at, data.frame(mu = mu, phi = phi, nu = nu), ...)
+	}
+      })
+    } else {
+    ## prediction requires a function that suitably expands 'at'
+    ## and then evaluates fun() with predicted parameters as default
+      FUN <- function(at, mu = pars$mu, phi = pars$phi, nu = pars$nu, ...) {
+        n <- length(mu)
+	if(length(at) == 1L) at <- rep.int(as.vector(at), n)
+	if(length(at) != n) at <- rbind(at)
+	if(is.matrix(at) && NROW(at) == 1L) {
+	  at <- matrix(rep(at, each = n), nrow = n)
+	  rv <- fun(as.vector(at), pars = data.frame(mu = rep.int(mu, ncol(at)),
+	    phi = rep.int(phi, ncol(at)), nu = rep.int(nu, ncol(at))), ...)
+	  rv <- matrix(rv, nrow = n)
+	  rownames(rv) <- rownames(pars)
+	  colnames(rv) <- paste(substr(type, 1L, 1L),
+	    round(at[1L, ], digits = pmax(3L, getOption("digits") - 3L)), sep = "_")
+	} else {
+	  rv <- fun(at, pars = data.frame(mu = mu, phi = phi, nu = nu))
+	  names(rv) <- rownames(pars)
+	}
+	return(rv)
+      }
+      rval <- if(attype == "function") FUN else FUN(rbind(at))
+    }
+  }
+
+  return(rval)
 }
 
 coef.betareg <- function(object, model = c("full", "mean", "precision"), phi = NULL, ...)

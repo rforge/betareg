@@ -11,7 +11,7 @@
 
 \usage{
 \method{predict}{betareg}(object, newdata = NULL,
-  type = c("response", "link", "precision", "variance", "quantile"),
+  type = c("response", "link", "precision", "variance", "parameter", "density", "probability", "quantile"),
   na.action = na.pass, at = 0.5, \dots)
 }
 
@@ -29,6 +29,10 @@
     should be predicted (only if \code{type = "quantile"}), defaulting
     to the median \code{at = 0.5}.}
   \item{\dots}{currently not used.}
+}
+
+\details{
+  FIXME: Update to extended type and at processing.
 }
 
 \examples{
