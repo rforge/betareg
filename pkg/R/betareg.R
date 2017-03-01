@@ -47,7 +47,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
   ## type of estimator and distribution
   type <- match.arg(type, c("ML", "BC", "BR"))
-  if(!missing(dist)) {  
+  if(!missing(dist)) {
     dist <- match.arg(dist, c("beta", "cbeta4", "cbetax"))
     if(dist == "beta") {
       if(any(Y <= 0 | Y >= 1)) stop("invalid dependent variable, all observations must be in (0, 1)")
@@ -152,7 +152,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   if(dist != "beta") {
     if(type != "ML") stop(sprintf("only 'ML' estimation implemented for '%s'", dist))
     control$hessian <- TRUE
-    control$fsmaxit <- 0  
+    control$fsmaxit <- 0
   }
   estnu <- if(dist != "beta" & is.null(nu)) TRUE else FALSE
 
@@ -274,6 +274,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   fitfun <- function(par, deriv = 0L) {
     beta <- par[seq.int(length.out = k)]
     gamma <- par[seq.int(length.out = m) + k]
+    nu <- if(estnu) exp(par[k + m + 1]) else nu
     eta <- as.vector(x %*% beta + offset[[1L]])
     phi_eta <- as.vector(z %*% gamma + offset[[2L]])
     mu <- linkinv(eta)
@@ -284,6 +285,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     list(
       beta = beta,
       gamma = gamma,
+      nu = nu,
       eta = eta,
       phi_eta = phi_eta,
       mu = mu,
@@ -300,7 +302,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     if(is.null(fit)) fit <- fitfun(par)
     alpha <- fit$mu * fit$phi
     beta <- (1 - fit$mu) * fit$phi
-    
+
     ## compute log-likelihood
     if(any(!is.finite(fit$phi)) | any(alpha > 1e300) | any(beta > 1e300)) NaN else { ## catch extreme cases without warning
       ll <- suppressWarnings(dbeta(y, alpha, beta, log = TRUE))
@@ -434,15 +436,33 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     } else {
       dbetax
     }
-    
-    ## set up (censored) log-likelihood
-    loglikfun <- function(par, fit = NULL) {
-      mu <- linkinv(x %*% par[1:k] + offset[[1L]])
-      phi <- phi_linkinv(z %*% par[(k + 1):(k + m)] + offset[[2L]])
-      nu <- if(estnu) exp(par[k + m + 1]) else nu
-      rval <- dfun(y, mu = mu, phi = phi, nu = nu, log = TRUE, censored = TRUE)
+
+  ## set up (censored) log-likelihood
+  loglikfun <- function(par, fit = NULL) {
+      ## extract fitted parameters
+      if(is.null(fit)) fit <- fitfun(par)
+      rval <- dfun(y, mu = fit$mu, phi = fit$phi, nu = fit$nu, log = TRUE, censored = TRUE)
       sum(weights * rval)
-    }
+  }
+
+  ## loglikfun <- function(par, fit = NULL) {
+  ##   mu <- linkinv(x %*% par[1:k] + offset[[1L]])
+  ##   phi <- phi_linkinv(z %*% par[(k + 1):(k + m)] + offset[[2L]])
+  ##   nu <- if(estnu) exp(par[k + m + 1]) else nu
+  ##   rval <- dfun(y, mu = mu, phi = phi, nu = nu, log = TRUE, censored = TRUE)
+  ##   sum(weights * rval)
+  ## }
+
+  gradfun <- function(par, fit = NULL) {
+      ## extract fitted means/precisions
+      if(is.null(fit)) fit <- fitfun(par, deriv = 1L)
+      mu <- fit$mu
+      phi <- fit$phi
+      eta <- fit$eta
+      phi_eta <- fit$phi_eta
+      mustar <- fit$mustar
+
+  }
 
     ## no gradients at the moment
     gradfun <- NULL
@@ -691,10 +711,10 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
         printCoefmat(x$coefficients$phi, digits = digits, signif.legend = FALSE)
       } else cat("\nNo coefficients (in precision model)\n")
     }
-    
+
     if(!is.null(x$coefficients$nu)) {
       cat("\nNu parameter:\n")
-      printCoefmat(x$coefficients$nu, digits = digits, signif.legend = FALSE)    
+      printCoefmat(x$coefficients$nu, digits = digits, signif.legend = FALSE)
     }
 
     if(getOption("show.signif.stars") & any(do.call("rbind", x$coefficients)[, 4L] < 0.1))
@@ -761,7 +781,7 @@ predict.betareg <- function(object, newdata = NULL,
       "density" = function(x, pars, ...) dbeta4(x, mu = pars$mu, phi = pars$phi, theta1 = -pars$nu, censored = TRUE, ...),
       "probability" = function(q, pars, ...) pbeta4(q, mu = pars$mu, phi = pars$phi, theta1 = -pars$nu, censored = TRUE, ...),
       "quantile" = function(p, pars, ...) qbeta4(p, mu = pars$mu, phi = pars$phi, theta1 = -pars$nu, censored = TRUE, ...)
-    )  
+    )
   } else if(object$dist == "cbetax") {
     switch(type,
       "response" = function(pars) rep.int(NA_real_, length(pars$mu)),
@@ -773,7 +793,7 @@ predict.betareg <- function(object, newdata = NULL,
       "probability" = function(q, pars, ...) pbetax(q, mu = pars$mu, phi = pars$phi, nu = pars$nu, censored = TRUE, ...),
       "quantile" = function(p, pars, ...) rep.int(NA_real_, length(pars$mu))
         ## qbetax(p, mu = pars$mu, phi = pars$phi, nu = pars$nu, censored = TRUE, ...)
-    )  
+    )
   }
 
   if(missing(newdata) || is.null(newdata)) {
@@ -783,7 +803,7 @@ predict.betareg <- function(object, newdata = NULL,
       gamma <- object$coefficients$phi
       z <- if(is.null(object$x)) model.matrix(object, model = "phi") else object$x$phi
       offset <- if(is.null(object$offset$phi)) rep.int(0, NROW(z)) else object$offset$phi
-      pars$phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))    
+      pars$phi <- object$link$phi$linkinv(drop(z %*% gamma + offset))
     }
 
   } else {
@@ -801,7 +821,7 @@ predict.betareg <- function(object, newdata = NULL,
 
     pars <- data.frame(mu = rep.int(NA_real_, nrow(mf)), phi = NA_real_, nu = object$nu)
     rownames(pars) <- rownames(mf)
-    
+
     if(type != "precision") {
       X <- model.matrix(delete.response(object$terms$mu), mf, contrasts = object$contrasts$mu)
       if(!is.null(object$call$offset)) offset[[1L]] <- offset[[1L]] + eval(object$call$offset, newdata)
@@ -1201,7 +1221,7 @@ pit.betareg <- function(object, ...)
 utils::globalVariables("rootogram.default")
 
 rootogram.betareg <- function(object, newdata = NULL, breaks = NULL,
-  max = NULL, xlab = NULL, main = NULL, width = NULL, ...) 
+  max = NULL, xlab = NULL, main = NULL, width = NULL, ...)
 {
   ## observed response and weights
   mt <- terms(object)
@@ -1224,5 +1244,5 @@ rootogram.betareg <- function(object, newdata = NULL, breaks = NULL,
   if(is.null(xlab)) xlab <- as.character(attr(mt, "variables"))[2L]
   if(is.null(main)) main <- deparse(substitute(object))
   rootogram.default(obsrvd, expctd, breaks = breaks,
-    xlab = xlab, main = main, width = 1, ...)  
+    xlab = xlab, main = main, width = 1, ...)
 }
