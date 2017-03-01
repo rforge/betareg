@@ -65,7 +65,7 @@ export(
   "betareg.control",
   "betareg.fit",
   "gleverage",
-  
+
   ## beta regression trees
   "betatree",
   "sctest.betatree",
@@ -73,7 +73,7 @@ export(
   ## beta mixture models
   "betamix",
   "extraComponent",
-  
+
   ## goodness-of-fit tools
   "pit.betareg",
   "rootogram.betareg"
@@ -99,6 +99,7 @@ S3method("terms", "betareg")
 S3method("print", "summary.betareg")
 S3method("update", "betareg")
 S3method("vcov", "betareg")
+S3method("simulate", "betareg")
 
 ## methods for class betatree
 S3method("plot", "betatree")

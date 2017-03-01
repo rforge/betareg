@@ -279,35 +279,70 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     phi_eta <- as.vector(z %*% gamma + offset[[2L]])
     mu <- linkinv(eta)
     phi <- phi_linkinv(phi_eta)
-    mustar <- if(deriv >= 1L) digamma(mu * phi) - digamma((1 - mu) * phi) else NULL
-    psi1 <- if(deriv >= 2L) trigamma(mu * phi) else NULL
-    psi2 <- if(deriv >= 2L) trigamma((1 - mu) * phi) else NULL
+    shape1 <- mu * phi
+    shape2 <- (1 - mu) * phi
+
+    if (deriv >= 1L) {
+        d1 <- digamma(shape1)
+        d2 <- digamma(shape2)
+        mustar <- d1 - d2
+    }
+    else {
+        d1 <- d2 <- mustar <- NULL
+    }
+    if (deriv >= 2L) {
+        psi1 <- trigamma(shape1)
+        psi2 <- trigamma(shape2)
+    }
+    else {
+        psi1 <- psi2 <- NULL
+    }
+    if (deriv >= 3L) {
+        g1 <- gamma(shape1)
+        g2 <- gamma(shape2)
+        g12 <- gamma(phi)
+        d12 <- digamma(phi)
+        nu_low <- nu/(1 + 2*nu)
+        nu_upp <- (1 + nu)/(1 + 2*nu)
+    }
+    else {
+        g1 <- g2 <- d12 <- nu_low <- nu_upp <- NULL
+    }
     list(
-      beta = beta,
-      gamma = gamma,
-      nu = nu,
-      eta = eta,
-      phi_eta = phi_eta,
-      mu = mu,
-      phi = phi,
-      mustar = mustar,
-      psi1 = psi1,
-      psi2 = psi2
+        shape1 = shape1,
+        shape2 = shape2,
+        beta = beta,
+        gamma = gamma,
+        nu = nu,
+        eta = eta,
+        phi_eta = phi_eta,
+        mu = mu,
+        phi = phi,
+        mustar = mustar,
+        psi1 = psi1,
+        psi2 = psi2
     )
   }
 
   ## objective function
   loglikfun <- function(par, fit = NULL) {
-    ## extract fitted parameters
-    if(is.null(fit)) fit <- fitfun(par)
-    alpha <- fit$mu * fit$phi
-    beta <- (1 - fit$mu) * fit$phi
+      ## extract fitted parameters
+      if(is.null(fit)) fit <- fitfun(par)
 
-    ## compute log-likelihood
-    if(any(!is.finite(fit$phi)) | any(alpha > 1e300) | any(beta > 1e300)) NaN else { ## catch extreme cases without warning
-      ll <- suppressWarnings(dbeta(y, alpha, beta, log = TRUE))
-      if(any(!is.finite(ll))) NaN else sum(weights * ll) ## again: catch extreme cases without warning
-    }
+      ## compute log-likelihood
+      ## conditionals are still here for backward compatibility; to be
+      ## removed in a later release
+      with(fit, {
+          if(any(!is.finite(phi)) | any(shape1 > 1e300) | any(shape2 > 1e300)) {
+              NaN
+          }
+          ## catch extreme cases
+          else {
+              ll <- suppressWarnings(dbeta(y, shape1, shape2, log = TRUE))
+              if(any(!is.finite(ll))) NaN else sum(weights * ll)
+              ## again: catch extreme cases without warning
+          }
+      })
   }
 
   ## gradient (by default) or gradient contributions (sum = FALSE)
@@ -453,6 +488,16 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
   ##   sum(weights * rval)
   ## }
 
+      genh <- function(mu, phi, nu) {
+          mat <- cbind(mu * phi, (1 - mu)*phi)
+          apply(mat, 1, function(shape) {
+              a <- shape[1]
+              b <- shape[2]
+              genhypergeo(U = c(a, a, 1 - b), L = c(a + 1, a+ 1), z = nu/(1 + 2*nu))
+          })
+      }
+
+
   gradfun <- function(par, fit = NULL) {
       ## extract fitted means/precisions
       if(is.null(fit)) fit <- fitfun(par, deriv = 1L)
@@ -461,6 +506,19 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
       eta <- fit$eta
       phi_eta <- fit$phi_eta
       mustar <- fit$mustar
+
+      ynu <- (y + u)/(1 + 2*u)
+      ystarnu <- plogis(ynu)
+      ## Compute gradient contributions from observations in (0, 1)
+      l01_bg <- cbind(
+          phi * (ystarnu - mustar) * mu.eta(eta) * weights * x,
+          (mu * (ystarnu - mustar) + log(1-ynu) - digamma((1-mu)*phi) + digamma(phi)) *
+          phi_mu.eta(phi_eta) * weights * z
+      )
+
+      l1_bg <- cbind(
+          )
+
 
   }
 
@@ -1245,4 +1303,38 @@ rootogram.betareg <- function(object, newdata = NULL, breaks = NULL,
   if(is.null(main)) main <- deparse(substitute(object))
   rootogram.default(obsrvd, expctd, breaks = breaks,
     xlab = xlab, main = main, width = 1, ...)
+}
+
+
+simulate.betareg <- function(object, nsim = 1, seed = NULL, ...) {
+    ## Does not support cbeta4 and cbetax yet
+    if (!exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+        runif(1)
+    if (is.null(seed))
+        RNGstate <- get(".Random.seed", envir = .GlobalEnv)
+    else {
+        R.seed <- get(".Random.seed", envir = .GlobalEnv)
+        set.seed(seed)
+        RNGstate <- structure(seed, kind = as.list(RNGkind()))
+        on.exit(assign(".Random.seed", R.seed, envir = .GlobalEnv))
+    }
+    Xmean <- model.matrix(object, model = "mean")
+    n <- nrow(Xmean)
+    nm <- rownames(Xmean)
+    Xprecision <- model.matrix(object, model = "precision")
+    cMean <- coef(object, model = "mean")
+    cPrecision <- coef(object, model = "precision")
+    link_mean <- object$link$mean$linkinv
+    link_precision <- object$link$precision$linkinv
+    mus <- link_mean(c(Xmean %*% cMean))
+    phis <- link_precision(c(Xprecision %*% cPrecision))
+    ps <- mus * phis
+    qs <- (1 - mus) * phis
+    val <- matrix(1 - rbeta(n * nsim, qs, ps),  n, nsim)
+    val <- as.data.frame(val)
+    names(val) <- paste("sim", seq_len(nsim), sep = "_")
+    if (!is.null(nm))
+        row.names(val) <- nm
+    attr(val, "seed") <- RNGstate
+    val
 }
