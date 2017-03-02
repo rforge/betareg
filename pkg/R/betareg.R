@@ -500,31 +500,35 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     phi * (ystarnu - mustar) * mu.eta(eta) * weights * x,
                     (mu * (ystarnu - mustar) + log(1 - ynu) - digamma((1 - mu) * phi) + digamma(phi)) *
                     phi_mu.eta(phi_eta) * weights * z,
-                    phi * mu * (1 - 2 * y) * (1/(y + nu) + 1/(1 - y + nu)) / (1 + 2 * nu) - (1 - 2 * y) * phi / ((1 + 2 * nu) * (1 - y + nu)) - 2/(1 + 2 * nu)
+                    (phi * mu * (1 - 2 * y) * (1/(y + nu) + 1/(1 - y + nu)) / (1 + 2 * nu) - (1 - 2 * y) * phi / ((1 + 2 * nu) * (1 - y + nu)) - 2/(1 + 2 * nu)) * weights
                 )
 
                 F1low <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
                     b <- shapes[2]
                     hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_low, check_mod = FALSE)
+                    ## hypergeo::genhypergeo_contfrac(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_low)
                 })
 
                 F2upp <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
                     b <- shapes[2]
                     hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_upp, check_mod = FALSE)
+                    ## hypergeo::genhypergeo_contfrac(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_upp)
                 })
 
                 F1upp <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
                     b <- shapes[2]
                     hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_upp, check_mod = FALSE)
+                    ## hypergeo::genhypergeo_contfrac(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_upp)
                 })
 
                 F2low <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
                     b <- shapes[2]
                     hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_low, check_mod = FALSE)
+                    ## hypergeo::genhypergeo_contfrac(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_low)
                 })
 
                 dlow <- dbeta(nu_low, shape1, shape2)
@@ -538,17 +542,16 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * F2low / (shape2^2 * b12)
                 ## Tested the above with numerical derivatives; look ok
 
-
                 grad_l0 <- cbind(
                     phi * mu.eta(eta) * (delta1low - delta2low) * weights * x / plow,
                     phi_mu.eta(phi_eta) * (delta1low * mu + delta2low * (1 - mu)) * weights * z / plow,
-                    dlow/(plow * (1 + 2 * nu)^2) ## case weights here?
+                    dlow/(plow * (1 + 2 * nu)^2) * weights ## case weights here?
                 )
 
                 grad_l1 <- cbind(
                     phi * mu.eta(eta) * (delta2upp - delta1upp) * weights * x / (1 - pupp),
                     - phi_mu.eta(phi_eta) * (delta1upp * mu + delta2upp * (1 - mu)) * weights * z / (1 - pupp),
-                    dupp/((1 - pupp) * (1 + 2 * nu)^2) ## case weights here?
+                    dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights ## case weights here?
                 )
 
                 out <- colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
@@ -566,6 +569,10 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     opt <- optim(par = start, fn = loglikfun, gr = gradfun,
                  method = method, hessian = hessian, control = control)
     par <- opt$par
+
+##:ess-bp-start::browser@nil:##
+browser(expr=is.null(.ESSBP.[["@21@"]]));##:ess-bp-end:##
+
 
     ## conduct further (quasi) Fisher scoring to move ML derivatives
     ## even further to zero or conduct bias reduction
