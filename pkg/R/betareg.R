@@ -517,9 +517,9 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     phi * (ystarnu - mustar) * mu.eta(eta) * weights * x,
                     (mu * (ystarnu - mustar) + log(1 - ynu) - digamma((1 - mu) * phi) + digamma(phi)) *
                     phi_mu.eta(phi_eta) * weights * z,
-                    ((mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu)) * nu)
+                    ((mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu)) * weights * nu)
 
-
+                ## Bottleneck!
                 Fs <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
                     b <- shapes[2]
@@ -528,32 +528,27 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     c(f1, f2)
                 })
 
-                F1low <- Fs[1, ]
-                F1upp <- Fs[2, ]
-                F2low <- Fs[3, ]
-                F2upp <- Fs[4, ]
-
                 dlow <- dbeta(nu_low, shape1, shape2)
                 plow <- pbeta(nu_low, shape1, shape2)
                 dupp <- dbeta(nu_upp, shape1, shape2)
                 pupp <- pbeta(nu_upp, shape1, shape2)
 
-                delta1low <- plow * (d12 - d1 + log(nu_low)) - nu_low^shape1 * F1low / (shape1^2 * b12)
-                delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * F2upp / (shape2^2 * b12)
-                delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * F1upp / (shape1^2 * b12)
-                delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * F2low / (shape2^2 * b12)
+                delta1low <- plow * (d12 - d1 + log(nu_low)) - nu_low^shape1 * Fs[1, ] / (shape1^2 * b12)
+                delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * Fs[4, ] / (shape2^2 * b12)
+                delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * Fs[2, ] / (shape1^2 * b12)
+                delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * Fs[3, ] / (shape2^2 * b12)
                 ## Tested the above with numerical derivatives; look ok
 
                 grad_l0 <- cbind(
                     phi * mu.eta(eta) * (delta1low - delta2low) * weights * x / plow,
                     phi_mu.eta(phi_eta) * (delta1low * mu + delta2low * (1 - mu)) * weights * z / plow,
-                    dlow/(plow * (1 + 2 * nu)^2) * weights * nu ## case weights here?
+                    dlow/(plow * (1 + 2 * nu)^2) * weights * nu ## case weights here
                 )
 
                 grad_l1 <- cbind(
                     phi * mu.eta(eta) * (delta2upp - delta1upp) * weights * x / (1 - pupp),
                     - phi_mu.eta(phi_eta) * (delta1upp * mu + delta2upp * (1 - mu)) * weights * z / (1 - pupp),
-                    dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights * nu ## case weights here?
+                    dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights * nu ## case weights here
                 )
 
                 grad_l0[!indices0, ] <- 0
