@@ -504,7 +504,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
         }
 
 
-        gradfun <- function(par, fit = NULL) {
+        gradfun <- function(par, sum = TRUE, fit = NULL) {
             ## extract fitted means/precisions
             if(is.null(fit)) fit <- fitfun(par, deriv = 3L)
 
@@ -526,7 +526,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     f1 <- hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = c(nu_low, nu_upp), check_mod = FALSE)
                     f2 <- hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = c(nu_low, nu_upp), check_mod = FALSE)
                     c(f1, f2)
-                     ## c(f1[1], f2[2], f1[2], f2[1])
                 })
 
                 F1low <- Fs[1, ]
@@ -557,8 +556,21 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights * nu ## case weights here?
                 )
 
-                out <- colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
-                if (estnu) out else out[1:(k + m)]
+                grad_l0[!indices0, ] <- 0
+                grad_l1[!indices1, ] <- 0
+                grad_l01[!indices01, ] <- 0
+
+                out <- grad_l0 + grad_l1 + grad_l01
+                out <- if (estnu) out else out[, 1:(k + m)]
+                if (sum) {
+                    colSums(out)
+                }
+                else {
+                    out
+                }
+                ## out <- colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
+
+
             })
         }
 
