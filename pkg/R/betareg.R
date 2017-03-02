@@ -487,26 +487,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             sum(weights * rval)
         }
 
-        ## loglikfun <- function(par, fit = NULL) {
-        ##   mu <- linkinv(x %*% par[1:k] + offset[[1L]])
-        ##   phi <- phi_linkinv(z %*% par[(k + 1):(k + m)] + offset[[2L]])
-        ##   nu <- if(estnu) exp(par[k + m + 1]) else nu
-        ##   rval <- dfun(y, mu = mu, phi = phi, nu = nu, log = TRUE, censored = TRUE)
-        ##   sum(weights * rval)
-        ## }
-
-        ## Just to test that the high-level loglikfun above does the right job
-        loglikfune <- function(par, fit = NULL) {
-            if(is.null(fit)) fit <- fitfun(par)
-            with(fit, {
-                s01 <- log(dbeta((y + nu)/(1 + 2*nu), shape1, shape2)) - log(1 + 2*nu)
-                s0 <- log(pbeta(nu/(1 + 2*nu), shape1, shape2))
-                s1 <- log(1 - pbeta((1 + nu)/(1 + 2*nu), shape1, shape2))
-                ## sum(s01[indices01]) + sum(s0[indices0]) + sum(s1[indices1])
-                sum(s1[indices1])
-            })
-        }
-
         gradfun <- function(par, fit = NULL) {
             ## extract fitted means/precisions
             if(is.null(fit)) fit <- fitfun(par, deriv = 3L)
@@ -571,7 +551,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     dupp/((1 - pupp) * (1 + 2 * nu)^2) ## case weights here?
                 )
 
-                colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
+                out <- colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
+                if (estnu) out else out[1:(k + m)]
             })
         }
 
