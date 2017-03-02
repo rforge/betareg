@@ -519,35 +519,55 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     phi_mu.eta(phi_eta) * weights * z,
                     ## ((phi * mu * (1 - 2 * y) * (1/(y + nu) + 1/(1 - y + nu)) / (1 + 2 * nu) - (1 - 2 * y) * phi / ((1 + 2 * nu) * (1 - y + nu)) - 2/(1 + 2 * nu))) * weights  * nu,
                     ## nu * (((mu * phi - 1)/(y + nu) - ((1 - mu) * phi - 1)/(1 - y + nu)) * (2 * y - 1) - 2) / (1 + 2 * nu),
-                    (mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu))
+                    ((mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu)) * nu)
 
-                F1low <- apply(cbind(shape1, shape2), 1, function(shapes) {
+
+                Fs <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
                     b <- shapes[2]
-                    hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_low, check_mod = FALSE)
-                    ## hypergeo::genhypergeo_contfrac(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_low)
+                    f1 <- hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = c(nu_low, nu_upp), check_mod = FALSE)
+                    f2 <- hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = c(nu_low, nu_upp), check_mod = FALSE)
+                    c(f1, f2)
+                     ## c(f1[1], f2[2], f1[2], f2[1])
                 })
 
-                F2upp <- apply(cbind(shape1, shape2), 1, function(shapes) {
-                    a <- shapes[1]
-                    b <- shapes[2]
-                    hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_upp, check_mod = FALSE)
-                    ## hypergeo::genhypergeo_contfrac(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_upp)
-                })
+                F1low <- Fs[1, ]
+                F1upp <- Fs[2, ]
+                F2low <- Fs[1, ]
+                F2upp <- Fs[2, ]
 
-                F1upp <- apply(cbind(shape1, shape2), 1, function(shapes) {
-                    a <- shapes[1]
-                    b <- shapes[2]
-                    hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_upp, check_mod = FALSE)
-                    ## hypergeo::genhypergeo_contfrac(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_upp)
-                })
+                ## F1low <- Fs[1, ]
+                ## F2upp <- Fs[2, ]
+                ## F1upp <- Fs[3, ]
+                ## F2low <- Fs[4, ]
 
-                F2low <- apply(cbind(shape1, shape2), 1, function(shapes) {
-                    a <- shapes[1]
-                    b <- shapes[2]
-                    hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_low, check_mod = FALSE)
-                    ## hypergeo::genhypergeo_contfrac(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_low)
-                })
+                ## F1low <- apply(cbind(shape1, shape2), 1, function(shapes) {
+                ##     a <- shapes[1]
+                ##     b <- shapes[2]
+                ##     hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_low, check_mod = FALSE)
+                ##     ## hypergeo::genhypergeo_contfrac(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_low)
+                ## })
+
+                ## F2upp <- apply(cbind(shape1, shape2), 1, function(shapes) {
+                ##     a <- shapes[1]
+                ##     b <- shapes[2]
+                ##     hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_upp, check_mod = FALSE)
+                ##     ## hypergeo::genhypergeo_contfrac(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_upp)
+                ## })
+
+                ## F1upp <- apply(cbind(shape1, shape2), 1, function(shapes) {
+                ##     a <- shapes[1]
+                ##     b <- shapes[2]
+                ##     hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_upp, check_mod = FALSE)
+                ##     ## hypergeo::genhypergeo_contfrac(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = nu_upp)
+                ## })
+
+                ## F2low <- apply(cbind(shape1, shape2), 1, function(shapes) {
+                ##     a <- shapes[1]
+                ##     b <- shapes[2]
+                ##     hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_low, check_mod = FALSE)
+                ##     ## hypergeo::genhypergeo_contfrac(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = nu_low)
+                ## })
 
                 dlow <- dbeta(nu_low, shape1, shape2)
                 plow <- pbeta(nu_low, shape1, shape2)
