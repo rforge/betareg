@@ -487,6 +487,23 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             sum(weights * rval)
         }
 
+        ## Just to test that the high-level loglikfun above does the right job
+        loglikfune <- function(par, fit = NULL, terms = c("all", "01", "0", "1")) {
+            terms <- match.arg(terms)
+            if(is.null(fit)) fit <- fitfun(par)
+            with(fit, {
+                s01 <- log(dbeta((y + nu)/(1 + 2*nu), shape1, shape2)) - log(1 + 2*nu)
+                s0 <- log(pbeta(nu/(1 + 2*nu), shape1, shape2))
+                s1 <- log(1 - pbeta((1 + nu)/(1 + 2*nu), shape1, shape2))
+                switch(terms,
+                       "all" = sum(s01[indices01]) + sum(s0[indices0]) + sum(s1[indices1]),
+                       "01" = sum(s01[indices01]),
+                       "1" = sum(s1[indices1]),
+                       "0" = sum(s0[indices0]))
+            })
+        }
+
+
         gradfun <- function(par, fit = NULL) {
             ## extract fitted means/precisions
             if(is.null(fit)) fit <- fitfun(par, deriv = 3L)
@@ -500,8 +517,9 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     phi * (ystarnu - mustar) * mu.eta(eta) * weights * x,
                     (mu * (ystarnu - mustar) + log(1 - ynu) - digamma((1 - mu) * phi) + digamma(phi)) *
                     phi_mu.eta(phi_eta) * weights * z,
-                    (phi * mu * (1 - 2 * y) * (1/(y + nu) + 1/(1 - y + nu)) / (1 + 2 * nu) - (1 - 2 * y) * phi / ((1 + 2 * nu) * (1 - y + nu)) - 2/(1 + 2 * nu)) * weights
-                )
+                    ## ((phi * mu * (1 - 2 * y) * (1/(y + nu) + 1/(1 - y + nu)) / (1 + 2 * nu) - (1 - 2 * y) * phi / ((1 + 2 * nu) * (1 - y + nu)) - 2/(1 + 2 * nu))) * weights  * nu,
+                    ## nu * (((mu * phi - 1)/(y + nu) - ((1 - mu) * phi - 1)/(1 - y + nu)) * (2 * y - 1) - 2) / (1 + 2 * nu),
+                    (mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu))
 
                 F1low <- apply(cbind(shape1, shape2), 1, function(shapes) {
                     a <- shapes[1]
@@ -545,13 +563,13 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 grad_l0 <- cbind(
                     phi * mu.eta(eta) * (delta1low - delta2low) * weights * x / plow,
                     phi_mu.eta(phi_eta) * (delta1low * mu + delta2low * (1 - mu)) * weights * z / plow,
-                    dlow/(plow * (1 + 2 * nu)^2) * weights ## case weights here?
+                    dlow/(plow * (1 + 2 * nu)^2) * weights * nu ## case weights here?
                 )
 
                 grad_l1 <- cbind(
                     phi * mu.eta(eta) * (delta2upp - delta1upp) * weights * x / (1 - pupp),
                     - phi_mu.eta(phi_eta) * (delta1upp * mu + delta2upp * (1 - mu)) * weights * z / (1 - pupp),
-                    dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights ## case weights here?
+                    dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights * nu ## case weights here?
                 )
 
                 out <- colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
@@ -572,7 +590,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
 ##:ess-bp-start::browser@nil:##
 browser(expr=is.null(.ESSBP.[["@21@"]]));##:ess-bp-end:##
-
 
     ## conduct further (quasi) Fisher scoring to move ML derivatives
     ## even further to zero or conduct bias reduction
