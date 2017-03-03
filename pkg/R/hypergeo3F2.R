@@ -1,5 +1,4 @@
-h3f2 <- function(a, b, z, n,
-                 maxiter = 5000, eps = 1e-14) {
+h3f2 <- function(a, b, z, n, maxiter = 5000, eps = 1e-14) {
     res <- .C("h3f2",
               a = as.double(a),
               b = as.double(b),
@@ -26,8 +25,3 @@ h3f2 <- function(a, b, z, n,
 ##               out = double(n))
 ##     res$out
 ## }
-
-## system("R CMD SHLIB ~/Downloads/hypergeo3F2.c")
-## system("R CMD SHLIB ~/Downloads/h3F2.c")
-## dyn.load("~/Downloads/h3F2.so")
-## dyn.load("~/Downloads/hypergeo3F2.so")
