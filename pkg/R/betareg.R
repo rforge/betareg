@@ -487,7 +487,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             sum(weights * rval)
         }
 
-        ## Just to test that the high-level loglikfun above does the right job
+        ## Just for testing that the high-level loglikfun above does
+        ## the right job and that gradients are implemented correctly
         ## loglikfune <- function(par, fit = NULL, terms = c("all", "01", "0", "1")) {
         ##     terms <- match.arg(terms)
         ##     if(is.null(fit)) fit <- fitfun(par)
@@ -537,30 +538,24 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 Fs2 <- h3f2(shape1, shape2, nu_upp, n, maxiter = 10000, eps = 0)
                 Fs3 <- h3f2(shape2, shape1, nu_low, n, maxiter = 10000, eps = 0)
                 Fs4 <- h3f2(shape2, shape1, nu_upp, n, maxiter = 10000, eps = 0)
-
                 delta1low <- plow * (d12 - d1 + log(nu_low)) - nu_low^shape1 * Fs1 / (shape1^2 * b12)
                 delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * Fs4 / (shape2^2 * b12)
                 delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * Fs2 / (shape1^2 * b12)
                 delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * Fs3 / (shape2^2 * b12)
-
                 ## Tested the above with numerical derivatives; look ok
-
                 grad_l0 <- cbind(
                     phi * mu.eta(eta) * (delta1low - delta2low) * weights * x / plow,
                     phi_mu.eta(phi_eta) * (delta1low * mu + delta2low * (1 - mu)) * weights * z / plow,
                     dlow/(plow * (1 + 2 * nu)^2) * weights * nu ## case weights here
                 )
-
                 grad_l1 <- cbind(
                     phi * mu.eta(eta) * (delta2upp - delta1upp) * weights * x / (1 - pupp),
                     - phi_mu.eta(phi_eta) * (delta1upp * mu + delta2upp * (1 - mu)) * weights * z / (1 - pupp),
                     dupp/((1 - pupp) * (1 + 2 * nu)^2) * weights * nu ## case weights here
                 )
-
                 grad_l0[!indices0, ] <- 0
                 grad_l1[!indices1, ] <- 0
                 grad_l01[!indices01, ] <- 0
-
                 out <- grad_l0 + grad_l1 + grad_l01
                 out <- if (estnu) out else out[, 1:(k + m)]
                 if (sum) {
