@@ -488,55 +488,61 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
         }
 
         ## Just to test that the high-level loglikfun above does the right job
-        loglikfune <- function(par, fit = NULL, terms = c("all", "01", "0", "1")) {
-            terms <- match.arg(terms)
-            if(is.null(fit)) fit <- fitfun(par)
-            with(fit, {
-                s01 <- log(dbeta((y + nu)/(1 + 2*nu), shape1, shape2)) - log(1 + 2*nu)
-                s0 <- log(pbeta(nu/(1 + 2*nu), shape1, shape2))
-                s1 <- log(1 - pbeta((1 + nu)/(1 + 2*nu), shape1, shape2))
-                switch(terms,
-                       "all" = sum(s01[indices01]) + sum(s0[indices0]) + sum(s1[indices1]),
-                       "01" = sum(s01[indices01]),
-                       "1" = sum(s1[indices1]),
-                       "0" = sum(s0[indices0]))
-            })
-        }
-
+        ## loglikfune <- function(par, fit = NULL, terms = c("all", "01", "0", "1")) {
+        ##     terms <- match.arg(terms)
+        ##     if(is.null(fit)) fit <- fitfun(par)
+        ##     with(fit, {
+        ##         s01 <- log(dbeta((y + nu)/(1 + 2*nu), shape1, shape2)) - log(1 + 2*nu)
+        ##         s0 <- log(pbeta(nu/(1 + 2*nu), shape1, shape2))
+        ##         s1 <- log(1 - pbeta((1 + nu)/(1 + 2*nu), shape1, shape2))
+        ##         switch(terms,
+        ##                "all" = sum(s01[indices01]) + sum(s0[indices0]) + sum(s1[indices1]),
+        ##                "01" = sum(s01[indices01]),
+        ##                "1" = sum(s1[indices1]),
+        ##                "0" = sum(s0[indices0]))
+        ##     })
+        ## }
 
         gradfun <- function(par, sum = TRUE, fit = NULL) {
             ## extract fitted means/precisions
             if(is.null(fit)) fit <- fitfun(par, deriv = 3L)
-
             with(fit, {
                 ynu <- (y + nu)/(1 + 2 * nu)
                 ystarnu <- qlogis(ynu)
-
                 ## Compute gradient contributions from observations in (0, 1) (beta regression scores)
                 grad_l01 <- cbind(
                     phi * (ystarnu - mustar) * mu.eta(eta) * weights * x,
                     (mu * (ystarnu - mustar) + log(1 - ynu) - digamma((1 - mu) * phi) + digamma(phi)) *
                     phi_mu.eta(phi_eta) * weights * z,
                     ((mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu)) * weights * nu)
-
-                ## Bottleneck!
-                Fs <- apply(cbind(shape1, shape2), 1, function(shapes) {
-                    a <- shapes[1]
-                    b <- shapes[2]
-                    f1 <- hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = c(nu_low, nu_upp), check_mod = FALSE)
-                    f2 <- hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = c(nu_low, nu_upp), check_mod = FALSE)
-                    c(f1, f2)
-                })
-
                 dlow <- dbeta(nu_low, shape1, shape2)
                 plow <- pbeta(nu_low, shape1, shape2)
                 dupp <- dbeta(nu_upp, shape1, shape2)
                 pupp <- pbeta(nu_upp, shape1, shape2)
 
-                delta1low <- plow * (d12 - d1 + log(nu_low)) - nu_low^shape1 * Fs[1, ] / (shape1^2 * b12)
-                delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * Fs[4, ] / (shape2^2 * b12)
-                delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * Fs[2, ] / (shape1^2 * b12)
-                delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * Fs[3, ] / (shape2^2 * b12)
+                ## ## ## Bottleneck!
+                ## Fs <- apply(cbind(shape1, shape2), 1, function(shapes) {
+                ##     a <- shapes[1]
+                ##     b <- shapes[2]
+                ##     f1 <- hypergeo::genhypergeo_series(U = c(a, a, 1 - b), L = c(a + 1, a + 1), z = c(nu_low, nu_upp), check_mod = FALSE, maxiter = 5000)
+                ##     f2 <- hypergeo::genhypergeo_series(U = c(b, b, 1 - a), L = c(b + 1, b + 1), z = c(nu_low, nu_upp), check_mod = FALSE, maxiter = 5000)
+                ##     c(f1, f2)
+                ## })
+                ## delta1low <- plow * (d12 - d1 + log(nu_low)) - nu_low^shape1 * Fs[1, ] / (shape1^2 * b12)
+                ## delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * Fs[4, ] / (shape2^2 * b12)
+                ## delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * Fs[2, ] / (shape1^2 * b12)
+                ## delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * Fs[3, ] / (shape2^2 * b12)
+
+                Fs1 <- h3f2(shape1, shape2, nu_low, n, maxiter = 10000, eps = 0)
+                Fs2 <- h3f2(shape1, shape2, nu_upp, n, maxiter = 10000, eps = 0)
+                Fs3 <- h3f2(shape2, shape1, nu_low, n, maxiter = 10000, eps = 0)
+                Fs4 <- h3f2(shape2, shape1, nu_upp, n, maxiter = 10000, eps = 0)
+
+                delta1low <- plow * (d12 - d1 + log(nu_low)) - nu_low^shape1 * Fs1 / (shape1^2 * b12)
+                delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * Fs4 / (shape2^2 * b12)
+                delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * Fs2 / (shape1^2 * b12)
+                delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * Fs3 / (shape2^2 * b12)
+
                 ## Tested the above with numerical derivatives; look ok
 
                 grad_l0 <- cbind(
@@ -563,14 +569,11 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 else {
                     out
                 }
-                ## out <- colSums(grad_l01[indices01,]) + colSums(grad_l0[indices0, ]) + colSums(grad_l1[indices1,])
-
-
             })
         }
 
         ## no gradients at the moment
-        gradfun <- NULL
+        ## gradfun <- NULL
         ## after optimization one could do:
         ## grad = numDeriv::grad(nll, opt$par)
     }
@@ -579,9 +582,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     opt <- optim(par = start, fn = loglikfun, gr = gradfun,
                  method = method, hessian = hessian, control = control)
     par <- opt$par
-
-##:ess-bp-start::browser@nil:##
-browser(expr=is.null(.ESSBP.[["@21@"]]));##:ess-bp-end:##
 
     ## conduct further (quasi) Fisher scoring to move ML derivatives
     ## even further to zero or conduct bias reduction

@@ -1,3 +1,5 @@
+useDynLib("betareg", .registration = TRUE)
+
 import("graphics", "stats", "Formula")
 
 importFrom("grDevices",
