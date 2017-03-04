@@ -129,8 +129,10 @@ quadtable <- function(nquad = 20) {
   ), nrow = nquad)
 }
 
-dbetax <- function(x, mu, phi, nu, log = FALSE, censored = FALSE, quadrule = quadtable(nquad = 20)) {
+dbetax <- function(x, mu, phi, nu, log = FALSE, censored = FALSE, quad = 20) {
   ## standard beta distribution
+  if(length(quad) == 1L) quad <- quadtable(quad)
+
   if(all(nu == 0)) return(dbeta(x, shape1 = mu * phi, shape2 = (1 - mu) * phi, log = log))
 
   if(!censored && any(x < 0 | x > 1)) {
@@ -145,7 +147,7 @@ dbetax <- function(x, mu, phi, nu, log = FALSE, censored = FALSE, quadrule = qua
   nu <- rep_len(nu, n)
 
   ## quadrature
-  out <- apply(quadrule, 1, function(rule) {
+  out <- apply(quad, 1, function(rule) {
     e <- rule[1] * nu
     rule[2] * dbeta((x + e)/(1 + 2 * e), shape1 = mu * phi, shape2 = (1 - mu) * phi)/(1 + 2 * e)
   })
@@ -162,7 +164,8 @@ dbetax <- function(x, mu, phi, nu, log = FALSE, censored = FALSE, quadrule = qua
   return(out)
 }
 
-pbetax <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = FALSE, quadrule = quadtable(nquad = 20)) {
+pbetax <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = FALSE, quad = 20) {
+  if(length(quad) == 1L) quad <- quadtable(quad)
   ## standard beta distribution
   if(all(nu == 0)) return(pbeta(q, shape1 = mu * phi, shape2 = (1 - mu) * phi,
     lower.tail = lower.tail, log.p = log.p))

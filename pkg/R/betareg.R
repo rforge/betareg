@@ -103,7 +103,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 
     ## call the actual workhorse: betareg.fit()
     rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control, dist, nu,
-                        temporary_control = temporary_control)
+                        temporary_control = temporary_control) ## temprorary
 
     ## further model information
     rval$call <- cl
@@ -135,10 +135,10 @@ fix_model_mu_phi <- function(model) {
 
 betareg.control <- function(phi = TRUE,
                             method = "BFGS", maxit = 5000, hessian = FALSE, trace = FALSE, start = NULL,
-                            fsmaxit = 200, fstol = 1e-8, nquad = 20,...)
+                            fsmaxit = 200, fstol = 1e-8, quad = 20,...)
 {
     rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start,
-                 fsmaxit = fsmaxit, fstol = fstol, nquad = nquad)
+                 fsmaxit = fsmaxit, fstol = fstol, quad = quad)
     rval <- c(rval, list(...))
     if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
     rval$fnscale <- -1
@@ -149,7 +149,7 @@ betareg.control <- function(phi = TRUE,
 betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                         link = "logit", link.phi = "log", type = "ML", control = betareg.control(),
                         dist = "beta", nu = NULL,
-                        temporary_control)  ## temporary control
+                        temporary_control = list(use_gradient = TRUE, halt = FALSE))  ## temporary control
 {
     ## estimation type and distribution:
     ## only plain ML supported for censored distributions
@@ -244,8 +244,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     start <- control$start
     fsmaxit <- control$fsmaxit
     fstol <- control$fstol
-    nquad <- control$nquad
-    control$phi <- control$method <- control$hessian <- control$start <- control$fsmaxit <- control$fstol <- control$nquad <- NULL
+    quad <- control$quad
+    control$phi <- control$method <- control$hessian <- control$start <- control$fsmaxit <- control$fstol <- control$quad <- NULL
 
     ## starting values
     if(is.null(start)) {
@@ -468,8 +468,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     function(x, mu, phi, nu, ...) dbeta4(x, mu = mu, phi = phi, theta1 = -nu, ...)
                 }
                 else {
-                    quadrule <- quadtable(nquad = nquad)
-                    function(...) dbetax(quadrule = quadrule, ...)
+                    quadrule <- quadtable(nquad = quad)
+                    function(...) dbetax(quad = quadrule, ...)
                 }
 
         ## set up (censored) log-likelihood
@@ -547,7 +547,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                         rule[2]*dbeta4(y, mu, phi, theta1 = -e, log = FALSE, censored = TRUE)
                     })
                     tdens <- rowSums(dens)
-                    obsders <- lapply(seq.int(nquad), function(inds) {
+                    obsders <- lapply(seq.int(quad), function(inds) {
                         current_nu <- fit$nu <- quadrule[inds, 1]*nu
                         par[k + m + 1] <- log(current_nu)
                         out <- gradfun_cbeta4(par, fit = fit, sum = FALSE)
