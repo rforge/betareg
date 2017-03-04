@@ -135,10 +135,10 @@ fix_model_mu_phi <- function(model) {
 
 betareg.control <- function(phi = TRUE,
                             method = "BFGS", maxit = 5000, hessian = FALSE, trace = FALSE, start = NULL,
-                            fsmaxit = 200, fstol = 1e-8, ...)
+                            fsmaxit = 200, fstol = 1e-8, nquad = 20,...)
 {
     rval <- list(phi = phi, method = method, maxit = maxit, hessian = hessian, trace = trace, start = start,
-                 fsmaxit = fsmaxit, fstol = fstol)
+                 fsmaxit = fsmaxit, fstol = fstol, nquad = nquad)
     rval <- c(rval, list(...))
     if(!is.null(rval$fnscale)) warning("fnscale must not be modified")
     rval$fnscale <- -1
@@ -244,7 +244,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     start <- control$start
     fsmaxit <- control$fsmaxit
     fstol <- control$fstol
-    control$phi <- control$method <- control$hessian <- control$start <- control$fsmaxit <- control$fstol <- NULL
+    nquad <- control$nquad
+    control$phi <- control$method <- control$hessian <- control$start <- control$fsmaxit <- control$fstol <- control$nquad <- NULL
 
     ## starting values
     if(is.null(start)) {
@@ -305,13 +306,11 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             psi1 <- psi2 <- NULL
         }
         if (deriv >= 3L) {
-            nu_low <- nu/(1 + 2*nu)
-            nu_upp <- (1 + nu)/(1 + 2*nu)
             b12 <- beta(shape1, shape2)
             d12 <- digamma(phi)
         }
         else {
-            b12 <- d12 <- nu_low <- nu_upp <- NULL
+            b12 <- d12 <- NULL
         }
         list(
             shape1 = shape1,
@@ -329,159 +328,157 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             phi = phi,
             mustar = mustar,
             psi1 = psi1,
-            psi2 = psi2,
-            nu_low = nu_low,
-            nu_upp = nu_upp
+            psi2 = psi2
         )
     }
 
-    ## objective function
-    loglikfun <- function(par, fit = NULL) {
-        ## extract fitted parameters
-        if(is.null(fit)) fit <- fitfun(par)
+    if(dist == "beta") {
 
-        ## compute log-likelihood
-        ## conditionals are still here for backward compatibility; to be
-        ## removed in a later release
-        with(fit, {
-            if(any(!is.finite(phi)) | any(shape1 > 1e300) | any(shape2 > 1e300)) {
-                NaN
-            }
-            ## catch extreme cases
-            else {
-                ll <- suppressWarnings(dbeta(y, shape1, shape2, log = TRUE))
-                if(any(!is.finite(ll))) NaN else sum(weights * ll)
-                ## again: catch extreme cases without warning
-            }
-        })
-    }
-
-    ## gradient (by default) or gradient contributions (sum = FALSE)
-    gradfun <- function(par, sum = TRUE, fit = NULL) {
-        ## extract fitted means/precisions
-        if(is.null(fit)) fit <- fitfun(par, deriv = 1L)
-
-        rval <- with(fit, {
-            ## compute gradient contributions
-            cbind(
-                phi * (ystar - mustar) * mu.eta(eta) * weights * x,
-                (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
-                phi_mu.eta(phi_eta) * weights * z
-            )
-        })
-        if(sum) colSums(rval) else rval
-    }
-
-    ## analytical Hessian (expected information) or covariance matrix (inverse of Hessian)
-    hessfun <- function(par, inverse = FALSE, fit = NULL) {
-        ## extract fitted means/precisions
-        if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
-
-        with(fit, {
-            ## auxiliary transformations
-            a <- psi1 + psi2
-            b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
-            ## compute elements of W
-            wbb <- phi^2 * a * mu.eta(eta)^2
-            wpp <- b * phi_mu.eta(phi_eta)^2
-            wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
-            ## compute elements of K
-            kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
-            kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
-            kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
-
-            ## put together K (= expected information)
-            K <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
-            if (inverse) chol2inv(chol(K)) else K
-            ## previously computed K^(-1) via partitioned matrices, but this appears to be
-            ## slower - even for moderately sized problems
-            ##   kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
-            ##   kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
-            ##   vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
-            ##     -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
-        })
-    }
-
-    ## compute biases and adjustment for bias correction/reduction
-    biasfun <- function(par, fit = NULL, vcov = NULL) {
-        if (is.null(fit)) fit <- fitfun(par, deriv = 2L)
-        InfoInv <- if(is.null(vcov)) try(hessfun(par, inverse = TRUE), silent = TRUE) else vcov
-        mu <- fit$mu
-
-        with(fit, {
-            kappa2 <- psi1 + psi2
-
-            D1 <- mu.eta(eta)
-            D2 <- phi_mu.eta(phi_eta)
-            D1dash <- d2mu.deta(eta)
-            D2dash <- phi_d2mu.deta(phi_eta)
-
-            dpsi1 <-  psigamma(mu * phi, 2)       ## potentially move to fitfun() when we add support for
-            dpsi2 <-  psigamma((1 - mu) * phi, 2) ## observed information (as opposed to expected)
-
-            kappa3 <- dpsi1 - dpsi2
-            psi3 <- psigamma(phi, 1)
-            dpsi3 <- psigamma(phi, 2)
-            ## PQsum produces the the adustments to the score functions and is suggested for iteration
-            PQsum <- function(t) {
-                if (t <= k)  {
-                    Xt <- x[,t]
-                bb <- if (k > 0L)
-                          crossprod(x, weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x)
-                      else
-                          crossprod(x)
-                    bg <- if ((k > 0L) & (m > 0L))
-                              crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dpsi2 + kappa2) * Xt * z)
-                          else
-                              crossprod(x, z)
-                    gg <- if (m > 0L)
-                              crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dpsi2 + 2 * mu * dpsi2) * Xt * z) +
-                                  crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - psi2) * Xt * z)
-                          else
-                              crossprod(z)
-                } else {
-                    Zt <- z[, t - k]
-                    bb <- if (k > 0L)
-                              crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dpsi2 + D1dash * mu * kappa2 - D1dash * psi2) * Zt * x)
-                          else
-                              crossprod(x)
-                    bg <- if ((k > 0L) & (m > 0L))
-                              crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dpsi2 + mu * kappa2 - psi2) * Zt * z)
-                          else
-                              crossprod(x, z)
-                    gg <- if (m > 0L)
-                              crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dpsi2 - dpsi3) * Zt * z) +
-                                  crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * psi2 - psi3) * Zt * z)
-                          else
-                              crossprod(z)
+        ## objective function
+        loglikfun <- function(par, fit = NULL) {
+            ## extract fitted parameters
+            if(is.null(fit)) fit <- fitfun(par)
+            ## compute log-likelihood
+            ## conditionals are still here for backward compatibility; to be
+            ## removed in a later release
+            with(fit, {
+                if(any(!is.finite(phi)) | any(shape1 > 1e300) | any(shape2 > 1e300)) {
+                    NaN
                 }
-                pq <- rbind(cbind(bb, bg), cbind(t(bg), gg))
-                sum(diag(InfoInv %*% pq))/2
-            }
-            if (inherits(InfoInv, "try-error")) {
-                bias <- adjustment <- rep.int(NA_real_, k + m)
-            }
-            else {
-                adjustment <- sapply(1:(k + m), PQsum)
-                bias <- - InfoInv %*% adjustment
-            }
-            list(bias = bias, adjustment = adjustment)
-        })
+                ## catch extreme cases
+                else {
+                    ll <- suppressWarnings(dbeta(y, shape1, shape2, log = TRUE))
+                    if(any(!is.finite(ll))) NaN else sum(weights * ll)
+                    ## again: catch extreme cases without warning
+                }
+            })
+        }
+
+        ## gradient (by default) or gradient contributions (sum = FALSE)
+        gradfun <- function(par, sum = TRUE, fit = NULL) {
+            ## extract fitted means/precisions
+            if(is.null(fit)) fit <- fitfun(par, deriv = 1L)
+            rval <- with(fit, {
+                ## compute gradient contributions
+                cbind(
+                    phi * (ystar - mustar) * mu.eta(eta) * weights * x,
+                    (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
+                    phi_mu.eta(phi_eta) * weights * z
+                )
+            })
+            if(sum) colSums(rval) else rval
+        }
+
+        ## analytical Hessian (expected information) or covariance matrix (inverse of Hessian)
+        hessfun <- function(par, inverse = FALSE, fit = NULL) {
+            ## extract fitted means/precisions
+            if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
+            with(fit, {
+                ## auxiliary transformations
+                a <- psi1 + psi2
+                b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
+                ## compute elements of W
+                wbb <- phi^2 * a * mu.eta(eta)^2
+                wpp <- b * phi_mu.eta(phi_eta)^2
+                wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
+                ## compute elements of K
+                kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
+                kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
+                kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
+                ## put together K (= expected information)
+                K <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
+                if (inverse) chol2inv(chol(K)) else K
+                ## previously computed K^(-1) via partitioned matrices, but this appears to be
+                ## slower - even for moderately sized problems
+                ##   kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
+                ##   kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
+                ##   vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
+                ##     -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+            })
+        }
+
+        ## compute biases and adjustment for bias correction/reduction
+        biasfun <- function(par, fit = NULL, vcov = NULL) {
+            if (is.null(fit)) fit <- fitfun(par, deriv = 2L)
+            InfoInv <- if(is.null(vcov)) try(hessfun(par, inverse = TRUE), silent = TRUE) else vcov
+            mu <- fit$mu
+            with(fit, {
+                kappa2 <- psi1 + psi2
+                D1 <- mu.eta(eta)
+                D2 <- phi_mu.eta(phi_eta)
+                D1dash <- d2mu.deta(eta)
+                D2dash <- phi_d2mu.deta(phi_eta)
+                dpsi1 <-  psigamma(mu * phi, 2)       ## potentially move to fitfun() when we add support for
+                dpsi2 <-  psigamma((1 - mu) * phi, 2) ## observed information (as opposed to expected)
+                kappa3 <- dpsi1 - dpsi2
+                psi3 <- psigamma(phi, 1)
+                dpsi3 <- psigamma(phi, 2)
+                ## PQsum produces the the adustments to the score functions and is suggested for iteration
+                PQsum <- function(t) {
+                    if (t <= k)  {
+                        Xt <- x[,t]
+                        bb <- if (k > 0L)
+                                  crossprod(x, weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x)
+                              else
+                                  crossprod(x)
+                        bg <- if ((k > 0L) & (m > 0L))
+                                  crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dpsi2 + kappa2) * Xt * z)
+                              else
+                                  crossprod(x, z)
+                        gg <- if (m > 0L)
+                                  crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dpsi2 + 2 * mu * dpsi2) * Xt * z) +
+                                      crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - psi2) * Xt * z)
+                              else
+                                  crossprod(z)
+                    } else {
+                        Zt <- z[, t - k]
+                        bb <- if (k > 0L)
+                                  crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dpsi2 + D1dash * mu * kappa2 - D1dash * psi2) * Zt * x)
+                              else
+                                  crossprod(x)
+                        bg <- if ((k > 0L) & (m > 0L))
+                                  crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dpsi2 + mu * kappa2 - psi2) * Zt * z)
+                              else
+                              crossprod(x, z)
+                        gg <- if (m > 0L)
+                                  crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dpsi2 - dpsi3) * Zt * z) +
+                                      crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * psi2 - psi3) * Zt * z)
+                              else
+                                  crossprod(z)
+                    }
+                    pq <- rbind(cbind(bb, bg), cbind(t(bg), gg))
+                    sum(diag(InfoInv %*% pq))/2
+                }
+                if (inherits(InfoInv, "try-error")) {
+                    bias <- adjustment <- rep.int(NA_real_, k + m)
+                }
+                else {
+                    adjustment <- sapply(1:(k + m), PQsum)
+                    bias <- - InfoInv %*% adjustment
+                }
+                list(bias = bias, adjustment = adjustment)
+            })
+        }
     }
 
-    if(dist != "beta") {
+    ##  if(dist != "beta") {
+    else {
         ## distribution d/p functions
         dfun <- if(dist == "cbeta4") {
                     function(x, mu, phi, nu, ...) dbeta4(x, mu = mu, phi = phi, theta1 = -nu, ...)
-                } else {
-                    dbetax
+                }
+                else {
+                    quadrule <- quadtable(nquad = nquad)
+                    function(...) dbetax(quadrule = quadrule, ...)
                 }
 
         ## set up (censored) log-likelihood
         loglikfun <- function(par, fit = NULL) {
             ## extract fitted parameters
             if(is.null(fit)) fit <- fitfun(par)
-            rval <- dfun(y, mu = fit$mu, phi = fit$phi, nu = fit$nu, log = TRUE, censored = TRUE)
+            rval <- with(fit, {
+                dfun(y, mu = mu, phi = phi, nu = nu, log = TRUE, censored = TRUE)
+            })
             sum(weights * rval)
         }
 
@@ -502,7 +499,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
         ##     })
         ## }
 
-        gradfun <- function(par, sum = TRUE, fit = NULL) {
+        gradfun_cbeta4 <- function(par, sum = TRUE, fit = NULL) {
             ## extract fitted means/precisions
             if(is.null(fit)) fit <- fitfun(par, deriv = 3L)
             with(fit, {
@@ -514,6 +511,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                     (mu * (ystarnu - mustar) + log(1 - ynu) - digamma((1 - mu) * phi) + digamma(phi)) *
                     phi_mu.eta(phi_eta) * weights * z,
                     ((mu * phi - 1)/(y + nu) + ((1 - mu) * phi - 1)/(1 - y + nu) - 2 * (phi - 1)/(1 + 2 * nu)) * weights * nu)
+                nu_low <- nu/(1 + 2*nu)
+                nu_upp <- (1 + nu)/(1 + 2*nu)
                 dlow <- dbeta(nu_low, shape1, shape2)
                 plow <- pbeta(nu_low, shape1, shape2)
                 dupp <- dbeta(nu_upp, shape1, shape2)
@@ -531,7 +530,6 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 ## delta2low <- (1 - plow) * (d2 - d12 - log(nu_upp)) + nu_upp^shape2 * Fs[4, ] / (shape2^2 * b12)
                 ## delta1upp <- pupp * (d12 - d1 + log(nu_upp)) - nu_upp^shape1 * Fs[2, ] / (shape1^2 * b12)
                 ## delta2upp <- (1 - pupp) * (d2 - d12 - log(nu_low)) + nu_low^shape2 * Fs[3, ] / (shape2^2 * b12)
-
                 Fs1 <- h3f2(shape1, shape2, nu_low, n, maxiter = 10000, eps = 0)
                 Fs2 <- h3f2(shape1, shape2, nu_upp, n, maxiter = 10000, eps = 0)
                 Fs3 <- h3f2(shape2, shape1, nu_low, n, maxiter = 10000, eps = 0)
@@ -565,35 +563,36 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             })
         }
 
-
-        gradfunX <- function(pars, fit = NULL, observationwise = FALSE, ...) {
-            if (is.null(fit)) {
-                fit <- fitfun(pars, level = 1L, ...)
-            }
-            with(fit, {
-                dens <- apply(quadtable, 1, function(rule) {
-                    e <- rule[1]*nu
-                    rule[2]*dbeta((y + e)/(1 + 2*e), shape1s, shape2s)/(1 + 2*e)
-                })
-                tdens <- rowSums(dens)
-                obsders <- lapply(seq.int(nquad), function(inds) {
-                    out <- gradfunF(pars, fit = fit, observationwise = TRUE, e = quadtable[inds, 1]*nu)
-                    dens[, inds]*out/tdens
-                })
-                dobs <- Reduce("+", obsders)
-                if (observationwise) {
-                    dobs
-                }
-                else {
-                    colSums(dobs)
-                }
-            })
+        if (dist == "cbeta4") {
+            gradfun <- gradfun_cbeta4
         }
-
-        ## no gradients at the moment
-        ## gradfun <- NULL
-        ## after optimization one could do:
-        ## grad = numDeriv::grad(nll, opt$par)
+        if (dist == "cbetax") {
+            gradfun <- function(par, fit = NULL, sum = TRUE, ...) {
+                if (is.null(fit)) {
+                    fit <- fitfun(par, deriv = 3L)
+                }
+                with(fit, {
+                    dens <- apply(quadrule, 1, function(rule) {
+                        e <- rule[1]*nu
+                        rule[2]*dbeta4(y, mu, phi, theta1 = -e, log = FALSE, censored = TRUE)
+                    })
+                    tdens <- rowSums(dens)
+                    obsders <- lapply(seq.int(nquad), function(inds) {
+                        current_nu <- fit$nu <- quadrule[inds, 1]*nu
+                        par[k + m + 1] <- log(current_nu)
+                        out <- gradfun_cbeta4(par, fit = fit, sum = FALSE)
+                        dens[, inds]*out/tdens
+                    })
+                    out <- Reduce("+", obsders)
+                    if (sum) {
+                        colSums(out)
+                    }
+                    else {
+                        out
+                    }
+                })
+            }
+        }
     }
 
     ## optimize likelihood
