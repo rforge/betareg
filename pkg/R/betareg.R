@@ -360,18 +360,15 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     gradfun <- function(par, sum = TRUE, fit = NULL) {
         ## extract fitted means/precisions
         if(is.null(fit)) fit <- fitfun(par, deriv = 1L)
-        mu <- fit$mu
-        phi <- fit$phi
-        eta <- fit$eta
-        phi_eta <- fit$phi_eta
-        mustar <- fit$mustar
 
-        ## compute gradient contributions
-        rval <- cbind(
-            phi * (ystar - mustar) * mu.eta(eta) * weights * x,
-            (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
-            phi_mu.eta(phi_eta) * weights * z
-        )
+        rval <- with(fit, {
+            ## compute gradient contributions
+            cbind(
+                phi * (ystar - mustar) * mu.eta(eta) * weights * x,
+                (mu * (ystar - mustar) + log(1-y) - digamma((1-mu)*phi) + digamma(phi)) *
+                phi_mu.eta(phi_eta) * weights * z
+            )
+        })
         if(sum) colSums(rval) else rval
     }
 
@@ -379,35 +376,30 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     hessfun <- function(par, inverse = FALSE, fit = NULL) {
         ## extract fitted means/precisions
         if(is.null(fit)) fit <- fitfun(par, deriv = 2L)
-        mu <- fit$mu
-        phi <- fit$phi
-        eta <- fit$eta
-        phi_eta <- fit$phi_eta
-        mustar <- fit$mustar
-        psi1 <- fit$psi1
-        psi2 <- fit$psi2
 
-        ## auxiliary transformations
-        a <- psi1 + psi2
-        b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
-        ## compute elements of W
-        wbb <- phi^2 * a * mu.eta(eta)^2
-        wpp <- b * phi_mu.eta(phi_eta)^2
-        wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
-        ## compute elements of K
-        kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
-        kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
-        kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
+        with(fit, {
+            ## auxiliary transformations
+            a <- psi1 + psi2
+            b <- psi1 * mu^2 + psi2 * (1-mu)^2 - trigamma(phi)
+            ## compute elements of W
+            wbb <- phi^2 * a * mu.eta(eta)^2
+            wpp <- b * phi_mu.eta(phi_eta)^2
+            wbp <- phi * (mu * a - psi2) * mu.eta(eta) * phi_mu.eta(phi_eta)
+            ## compute elements of K
+            kbb <- if(k > 0L) crossprod(sqrt(weights) * sqrt(wbb) * x) else crossprod(x)
+            kpp <- if(m > 0L) crossprod(sqrt(weights) * sqrt(wpp) * z) else crossprod(z)
+            kbp <- if(k > 0L & m > 0L) crossprod(weights * wbp * x, z) else crossprod(x, z)
 
-        ## put together K (= expected information)
-        K <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
-        if(!inverse) K else chol2inv(chol(K))
-        ## previously computed K^(-1) via partitioned matrices, but this appears to be
-        ## slower - even for moderately sized problems
-        ##   kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
-        ##   kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
-        ##   vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
-        ##     -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+            ## put together K (= expected information)
+            K <- cbind(rbind(kbb, t(kbp)), rbind(kbp, kpp))
+            if (inverse) chol2inv(chol(K)) else K
+            ## previously computed K^(-1) via partitioned matrices, but this appears to be
+            ## slower - even for moderately sized problems
+            ##   kbb1 <- if(k > 0L) chol2inv(qr.R(qr(sqrt(weights) * sqrt(wbb) * x))) else kbb
+            ##   kpp1 <- if(m > 0L) solve(kpp - t(kbp) %*% kbb1 %*% kbp) else kpp
+            ##   vcov <- cbind(rbind(kbb1 + kbb1 %*% kbp %*% kpp1 %*% t(kbp) %*% kbb1,
+            ##     -kpp1 %*% t(kbp) %*% kbb1), rbind(-kbb1 %*% kbp %*% kpp1, kpp1))
+        })
     }
 
     ## compute biases and adjustment for bias correction/reduction
@@ -415,64 +407,66 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
         if (is.null(fit)) fit <- fitfun(par, deriv = 2L)
         InfoInv <- if(is.null(vcov)) try(hessfun(par, inverse = TRUE), silent = TRUE) else vcov
         mu <- fit$mu
-        phi <- fit$phi
-        eta <- fit$eta
-        phi_eta <- fit$phi_eta
-        D1 <- mu.eta(eta)
-        D2 <- phi_mu.eta(phi_eta)
-        D1dash <- d2mu.deta(eta)
-        D2dash <- phi_d2mu.deta(phi_eta)
-        Psi2 <- fit$psi2
-        dPsi1 <-  psigamma(mu * phi, 2)       ## potentially move to fitfun() when we add support for
-        dPsi2 <-  psigamma((1 - mu) * phi, 2) ## observed information (as opposed to expected)
-        kappa2 <- fit$psi1 + Psi2
-        kappa3 <- dPsi1 - dPsi2
-        Psi3 <- psigamma(phi, 1)
-        dPsi3 <- psigamma(phi, 2)
-        ## PQsum produces the the adustments to the score functions and is suggested for iteration
-        PQsum <- function(t) {
-            if (t <= k)  {
-                Xt <- x[,t]
+
+        with(fit, {
+            kappa2 <- psi1 + psi2
+
+            D1 <- mu.eta(eta)
+            D2 <- phi_mu.eta(phi_eta)
+            D1dash <- d2mu.deta(eta)
+            D2dash <- phi_d2mu.deta(phi_eta)
+
+            dpsi1 <-  psigamma(mu * phi, 2)       ## potentially move to fitfun() when we add support for
+            dpsi2 <-  psigamma((1 - mu) * phi, 2) ## observed information (as opposed to expected)
+
+            kappa3 <- dpsi1 - dpsi2
+            psi3 <- psigamma(phi, 1)
+            dpsi3 <- psigamma(phi, 2)
+            ## PQsum produces the the adustments to the score functions and is suggested for iteration
+            PQsum <- function(t) {
+                if (t <= k)  {
+                    Xt <- x[,t]
                 bb <- if (k > 0L)
                           crossprod(x, weights * phi^2 * D1 * (phi * D1^2 * kappa3 + D1dash * kappa2) * Xt * x)
                       else
                           crossprod(x)
-                bg <- if ((k > 0L) & (m > 0L))
-                          crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dPsi2 + kappa2) * Xt * z)
-                      else
-                          crossprod(x, z)
-                gg <- if (m > 0L)
-                          crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dPsi2 + 2 * mu * dPsi2) * Xt * z) +
-                              crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - Psi2) * Xt * z)
-                      else
-                          crossprod(z)
-            } else {
-                Zt <- z[, t - k]
-                bb <- if (k > 0L)
-                          crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dPsi2 + D1dash * mu * kappa2 - D1dash * Psi2) * Zt * x)
-                      else
-                          crossprod(x)
-                bg <- if ((k > 0L) & (m > 0L))
-                          crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dPsi2 + mu * kappa2 - Psi2) * Zt * z)
-                      else
-                          crossprod(x, z)
-                gg <- if (m > 0L)
-                          crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dPsi2 - dPsi3) * Zt * z) +
-                              crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi2 - Psi3) * Zt * z)
-                      else
-                          crossprod(z)
+                    bg <- if ((k > 0L) & (m > 0L))
+                              crossprod(x, weights * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dpsi2 + kappa2) * Xt * z)
+                          else
+                              crossprod(x, z)
+                    gg <- if (m > 0L)
+                              crossprod(z, weights * phi * D1 * D2^2 * (mu^2 * kappa3 - dpsi2 + 2 * mu * dpsi2) * Xt * z) +
+                                  crossprod(z, weights * phi * D1 * D2dash * (mu * kappa2 - psi2) * Xt * z)
+                          else
+                              crossprod(z)
+                } else {
+                    Zt <- z[, t - k]
+                    bb <- if (k > 0L)
+                              crossprod(x, weights * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dpsi2 + D1dash * mu * kappa2 - D1dash * psi2) * Zt * x)
+                          else
+                              crossprod(x)
+                    bg <- if ((k > 0L) & (m > 0L))
+                              crossprod(x, weights * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dpsi2 + mu * kappa2 - psi2) * Zt * z)
+                          else
+                              crossprod(x, z)
+                    gg <- if (m > 0L)
+                              crossprod(z, weights * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dpsi2 - dpsi3) * Zt * z) +
+                                  crossprod(z, weights * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * psi2 - psi3) * Zt * z)
+                          else
+                              crossprod(z)
+                }
+                pq <- rbind(cbind(bb, bg), cbind(t(bg), gg))
+                sum(diag(InfoInv %*% pq))/2
             }
-            pq <- rbind(cbind(bb, bg), cbind(t(bg), gg))
-            sum(diag(InfoInv %*% pq))/2
-        }
-        if (inherits(InfoInv, "try-error")) {
-            bias <- adjustment <- rep.int(NA_real_, k + m)
-        }
-        else {
-            adjustment <- sapply(1:(k + m), PQsum)
-            bias <- - InfoInv %*% adjustment
-        }
-        list(bias = bias, adjustment = adjustment)
+            if (inherits(InfoInv, "try-error")) {
+                bias <- adjustment <- rep.int(NA_real_, k + m)
+            }
+            else {
+                adjustment <- sapply(1:(k + m), PQsum)
+                bias <- - InfoInv %*% adjustment
+            }
+            list(bias = bias, adjustment = adjustment)
+        })
     }
 
     if(dist != "beta") {
@@ -567,6 +561,31 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 }
                 else {
                     out
+                }
+            })
+        }
+
+
+        gradfunX <- function(pars, fit = NULL, observationwise = FALSE, ...) {
+            if (is.null(fit)) {
+                fit <- fitfun(pars, level = 1L, ...)
+            }
+            with(fit, {
+                dens <- apply(quadtable, 1, function(rule) {
+                    e <- rule[1]*nu
+                    rule[2]*dbeta((y + e)/(1 + 2*e), shape1s, shape2s)/(1 + 2*e)
+                })
+                tdens <- rowSums(dens)
+                obsders <- lapply(seq.int(nquad), function(inds) {
+                    out <- gradfunF(pars, fit = fit, observationwise = TRUE, e = quadtable[inds, 1]*nu)
+                    dens[, inds]*out/tdens
+                })
+                dobs <- Reduce("+", obsders)
+                if (observationwise) {
+                    dobs
+                }
+                else {
+                    colSums(dobs)
                 }
             })
         }
@@ -1121,13 +1140,13 @@ estfun.betareg <- function(x, phi = NULL, ...)
         D2 <- x$link$phi$mu.eta(phi_eta)
         D1dash <- x$link$mu$d2mu.deta(eta)
         D2dash <- x$link$phi$d2mu.deta(phi_eta)
-        Psi2 <- psigamma((1 - mu) * phi, 1)
-        dPsi1 <-  psigamma(mu * phi, 2)
-        dPsi2 <-  psigamma((1 - mu) * phi, 2)
-        kappa2 <- psigamma(mu * phi, 1) + Psi2
-        kappa3 <- dPsi1 - dPsi2
-        Psi3 <- psigamma(phi, 1)
-        dPsi3 <- psigamma(phi, 2)
+        psi2 <- psigamma((1 - mu) * phi, 1)
+        dpsi1 <-  psigamma(mu * phi, 2)
+        dpsi2 <-  psigamma((1 - mu) * phi, 2)
+        kappa2 <- psigamma(mu * phi, 1) + psi2
+        kappa3 <- dpsi1 - dpsi2
+        psi3 <- psigamma(phi, 1)
+        dpsi3 <- psigamma(phi, 2)
         PQ <- function(t) {
             prodfun <- function(mat1, mat2) {
                 sapply(seq_len(nobs), function(i) tcrossprod(mat1[i,], mat2[i,]), simplify = FALSE)
@@ -1141,14 +1160,14 @@ estfun.betareg <- function(x, phi = NULL, ...)
                       else
                           sapply(1:nobs, function(x) matrix(0, k, k))
                 bg <- if ((k > 0L) & (m > 0L)) {
-                          bgComp <- wts * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dPsi2 + kappa2) * Xt * zmat
+                          bgComp <- wts * phi * D1^2 * D2 * (mu * phi * kappa3 + phi * dpsi2 + kappa2) * Xt * zmat
                           prodfun(xmat, bgComp)
                       }
                       else
                           sapply(1:nobs, function(x) matrix(0, k, m))
                 gg <- if (m > 0L) {
-                          ggComp <- wts * phi * D1 * D2^2 * (mu^2 * kappa3 - dPsi2 + 2 * mu * dPsi2) * Xt * zmat +
-                              wts * phi * D1 * D2dash * (mu * kappa2 - Psi2) * Xt * zmat
+                          ggComp <- wts * phi * D1 * D2^2 * (mu^2 * kappa3 - dpsi2 + 2 * mu * dpsi2) * Xt * zmat +
+                              wts * phi * D1 * D2dash * (mu * kappa2 - psi2) * Xt * zmat
                           prodfun(zmat, ggComp)
                       }
                       else
@@ -1156,20 +1175,20 @@ estfun.betareg <- function(x, phi = NULL, ...)
             } else {
                 Zt <- zmat[, t - k]
                 bb <- if (k > 0L) {
-                          bbComp <- wts * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dPsi2 + D1dash * mu * kappa2 - D1dash * Psi2) * Zt * xmat
+                          bbComp <- wts * phi * D2 * (phi * D1^2 * mu * kappa3 + phi * D1^2 * dpsi2 + D1dash * mu * kappa2 - D1dash * psi2) * Zt * xmat
                           prodfun(xmat, bbComp)
                       }
                       else
                           sapply(1:nobs, function(x) matrix(0, k, k))
                 bg <- if ((k > 0L) & (m > 0L)) {
-                          bgComp <- wts * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dPsi2 + mu * kappa2 - Psi2) * Zt * zmat
+                          bgComp <- wts * D1 * D2^2 * (phi * mu^2 * kappa3 + phi * (2 * mu - 1) * dpsi2 + mu * kappa2 - psi2) * Zt * zmat
                           prodfun(xmat, bgComp)
                       }
                       else
                           sapply(1:nobs, function(x) matrix(0, k, m))
                 gg <- if (m > 0L) {
-                          ggComp <- wts * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dPsi2 - dPsi3) * Zt * zmat +
-                              wts * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * Psi2 - Psi3) * Zt * zmat
+                          ggComp <- wts * D2^3 * (mu^3 * kappa3 + (3 * mu^2 - 3 * mu + 1) * dpsi2 - dpsi3) * Zt * zmat +
+                              wts * D2dash * D2 * (mu^2 * kappa2 + (1 - 2 * mu) * psi2 - psi3) * Zt * zmat
                           prodfun(zmat, ggComp)
                       }
                       else
