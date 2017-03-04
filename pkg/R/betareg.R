@@ -3,7 +3,9 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
                     link.phi = NULL, type = c("ML", "BC", "BR"),
 		    dist = c("beta", "cbeta4", "cbetax"), nu = NULL,
                     control = betareg.control(...),
-                    model = TRUE, y = TRUE, x = FALSE, ...)
+                    model = TRUE, y = TRUE, x = FALSE,
+                    temporary_control = list(use_gradient = TRUE),  ## temporary control
+                    ...)
 {
     ## call
     cl <- match.call()
@@ -100,7 +102,8 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
     offset <- list(mu = offsetX, phi = offsetZ)
 
     ## call the actual workhorse: betareg.fit()
-    rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control, dist, nu)
+    rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control, dist, nu,
+                        temporary_control = temporary_control)
 
     ## further model information
     rval$call <- cl
@@ -145,7 +148,8 @@ betareg.control <- function(phi = TRUE,
 
 betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                         link = "logit", link.phi = "log", type = "ML", control = betareg.control(),
-                        dist = "beta", nu = NULL)
+                        dist = "beta", nu = NULL,
+                        temporary_control)  ## temporary control
 {
     ## estimation type and distribution:
     ## only plain ML supported for censored distributions
@@ -574,7 +578,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     }
 
     ## optimize likelihood
-    opt <- optim(par = start, fn = loglikfun, gr = gradfun,
+    opt <- optim(par = start, fn = loglikfun, gr = if (temporary_control$use_gradient) gradfun else NULL,
                  method = method, hessian = hessian, control = control)
     par <- opt$par
 
@@ -631,7 +635,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     }
 
     ## extract fitted values/parameters
-    fit <- fitfun(par, deriv = 2L)
+    fit <- fitfun(par, deriv = 3L)
     beta <- fit$beta
     gamma <- fit$gamma
     eta <- fit$eta
@@ -642,7 +646,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     ## log-likelihood/gradients/covariance matrix at optimized parameters
     ll <- loglikfun(par, fit = fit)
     ## No need to evaluate ef below.
-    ## ef <- gradfun(par, fit = fit, sum = FALSE)
+    ef <- gradfun(par, fit = fit, sum = FALSE)
     vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
 
     ## R-squared
@@ -681,7 +685,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
         bias = bias,
         pseudo.r.squared = pseudor2,
         link = list(mu = linkobj, phi = phi_linkobj),
-        converged = converged
+        converged = converged,
+        grad = ef
     )
     if(estnu) rval$coefficients$nu <- c("Log(nu)" = log(nu))
     if(dist == "beta") {
