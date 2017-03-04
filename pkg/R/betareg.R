@@ -4,7 +4,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 		    dist = c("beta", "cbeta4", "cbetax"), nu = NULL,
                     control = betareg.control(...),
                     model = TRUE, y = TRUE, x = FALSE,
-                    temporary_control = list(use_gradient = TRUE),  ## temporary control
+                    temporary_control = list(use_gradient = TRUE, halt = FALSE),  ## temporary control
                     ...)
 {
     ## call
@@ -569,6 +569,8 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     opt <- optim(par = start, fn = loglikfun, gr = if (temporary_control$use_gradient) gradfun else NULL,
                  method = method, hessian = hessian, control = control)
     par <- opt$par
+
+    if (temporary_control$halt) browser()
 
     ## conduct further (quasi) Fisher scoring to move ML derivatives
     ## even further to zero or conduct bias reduction
