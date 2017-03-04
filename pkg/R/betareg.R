@@ -830,8 +830,12 @@ print.summary.betareg <- function(x, digits = max(3, getOption("digits") - 3), .
             "on", sum(sapply(x$coefficients, NROW)), "Df")
         if(!is.na(x$pseudo.r.squared)) cat("\nPseudo R-squared:", formatC(x$pseudo.r.squared, digits = digits))
         if(x$iterations[2L] > 0) {
+            scoring_type <- switch(x$type,
+                                   "ML" = "(Fisher scoring)",
+                                   "BR" = "(quasi Fisher scoring)",
+                                   "BC" = "(Fisher scoring)")
             cat(paste("\nNumber of iterations:", x$iterations[1L],
-                      sprintf("(%s) +", x$method), x$iterations[2L], "(Fisher scoring) \n"))
+                      sprintf("(%s) +", x$method), x$iterations[2L], paste(scoring_type, "\n")))
         } else {
             cat(paste("\nNumber of iterations in", x$method, "optimization:", x$iterations[1L], "\n"))
         }
