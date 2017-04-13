@@ -178,7 +178,7 @@ pbetax <- function(q, mu, phi, nu, lower.tail = TRUE, log.p = FALSE, censored = 
   nu <- rep_len(nu, n)
 
   ## quadrature
-  out <- apply(quadrule, 1, function(rule) {
+  out <- apply(quad, 1, function(rule) {
     e <- rule[1] * nu
     rule[2] * pbeta((q + e)/(1 + 2 * e), shape1 = mu * phi, shape2 = (1 - mu) * phi)
   })
