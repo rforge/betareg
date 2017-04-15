@@ -4,7 +4,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
 		    dist = c("beta", "cbeta4", "cbetax"), nu = NULL,
                     control = betareg.control(...),
                     model = TRUE, y = TRUE, x = FALSE,
-                    temporary_control = list(use_gradient = TRUE, halt = FALSE),  ## temporary control
+                    temporary_control = temp_control(),  ## temporary control
                     ...)
 {
     ## call
@@ -101,6 +101,7 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
     ## collect
     offset <- list(mu = offsetX, phi = offsetZ)
 
+
     ## call the actual workhorse: betareg.fit()
     rval <- betareg.fit(X, Y, Z, weights, offset, link, link.phi, type, control, dist, nu,
                         temporary_control = temporary_control) ## temprorary
@@ -133,6 +134,11 @@ fix_model_mu_phi <- function(model) {
     return(as.vector(model))
 }
 
+temp_control <- function(use_gradient = TRUE, halt = FALSE, use_nlminb = FALSE) {
+    list(use_gradient = use_gradient, halt = halt, use_nlminb = use_nlminb)
+}
+
+
 betareg.control <- function(phi = TRUE,
                             method = "BFGS", maxit = 5000, hessian = FALSE, trace = FALSE, start = NULL,
                             fsmaxit = 200, fstol = 1e-8, quad = 20,...)
@@ -149,7 +155,7 @@ betareg.control <- function(phi = TRUE,
 betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                         link = "logit", link.phi = "log", type = "ML", control = betareg.control(),
                         dist = "beta", nu = NULL,
-                        temporary_control = list(use_gradient = TRUE, halt = FALSE))  ## temporary control
+                        temporary_control = temp_control())  ## temporary control
 {
     ## estimation type and distribution:
     ## only plain ML supported for censored distributions
@@ -482,6 +488,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             sum(weights * rval)
         }
 
+        ## FIXME: Numerics are not yet very reliable. Accurate evaluation of h3f2 is still the issue here...
         gradfun_cbeta4 <- function(par, sum = TRUE, fit = NULL) {
             ## extract fitted means/precisions
             if(is.null(fit)) fit <- fitfun(par, deriv = 3L)
@@ -537,7 +544,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
             gradfun <- gradfun_cbeta4
         }
         if (dist == "cbetax") {
-            gradfun <- function(par, fit = NULL, sum = TRUE, ...) {
+            gradfun <- function(par, sum = TRUE, fit = NULL) {
                 if (is.null(fit)) {
                     fit <- fitfun(par, deriv = 3L)
                 }
@@ -566,8 +573,17 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     }
 
     ## optimize likelihood
-    opt <- optim(par = start, fn = loglikfun, gr = if (temporary_control$use_gradient) gradfun else NULL,
-                 method = method, hessian = hessian, control = control)
+
+    if (temporary_control$use_nlminb) {
+        opt <- nlminb(start = start, objective = function(par, ...) -loglikfun(par, ...),
+                      gradient = if (temporary_control$use_gradient) function(par, ...) -gradfun(par, ...) else NULL)
+        opt$hessian <- numDeriv::hessian(loglikfun, opt$par)
+    }
+    else {
+        opt <- optim(par = start, fn = loglikfun, gr = if (temporary_control$use_gradient) gradfun else NULL,
+                     method = method, hessian = hessian, control = control)
+    }
+
     par <- opt$par
 
     if (temporary_control$halt) browser()
@@ -635,8 +651,20 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
 
     ## log-likelihood/gradients/covariance matrix at optimized parameters
     ll <- loglikfun(par, fit = fit)
+
+
+
     ## No need to evaluate ef below.
-    ef <- gradfun(par, fit = fit, sum = FALSE)
+    if (temporary_control$use_gradient) {
+        ef <- gradfun(par, fit = fit, sum = FALSE)
+    }
+    else {
+        ef <- numDeriv::grad(loglikfun, par)
+    }
+
+
+
+
     vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
 
     ## R-squared
