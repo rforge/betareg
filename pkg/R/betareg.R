@@ -507,6 +507,7 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
                 plow <- pbeta(nu_low, shape1, shape2)
                 dupp <- dbeta(nu_upp, shape1, shape2)
                 pupp <- pbeta(nu_upp, shape1, shape2)
+                ## Fs1 - Fs4 can explode below and floating point error propagates
                 Fs1 <- h3f2(shape1, shape2, nu_low, n, maxiter = 10000, eps = 0)
                 Fs2 <- h3f2(shape1, shape2, nu_upp, n, maxiter = 10000, eps = 0)
                 Fs3 <- h3f2(shape2, shape1, nu_low, n, maxiter = 10000, eps = 0)
