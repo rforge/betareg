@@ -661,8 +661,8 @@ Loading required package: lattice
 > coef(rs_mix2, which = "concomitant")
   (Intercept)       w
 1      0.0000  0.0000
-2      0.8115  1.0779
-3     -0.1194 -0.3488
+2      0.8114  1.0778
+3     -0.1195 -0.3488
 > summary(rs_mix2, which = "concomitant")
 $Comp.2
             Estimate Std. Error z value Pr(>|z|)  
@@ -1485,7 +1485,7 @@ Number of iterations: 33 (BFGS) + 28 (Fisher scoring)
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  11.236 0.056 11.293 0 0 
+Time elapsed:  11.472 0.036 11.512 0 0 
 > grDevices::dev.off()
 null device 
           1 
