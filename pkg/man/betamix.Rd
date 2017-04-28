@@ -179,8 +179,10 @@ for(i in 1:3)
    lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2,
          col = col0[i])
 
-## refit the model including a concomitant variable model
-## using the dyslexia information
+## refit the model including a concomitant variable model using the
+## dyslexia information with some noise to avoid complete separation
+## between concomitant variable and component memberships
+set.seed(4040)
 w <- rnorm(nrow(ReadingSkills), 
            c(-1, 1)[as.integer(ReadingSkills$dyslexia)])
 

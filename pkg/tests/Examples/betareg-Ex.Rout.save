@@ -1,6 +1,6 @@
 
-R version 3.2.0 (2015-04-16) -- "Full of Ingredients"
-Copyright (C) 2015 The R Foundation for Statistical Computing
+R version 3.3.3 (2017-03-06) -- "Another Canoe"
+Copyright (C) 2017 The R Foundation for Statistical Computing
 Platform: x86_64-pc-linux-gnu (64-bit)
 
 R is free software and comes with ABSOLUTELY NO WARRANTY.
@@ -157,7 +157,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 Type of estimator: ML (maximum likelihood)
 Log-likelihood: 75.68 on 6 Df
 Pseudo R-squared: 0.9398
-Number of iterations: 147 (BFGS) + 4 (Fisher scoring) 
+Number of iterations: 144 (BFGS) + 5 (Fisher scoring) 
 > 
 > ## Ferrari and Cribari-Neto (2004)
 > gy2 <- betareg(yield ~ batch + temp, data = GasolineYield)
@@ -640,8 +640,10 @@ detaching 'package:flexmix', 'package:lattice'
 +    lines(iq, plogis(cf[i, 1] + cf[i, 2] * iq), lwd = 2,
 +          col = col0[i])
 > 
-> ## refit the model including a concomitant variable model
-> ## using the dyslexia information
+> ## refit the model including a concomitant variable model using the
+> ## dyslexia information with some noise to avoid complete separation
+> ## between concomitant variable and component memberships
+> set.seed(4040)
 > w <- rnorm(nrow(ReadingSkills), 
 +            c(-1, 1)[as.integer(ReadingSkills$dyslexia)])
 > 
@@ -658,21 +660,21 @@ Loading required package: lattice
 +   FLXconcomitant = FLXPmultinom(~w))
 > coef(rs_mix2, which = "concomitant")
   (Intercept)       w
-1     0.00000  0.0000
-2     0.41500  1.0036
-3    -0.09352 -0.1806
+1      0.0000  0.0000
+2      0.8115  1.0779
+3     -0.1194 -0.3488
 > summary(rs_mix2, which = "concomitant")
 $Comp.2
             Estimate Std. Error z value Pr(>|z|)  
-(Intercept)    0.415      0.640    0.65    0.516  
-w              1.004      0.508    1.98    0.048 *
+(Intercept)    0.821      0.882    0.93     0.35  
+w              1.078      0.497    2.17     0.03 *
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 $Comp.3
             Estimate Std. Error z value Pr(>|z|)
-(Intercept)  -0.0934     0.6464   -0.14     0.89
-w            -0.1807     0.4368   -0.41     0.68
+(Intercept)   -0.113      0.812   -0.14     0.89
+w             -0.346      0.452   -0.77     0.44
 
 > 
 > 
@@ -1073,7 +1075,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 Type of estimator: ML (maximum likelihood)
 Log-likelihood: 27.3 on 4 Df
 Pseudo R-squared: 0.0391
-Number of iterations: 16 (BFGS) + 2 (Fisher scoring) 
+Number of iterations: 16 (BFGS) + 1 (Fisher scoring) 
 > library("strucchange")
 Loading required package: zoo
 
@@ -1483,7 +1485,7 @@ Number of iterations: 33 (BFGS) + 28 (Fisher scoring)
 > ###
 > options(digits = 7L)
 > base::cat("Time elapsed: ", proc.time() - base::get("ptime", pos = 'CheckExEnv'),"\n")
-Time elapsed:  35.808 0.112 36.001 0 0 
+Time elapsed:  11.236 0.056 11.293 0 0 
 > grDevices::dev.off()
 null device 
           1 
