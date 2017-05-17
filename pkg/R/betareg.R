@@ -1004,7 +1004,7 @@ predict.betareg <- function(object, newdata = NULL,
                 }
                 return(rv)
             }
-            rval <- if(attype == "function") FUN else FUN(rbind(at), ...)
+            rval <- if(attype == "function") FUN else FUN(at, ...)
         }
     }
 
