@@ -207,7 +207,7 @@ FLXMRbeta <- function(formula = .~., precision = ~ 1, offset = NULL,
 
   object@defineComponent <- expression({
     predict <- function(x, z, ...) {
-      dotarg = list(...)
+      dotarg <- list(...)
       if("offset" %in% names(dotarg))
         offset <- dotarg$offset
       p <- x%*%coef$mean
