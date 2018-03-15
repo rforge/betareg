@@ -42,6 +42,37 @@ betareg <- function(formula, data, subset, na.action, weights, offset,
     X <- model.matrix(mtX, mf)
     Z <- model.matrix(mtZ, mf)
 
+    ## obtain correct subset of predvars/dataClasses to terms
+    .add_predvars_and_dataClasses <- function(terms, model.frame) {
+      ## original terms
+      rval <- terms
+      ## terms from model.frame
+      nval <- if(inherits(model.frame, "terms")) model.frame else terms(model.frame, dot = control$dot)
+
+      ## associated variable labels
+      ovar <- sapply(as.list(attr(rval, "variables")), deparse)[-1]
+      nvar <- sapply(as.list(attr(nval, "variables")), deparse)[-1]
+      if(!all(ovar %in% nvar)) stop(
+        paste("The following terms variables are not part of the model.frame:",
+        paste(ovar[!(ovar %in% nvar)], collapse = ", ")))
+      ix <- match(ovar, nvar)
+  
+      ## subset predvars
+      if(!is.null(attr(rval, "predvars"))) 
+        warning("terms already had 'predvars' attribute, now replaced")
+      attr(rval, "predvars") <- attr(nval, "predvars")[1L + c(0L, ix)]
+
+      ## subset dataClasses
+      if(!is.null(attr(rval, "dataClasses"))) 
+        warning("terms already had 'dataClasses' attribute, now replaced")
+      attr(rval, "dataClasses") <- attr(nval, "dataClasses")[ix]
+  
+      return(rval)
+    }
+    mt  <- .add_predvars_and_dataClasses(mt,  mf)
+    mtX <- .add_predvars_and_dataClasses(mtX, mf)
+    mtZ <- .add_predvars_and_dataClasses(mtZ, mf)
+
     ## sanity checks
     if(length(Y) < 1) stop("empty model")
     if(any(Y < 0 | Y > 1)) stop("invalid dependent variable, all observations must be in [0, 1]")
