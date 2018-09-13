@@ -700,7 +700,16 @@ betareg.fit <- function(x, y, z = NULL, weights = NULL, offset = NULL,
     vcov <- if (hessian & (type == "ML")) solve(-as.matrix(opt$hessian)) else hessfun(fit = fit, inverse = TRUE)
 
     ## R-squared
-    pseudor2 <- if(dist != "beta" || var(eta) * var(ystar) <= 0) NA else cor(eta, linkfun(y))^2
+    wcor <- function(x, y, weights = NULL) {
+      if(is.null(weights) || identical(rep.int(1, length(x)), weights)) return(cor(x, y))
+      w <- weights/sum(weights)
+      x <- x - sum(x * w)
+      x <- x/sqrt(sum(w * x^2))
+      y <- y - sum(y * w)
+      y <- y/sqrt(sum(w * y^2))
+      sum(w * x * y)
+    }
+    pseudor2 <- if(dist != "beta" || var(eta) * var(ystar) <= 0) NA else wcor(eta, linkfun(y), weights)^2
 
     ## names
     names(beta) <- colnames(x)

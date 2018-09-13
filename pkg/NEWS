@@ -9,6 +9,9 @@ Changes in Version 3.2-0
     "nu" parameter. "cbetax" = censored exponential mixture beta distribution
     which allows for estimation of "nu".
 
+  o Bug fix in pseudo.r.squared computation for weighted models where previously
+    the weights were erroneously ignored (reported by Ray Tayek).
+
 
 Changes in Version 3.1-0
 
