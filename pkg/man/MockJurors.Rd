@@ -39,8 +39,7 @@ A data frame containing 104 observations on 3 variables.
 }
 
 \source{
-Example 1 from
-\url{http://www.michaelsmithson.online/stats/betareg/betareg.html}
+Example 1 from Smithson and Verkuilen (2006) supplements.
 }
 
 \references{
