@@ -12,6 +12,9 @@ Changes in Version 3.2-0
   o Bug fix in pseudo.r.squared computation for weighted models where previously
     the weights were erroneously ignored (reported by Ray Tayek).
 
+  o Bug fix in betatree() when only intercepts are included for both "mu" and
+    "phi" (reported by Ludwig Hothorn).
+
 
 Changes in Version 3.1-1
 
