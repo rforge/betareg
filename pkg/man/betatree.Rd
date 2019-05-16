@@ -84,6 +84,7 @@ options(digits = 4)
 ## data with two groups of dyslexic and non-dyslexic children
 data("ReadingSkills", package = "betareg")
 ## additional random noise (not associated with reading scores)
+suppressWarnings(RNGversion("3.5.0"))
 set.seed(1071)
 ReadingSkills$x1 <- rnorm(nrow(ReadingSkills))
 ReadingSkills$x2 <- runif(nrow(ReadingSkills))

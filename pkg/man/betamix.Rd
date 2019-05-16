@@ -149,6 +149,7 @@ options(digits = 4)
 ## data with two groups of dyslexic and non-dyslexic children
 data("ReadingSkills", package = "betareg")
 
+suppressWarnings(RNGversion("3.5.0"))
 set.seed(4040)
 ## try to capture accuracy ~ iq relationship (without using dyslexia
 ## information) using two beta regression components and one additional
