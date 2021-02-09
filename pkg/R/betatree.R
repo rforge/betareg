@@ -27,7 +27,7 @@ betatree <- function(formula, partition, data, subset = NULL, na.action = na.omi
   ))
   ## call for beta regression
   br_call <- match.call(expand.dots = FALSE)
-  br_call$partition <- br_call$cluster <- br_call[["..."]] <- NULL
+  br_call$partition <- br_call$cluster <- br_call$`...` <- NULL
   br_call$formula <- formula(formula, lhs = 1L, rhs = 1L:2L)
   
   ## terms
