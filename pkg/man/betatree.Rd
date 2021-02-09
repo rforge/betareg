@@ -80,11 +80,11 @@ Zeileis, A., Hothorn, T., and Hornik K. (2008).
 
 \examples{
 options(digits = 4)
+suppressWarnings(RNGversion("3.5.0"))
 
 ## data with two groups of dyslexic and non-dyslexic children
 data("ReadingSkills", package = "betareg")
 ## additional random noise (not associated with reading scores)
-suppressWarnings(RNGversion("3.5.0"))
 set.seed(1071)
 ReadingSkills$x1 <- rnorm(nrow(ReadingSkills))
 ReadingSkills$x2 <- runif(nrow(ReadingSkills))
@@ -100,10 +100,11 @@ plot(bt)
 
 ## inspect result
 coef(bt)
+if(require("strucchange")) sctest(bt)
+## IGNORE_RDIFF_BEGIN
 summary(bt, node = 2)
 summary(bt, node = 3)
-library("strucchange")
-sctest(bt)
+## IGNORE_RDIFF_END
 
 ## add a numerical variable with relevant information for splitting
 ReadingSkills$x4 <- rnorm(nrow(ReadingSkills), c(-1.5, 1.5)[ReadingSkills$dyslexia])
@@ -114,9 +115,11 @@ plot(bt2)
 
 ## inspect result
 coef(bt2)
-sctest(bt2)
+if(require("strucchange")) sctest(bt2)
+## IGNORE_RDIFF_BEGIN
 summary(bt2, node = 2)
 summary(bt2, node = 3)
+## IGNORE_RDIFF_END
 }
 
 \keyword{tree}
