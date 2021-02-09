@@ -73,7 +73,7 @@ betatree <- function(formula, partition, data, subset = NULL, na.action = na.omi
     if(estfun | object) {
       class(obj) <- "betareg"
       obj$contrasts <- attr(x, "contrasts")
-      obj$xlevels <- attr(x, "xlevels")    
+      obj$levels <- list(mu = attr(x, "xlevels"), phi = attr(x, "xlevels"), full = attr(x, "xlevels"))
       obj$call <- br_call
       obj$terms <- list(mean = xt, precision = zt, full = ft)
       obj$model <- mf
